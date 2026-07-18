@@ -461,17 +461,15 @@ User message: ${msgText}`;
     setUpdatesError("");
     try {
       const res = await fetch("/api/updates");
-      if (!res.ok) throw new Error("Could not connect to update servers.");
-      const contentType = res.headers.get("content-type") || "";
-      if (contentType.includes("text/html")) {
-        throw new Error("No backend API configured. Using offline mock/cache.");
+      const contentType = res?.headers?.get("content-type") || "";
+      if (res && res.ok && !contentType.includes("text/html")) {
+        const data = await res.json();
+        setUpdates(data);
+      } else {
+        setUpdates(STATIC_NURSING_UPDATES);
       }
-      const data = await res.json();
-      setUpdates(data);
     } catch (err: any) {
-      console.error(err);
       setUpdates(STATIC_NURSING_UPDATES);
-      setUpdatesError("Could not retrieve real-time data from server. Displaying high-yield cache instead.");
     } finally {
       setLoadingUpdates(false);
     }
@@ -521,6 +519,251 @@ User message: ${msgText}`;
       localStorage.setItem("np_users", JSON.stringify(initialUsers));
     }
   }, []);
+
+  // Mount URL routing detector: initializes page state from window.location.pathname
+  useEffect(() => {
+    const path = window.location.pathname;
+    const parts = path.split("/").filter(Boolean);
+    
+    if (parts.length === 0) {
+      setActivePage("landing");
+    } else if (parts[0] === "updates") {
+      setActivePage("updates");
+      if (parts[1]) {
+        const matchingUpdate = STATIC_NURSING_UPDATES.find(u => u.id === parts[1]);
+        if (matchingUpdate) {
+          setSelectedUpdate(matchingUpdate);
+        }
+      }
+    } else if (parts[0] === "test" && parts[1] && parts[2]) {
+      const subId = parts[1];
+      const tId = parts[2];
+      const subject = subjects.find(s => s.id === subId);
+      if (subject) {
+        const test = subject.tests.find(t => t.id === tId);
+        if (test) {
+          setActivePage("test");
+          setActiveSubjectId(subId);
+          setActiveTest(test);
+          const params = new URLSearchParams(window.location.search);
+          const mode = params.get("mode") === "practice" ? "practice" : "exam";
+          setExamMode(mode === "exam");
+          setTimeLeft(test.mins * 60);
+          setSelectedOptions(new Array(test.data.length).fill(null));
+          setQuestionAnswers(new Array(test.data.length).fill(null));
+        }
+      }
+    } else {
+      const pageMap: Record<string, string> = {
+        hub: "hub",
+        "mock-tests": "mock_tests",
+        chat: "chat",
+        pyq: "pyq",
+        updates: "updates",
+        analytics: "analytics",
+        auth: "auth",
+        admin: "admin",
+        settings: "settings"
+      };
+      if (pageMap[parts[0]]) {
+        setActivePage(pageMap[parts[0]]);
+      }
+    }
+  }, []);
+
+  // Synchronizes URL search path when active selected blog post changes
+  useEffect(() => {
+    if (activePage === "updates") {
+      if (selectedUpdate) {
+        window.history.replaceState({ page: "updates", subjectId: null, testId: null }, "", `/updates/${selectedUpdate.id}`);
+      } else {
+        window.history.replaceState({ page: "updates", subjectId: null, testId: null }, "", `/updates`);
+      }
+    }
+  }, [selectedUpdate, activePage]);
+
+  // Master SEO and head metadata controller (updates page titles, meta tags, OpenGraph, Canonical, and JSON-LD schemas)
+  useEffect(() => {
+    let seoTitle = "NCBT | Nursing Computer Based Tests | Nursing Mock Tests & Government Nursing Exam Preparation";
+    let seoDesc = "India's leading Nursing CBT exam preparation platform. Access high-quality practice questions, previous year papers, mock tests and study materials for AIIMS NORCET, ESIC, RRB, and WBHRB Staff Nurse examinations.";
+    let canonicalUrl = "https://ncbt.in" + window.location.pathname;
+    let robots = "index, follow";
+    let ogType = "website";
+    let ogImage = "https://images.unsplash.com/photo-1576091160550-2173dba999ef?q=80&w=1200";
+
+    if (activePage === "hub") {
+      seoTitle = "CBT Test Series Hub | NCBT – Nursing Computer Based Tests";
+      seoDesc = "Access our comprehensive suite of nursing subjects and exams. High-yield practice series for Anatomy, Physiology, Medical-Surgical, ObGyn, and Pharmacology.";
+    } else if (activePage === "mock_tests") {
+      seoTitle = "Free Full-Length Mock Tests | NCBT – Nursing Computer Based Tests";
+      seoDesc = "Practice full-length 50-question mock tests calibrated for AIIMS NORCET and other central exams. Real CBT exam environment, time constraints and negative marking.";
+    } else if (activePage === "chat") {
+      seoTitle = "AI Nursing Tutor & Chat | NCBT – Nursing Computer Based Tests";
+      seoDesc = "Discuss clinical scenarios, diagnostic priorities, and medical-surgical concepts with our advanced AI Nursing Professor tailored for NORCET preparation.";
+    } else if (activePage === "pyq") {
+      seoTitle = "Nursing Previous Year Questions (PYQ) | NCBT";
+      seoDesc = "Free access to authentic, solved previous year question papers from AIIMS NORCET, RRB, ESIC, DSSSB, and West Bengal Health recruitment exams.";
+    } else if (activePage === "updates") {
+      if (selectedUpdate) {
+        seoTitle = `${selectedUpdate.title} | NCBT Nursing Blog`;
+        seoDesc = selectedUpdate.summary;
+        ogType = "article";
+        ogImage = selectedUpdate.image;
+      } else {
+        seoTitle = "Daily Pulse - Nursing News & Clinical Study Notes | NCBT";
+        seoDesc = "Stay updated with central and state nursing officer recruitment alerts, updated syllabus guidelines, and high-yield academic study notes.";
+      }
+    } else if (activePage === "test" && activeTest) {
+      seoTitle = `${activeTest.title} | Active CBT Engine | NCBT`;
+      seoDesc = `Attempting ${activeTest.title} on NCBT. Real-time evaluation, diagnostic rationales, and deep analysis.`;
+      robots = "noindex, follow";
+    } else if (activePage === "analytics") {
+      seoTitle = "Performance Dashboard & Analytics | NCBT";
+      seoDesc = "Track your nursing CBT practice scores, active streaks, strengths, and subject-wise accuracy metrics dynamically.";
+      robots = "noindex, nofollow";
+    } else if (activePage === "settings") {
+      seoTitle = "Platform Preferences & Settings | NCBT";
+      seoDesc = "Configure your Supabase cloud sync credentials, local storage configurations, and custom Gemini API keys.";
+      robots = "noindex, nofollow";
+    } else if (activePage === "auth") {
+      seoTitle = "Secure Access & Authorization | NCBT";
+      seoDesc = "Log in or register your NCBT nursing account to enable automatic cloud backup and sync progress across devices.";
+      robots = "noindex, follow";
+    }
+
+    document.title = seoTitle;
+
+    const setMetaTag = (name: string, content: string, isProperty = false) => {
+      const attr = isProperty ? "property" : "name";
+      let element = document.querySelector(`meta[${attr}="${name}"]`);
+      if (!element) {
+        element = document.createElement("meta");
+        element.setAttribute(attr, name);
+        document.head.appendChild(element);
+      }
+      element.setAttribute("content", content);
+    };
+
+    setMetaTag("description", seoDesc);
+    setMetaTag("robots", robots);
+    setMetaTag("og:title", seoTitle, true);
+    setMetaTag("og:description", seoDesc, true);
+    setMetaTag("og:type", ogType, true);
+    setMetaTag("og:url", canonicalUrl, true);
+    setMetaTag("og:image", ogImage, true);
+    setMetaTag("og:site_name", "NCBT – Nursing Computer Based Tests", true);
+    setMetaTag("twitter:card", "summary_large_image");
+    setMetaTag("twitter:title", seoTitle);
+    setMetaTag("twitter:description", seoDesc);
+    setMetaTag("twitter:image", ogImage);
+    setMetaTag("theme-color", theme === "light" ? "#f8fafc" : "#080c12");
+
+    let canonicalLink = document.querySelector('link[rel="canonical"]');
+    if (!canonicalLink) {
+      canonicalLink = document.createElement("link");
+      canonicalLink.setAttribute("rel", "canonical");
+      document.head.appendChild(canonicalLink);
+    }
+    canonicalLink.setAttribute("href", canonicalUrl);
+
+    const existingJsonLd = document.getElementById("ncbt-jsonld");
+    if (existingJsonLd) {
+      existingJsonLd.remove();
+    }
+
+    const jsonLdData: any[] = [
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "@id": "https://ncbt.in/#organization",
+        "name": "NCBT",
+        "url": "https://ncbt.in",
+        "logo": "https://ncbt.in/assets/logo.png",
+        "description": "India's Nursing CBT Exam Preparation Platform providing high-quality mock tests, previous year papers, and academic study notes.",
+        "sameAs": []
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "@id": "https://ncbt.in/#website",
+        "url": "https://ncbt.in",
+        "name": "NCBT – Nursing Computer Based Tests",
+        "alternateName": "Nursing CBT Preparation",
+        "publisher": { "@id": "https://ncbt.in/#organization" },
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://ncbt.in/hub?search={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": `${canonicalUrl}#webpage`,
+        "url": canonicalUrl,
+        "name": seoTitle,
+        "description": seoDesc,
+        "isPartOf": { "@id": "https://ncbt.in/#website" }
+      }
+    ];
+
+    const breadcrumbItems = [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://ncbt.in" }
+    ];
+    if (activePage !== "landing") {
+      let pageLabel = activePage.toUpperCase();
+      if (activePage === "mock_tests") pageLabel = "Mock Tests";
+      else if (activePage === "pyq") pageLabel = "Previous Year Questions";
+      else if (activePage === "updates") pageLabel = "Daily Pulse News";
+      breadcrumbItems.push({
+        "@type": "ListItem",
+        "position": 2,
+        "name": pageLabel,
+        "item": `https://ncbt.in/${activePage}`
+      });
+
+      if (activePage === "updates" && selectedUpdate) {
+        breadcrumbItems.push({
+          "@type": "ListItem",
+          "position": 3,
+          "name": selectedUpdate.title,
+          "item": `https://ncbt.in/updates/${selectedUpdate.id}`
+        });
+      }
+    }
+
+    jsonLdData.push({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": breadcrumbItems
+    });
+
+    if (activePage === "updates" && selectedUpdate) {
+      jsonLdData.push({
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "@id": `https://ncbt.in/updates/${selectedUpdate.id}#article`,
+        "isPartOf": { "@id": `https://ncbt.in/updates/${selectedUpdate.id}#webpage` },
+        "headline": selectedUpdate.title,
+        "description": selectedUpdate.summary,
+        "image": selectedUpdate.image,
+        "datePublished": "2026-06-19T00:00:00+05:30",
+        "dateModified": "2026-06-19T00:00:00+05:30",
+        "author": {
+          "@type": "Organization",
+          "name": "NCBT Editorial Team"
+        },
+        "publisher": { "@id": "https://ncbt.in/#organization" }
+      });
+    }
+
+    const script = document.createElement("script");
+    script.id = "ncbt-jsonld";
+    script.type = "application/ld+json";
+    script.innerHTML = JSON.stringify(jsonLdData);
+    document.head.appendChild(script);
+
+  }, [activePage, selectedUpdate, activeTest, theme]);
 
   // Dismiss navigation dropdown on clicking outside anywhere in the web app
   useEffect(() => {
@@ -1077,7 +1320,17 @@ User message: ${msgText}`;
           subjectId: customState ? customState.subjectId : activeSubjectId,
           testId: customState ? customState.testId : (activeTest?.id || null)
         };
-        window.history.pushState(stateToPush, "", "");
+        let path = "/";
+        if (pageId !== "landing") {
+          if (pageId === "mock_tests") {
+            path = "/mock-tests";
+          } else if (pageId === "test" && (customState?.subjectId || activeSubjectId) && (customState?.testId || activeTest?.id)) {
+            path = `/test/${customState?.subjectId || activeSubjectId}/${customState?.testId || activeTest?.id}`;
+          } else {
+            path = `/${pageId}`;
+          }
+        }
+        window.history.pushState(stateToPush, "", path);
       } catch (e) {
         console.error("Failed to pushState", e);
       }
