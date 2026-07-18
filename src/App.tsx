@@ -57,6 +57,7 @@ import {
   clearClientGeminiKey, 
   generateContentDirect 
 } from "./services/geminiClient";
+import { safeLocalStorage } from "./services/safeStorage";
 
 // Dynamically enriches standard explanations with high-yield clinical pointers
 const getDetailedExplain = (q: Question): string => {
@@ -278,7 +279,7 @@ export default function App() {
   };
 
   const [subjects, setSubjects] = useState<Subject[]>(() => {
-    const saved = localStorage.getItem("np_subjects_custom_v1");
+    const saved = safeLocalStorage.getItem("np_subjects_custom_v1");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -303,7 +304,7 @@ export default function App() {
 
   const saveSubjects = (newSubjects: Subject[]) => {
     setSubjects(newSubjects);
-    localStorage.setItem("np_subjects_custom_v1", JSON.stringify(newSubjects));
+    safeLocalStorage.setItem("np_subjects_custom_v1", JSON.stringify(newSubjects));
   };
 
   // --- AI OPEN DISCUSS / CHAT SYSTEM STATE ---
@@ -390,7 +391,7 @@ User message: ${msgText}`;
 
   // Auth State
   const [currentUser, setCurrentUser] = useState<UserType | null>(() => {
-    const saved = localStorage.getItem("np_user");
+    const saved = safeLocalStorage.getItem("np_user");
     return saved ? JSON.parse(saved) : null;
   });
   const [authTab, setAuthTab] = useState<"login" | "register">("login");
@@ -409,7 +410,7 @@ User message: ${msgText}`;
 
   // Theme Mode (Light / Dark) State
   const [theme, setTheme] = useState<"light" | "dark">(
-    () => (localStorage.getItem("theme") as "light" | "dark") || "dark"
+    () => (safeLocalStorage.getItem("theme") as "light" | "dark") || "dark"
   );
 
   useEffect(() => {
@@ -418,7 +419,7 @@ User message: ${msgText}`;
     } else {
       document.body.classList.remove("light");
     }
-    localStorage.setItem("theme", theme);
+    safeLocalStorage.setItem("theme", theme);
   }, [theme]);
 
   // Test Engine State
@@ -452,8 +453,8 @@ User message: ${msgText}`;
   const [selectedUpdate, setSelectedUpdate] = useState<NursingUpdate | null>(null);
 
   // Client-side Settings States
-  const [supUrlInput, setSupUrlInput] = useState<string>(() => localStorage.getItem("np_supabase_url") || "");
-  const [supKeyInput, setSupKeyInput] = useState<string>(() => localStorage.getItem("np_supabase_anon_key") || "");
+  const [supUrlInput, setSupUrlInput] = useState<string>(() => safeLocalStorage.getItem("np_supabase_url") || "");
+  const [supKeyInput, setSupKeyInput] = useState<string>(() => safeLocalStorage.getItem("np_supabase_anon_key") || "");
   const [gemKeyInput, setGemKeyInput] = useState<string>(() => getClientGeminiKey() || "");
 
   const fetchUpdates = async () => {
@@ -510,13 +511,13 @@ User message: ${msgText}`;
 
   // Sync users in LocalStorage 
   useEffect(() => {
-    const existing = localStorage.getItem("np_users");
+    const existing = safeLocalStorage.getItem("np_users");
     if (!existing) {
       // Bootstrap with initial admin and a clean state
       const initialUsers = [
         { name: "Sakil Ahmed", email: "sakil.net.in@gmail.com", pass: "password", isAdmin: true, joined: Date.now() - 1000 * 60 * 60 * 24 * 5 }
       ];
-      localStorage.setItem("np_users", JSON.stringify(initialUsers));
+      safeLocalStorage.setItem("np_users", JSON.stringify(initialUsers));
     }
   }, []);
 
@@ -847,7 +848,7 @@ User message: ${msgText}`;
       const cloudAttempts = await getAttemptsFromCloud(userEmail);
       if (cloudAttempts && cloudAttempts.length > 0) {
         const localAttemptsKey = `np_attempts_${userEmail}`;
-        const localAttempts: Attempt[] = JSON.parse(localStorage.getItem(localAttemptsKey) || "[]");
+        const localAttempts: Attempt[] = JSON.parse(safeLocalStorage.getItem(localAttemptsKey) || "[]");
         
         const attemptMap = new Map<number, Attempt>();
         localAttempts.forEach(a => attemptMap.set(a.timestamp, a));
@@ -857,17 +858,17 @@ User message: ${msgText}`;
           .sort((a, b) => a.timestamp - b.timestamp)
           .slice(-50);
           
-        localStorage.setItem(localAttemptsKey, JSON.stringify(mergedAttempts));
+        safeLocalStorage.setItem(localAttemptsKey, JSON.stringify(mergedAttempts));
       }
 
       // 2. Sync streaks
       const cloudStreak = await getStreakFromCloud(userEmail);
       if (cloudStreak) {
         const localStreakKey = `np_streak_${userEmail}`;
-        const localStreak: StreakData = JSON.parse(localStorage.getItem(localStreakKey) || '{"streak":0,"last":""}');
+        const localStreak: StreakData = JSON.parse(safeLocalStorage.getItem(localStreakKey) || '{"streak":0,"last":""}');
         
         if (cloudStreak.streak > localStreak.streak || cloudStreak.last !== localStreak.last) {
-          localStorage.setItem(localStreakKey, JSON.stringify(cloudStreak));
+          safeLocalStorage.setItem(localStreakKey, JSON.stringify(cloudStreak));
         }
       }
     } catch (e) {
@@ -939,7 +940,7 @@ User message: ${msgText}`;
       
       if (res.user) {
         setCurrentUser(res.user);
-        localStorage.setItem("np_user", JSON.stringify(res.user));
+        safeLocalStorage.setItem("np_user", JSON.stringify(res.user));
         triggerToast(`Welcome back, ${res.user.name}! Verified securely via Supabase 🔓`, "ok");
         
         setAuthPhone("");
@@ -951,7 +952,7 @@ User message: ${msgText}`;
     }
 
     const isAdminUser = phoneClean === "9531659828";
-    const users: UserType[] = JSON.parse(localStorage.getItem("np_users") || "[]");
+    const users: UserType[] = JSON.parse(safeLocalStorage.getItem("np_users") || "[]");
 
     let found = users.find(u => u.phone === phoneClean || (u.email && u.email.toLowerCase() === `${phoneClean}@nursingmock.com`));
 
@@ -964,16 +965,16 @@ User message: ${msgText}`;
         joined: Date.now()
       };
       users.push(found);
-      localStorage.setItem("np_users", JSON.stringify(users));
+      safeLocalStorage.setItem("np_users", JSON.stringify(users));
     } else {
       if (isAdminUser && !found.isAdmin) {
         found.isAdmin = true;
-        localStorage.setItem("np_users", JSON.stringify(users));
+        safeLocalStorage.setItem("np_users", JSON.stringify(users));
       }
     }
 
     setCurrentUser(found);
-    localStorage.setItem("np_user", JSON.stringify(found));
+    safeLocalStorage.setItem("np_user", JSON.stringify(found));
     setAuthError("");
     triggerToast(`Welcome back, ${found.name}! Verified successfully 🔓`, "ok");
 
@@ -999,21 +1000,21 @@ User message: ${msgText}`;
       }
       if (res.user) {
         setCurrentUser(res.user);
-        localStorage.setItem("np_user", JSON.stringify(res.user));
+        safeLocalStorage.setItem("np_user", JSON.stringify(res.user));
         triggerToast(`Welcome back, ${res.user.name}! Connected via Supabase 👋`, "ok");
         showPage("hub");
         return;
       }
     }
 
-    const users: UserType[] = JSON.parse(localStorage.getItem("np_users") || "[]");
+    const users: UserType[] = JSON.parse(safeLocalStorage.getItem("np_users") || "[]");
     const found = users.find(u => u.email.toLowerCase() === authEmail.toLowerCase().trim() && (u as any).pass === authPassword);
     if (!found) {
       setAuthError("Invalid email or password.");
       return;
     }
     setCurrentUser(found);
-    localStorage.setItem("np_user", JSON.stringify(found));
+    safeLocalStorage.setItem("np_user", JSON.stringify(found));
     setAuthError("");
     triggerToast(`Welcome back, ${found.name}! 👋`, "ok");
     showPage("hub");
@@ -1039,14 +1040,14 @@ User message: ${msgText}`;
       }
       if (res.user) {
         setCurrentUser(res.user);
-        localStorage.setItem("np_user", JSON.stringify(res.user));
+        safeLocalStorage.setItem("np_user", JSON.stringify(res.user));
         triggerToast(`Account created on Supabase, welcome ${res.user.name}! 🎉`, "ok");
         showPage("hub");
         return;
       }
     }
 
-    const users: UserType[] = JSON.parse(localStorage.getItem("np_users") || "[]");
+    const users: UserType[] = JSON.parse(safeLocalStorage.getItem("np_users") || "[]");
     if (users.some(u => u.email.toLowerCase() === authEmail.toLowerCase().trim())) {
       setAuthError("Email is already registered.");
       return;
@@ -1060,9 +1061,9 @@ User message: ${msgText}`;
     } as any;
     
     users.push(newUser);
-    localStorage.setItem("np_users", JSON.stringify(users));
+    safeLocalStorage.setItem("np_users", JSON.stringify(users));
     setCurrentUser(newUser);
-    localStorage.setItem("np_user", JSON.stringify(newUser));
+    safeLocalStorage.setItem("np_user", JSON.stringify(newUser));
     setAuthError("");
     triggerToast(`Account created successfully, ${newUser.name}! 🎉`, "ok");
     showPage("hub");
@@ -1074,7 +1075,7 @@ User message: ${msgText}`;
         await supabaseSignOut();
       }
       setCurrentUser(null);
-      localStorage.removeItem("np_user");
+      safeLocalStorage.removeItem("np_user");
       triggerToast("Logged out successfully.", "ok");
       showPage("landing");
     }
@@ -1088,7 +1089,7 @@ User message: ${msgText}`;
       guest: true
     };
     setCurrentUser(guestUser);
-    localStorage.setItem("np_user", JSON.stringify(guestUser));
+    safeLocalStorage.setItem("np_user", JSON.stringify(guestUser));
     triggerToast("Continuing as Guest 👤", "ok");
     showPage("hub");
   };
@@ -1105,12 +1106,12 @@ User message: ${msgText}`;
       } as any;
       
       setCurrentUser(googleUserObj);
-      localStorage.setItem("np_user", JSON.stringify(googleUserObj));
+      safeLocalStorage.setItem("np_user", JSON.stringify(googleUserObj));
       
-      const users: UserType[] = JSON.parse(localStorage.getItem("np_users") || "[]");
+      const users: UserType[] = JSON.parse(safeLocalStorage.getItem("np_users") || "[]");
       if (!users.some(u => u.email.toLowerCase() === "sakil.net.in@gmail.com")) {
         users.push(googleUserObj);
-        localStorage.setItem("np_users", JSON.stringify(users));
+        safeLocalStorage.setItem("np_users", JSON.stringify(users));
       }
 
       triggerToast("Authenticated successfully with Google! 🛡️", "ok");
@@ -1284,8 +1285,8 @@ User message: ${msgText}`;
   };
 
   const toggleUserAdmin = (email: string) => {
-    const users: UserType[] = JSON.parse(localStorage.getItem("np_users") || "[]");
-    const currentUserInStorage = JSON.parse(localStorage.getItem("np_user") || "null");
+    const users: UserType[] = JSON.parse(safeLocalStorage.getItem("np_users") || "[]");
+    const currentUserInStorage = JSON.parse(safeLocalStorage.getItem("np_user") || "null");
 
     const updated = users.map(u => {
       if (u.email.toLowerCase() === email.toLowerCase()) {
@@ -1293,14 +1294,14 @@ User message: ${msgText}`;
         // If editing active user, sync their runtime state
         if (currentUser && currentUser.email.toLowerCase() === email.toLowerCase()) {
           setCurrentUser({ ...currentUser, isAdmin: nextAdminVal });
-          localStorage.setItem("np_user", JSON.stringify({ ...currentUser, isAdmin: nextAdminVal }));
+          safeLocalStorage.setItem("np_user", JSON.stringify({ ...currentUser, isAdmin: nextAdminVal }));
         }
         return { ...u, isAdmin: nextAdminVal };
       }
       return u;
     });
 
-    localStorage.setItem("np_users", JSON.stringify(updated));
+    safeLocalStorage.setItem("np_users", JSON.stringify(updated));
     triggerToast("User authorization settings successfully parsed!", "ok");
   };
 
@@ -1444,7 +1445,7 @@ User message: ${msgText}`;
     
     // Save to statistics analytics in LocalStorage
     const key = `np_attempts_${currentUser?.email || "guest"}`;
-    const attempts: Attempt[] = JSON.parse(localStorage.getItem(key) || "[]");
+    const attempts: Attempt[] = JSON.parse(safeLocalStorage.getItem(key) || "[]");
     
     const total = activeTest?.data.length || 0;
     const skipped = selectedOptions.filter(o => o === null).length;
@@ -1466,12 +1467,12 @@ User message: ${msgText}`;
     if (attempts.length > 50) {
       attempts.splice(0, attempts.length - 50); // limit historical logs
     }
-    localStorage.setItem(key, JSON.stringify(attempts));
+    safeLocalStorage.setItem(key, JSON.stringify(attempts));
 
     // Handle streaks
     const today = new Date().toDateString();
     const streakKey = `np_streak_${currentUser?.email || "guest"}`;
-    const sd: StreakData = JSON.parse(localStorage.getItem(streakKey) || '{"streak":0,"last":""}');
+    const sd: StreakData = JSON.parse(safeLocalStorage.getItem(streakKey) || '{"streak":0,"last":""}');
     const yesterday = new Date(Date.now() - 86400000).toDateString();
     
     if (sd.last === today) {
@@ -1483,7 +1484,7 @@ User message: ${msgText}`;
       sd.streak = 1;
       sd.last = today;
     }
-    localStorage.setItem(streakKey, JSON.stringify(sd));
+    safeLocalStorage.setItem(streakKey, JSON.stringify(sd));
 
     // Cloud backup to Supabase
     if (isSupabaseConnected() && currentUser && !currentUser.guest) {
@@ -1595,9 +1596,9 @@ Please format your response using standard markdown structure with custom emoji 
   // Analytics calculator helpers
   const getAnalytics = () => {
     const key = `np_attempts_${currentUser?.email || "guest"}`;
-    const attempts: Attempt[] = JSON.parse(localStorage.getItem(key) || "[]");
+    const attempts: Attempt[] = JSON.parse(safeLocalStorage.getItem(key) || "[]");
     const streakKey = `np_streak_${currentUser?.email || "guest"}`;
-    const sd: StreakData = JSON.parse(localStorage.getItem(streakKey) || '{"streak":0,"last":""}');
+    const sd: StreakData = JSON.parse(safeLocalStorage.getItem(streakKey) || '{"streak":0,"last":""}');
 
     if (attempts.length === 0) return null;
 
@@ -1634,7 +1635,7 @@ Please format your response using standard markdown structure with custom emoji 
 
   // Admin stats helper
   const getAdminStats = () => {
-    const users: UserType[] = JSON.parse(localStorage.getItem("np_users") || "[]");
+    const users: UserType[] = JSON.parse(safeLocalStorage.getItem("np_users") || "[]");
     const totalQs = subjects.flatMap(s => s.tests).filter(t => t.ready).reduce((acc, t) => acc + t.questions, 0);
     const liveTests = subjects.flatMap(s => s.tests).filter(t => t.ready).length;
     const totalTestsNum = subjects.flatMap(s => s.tests).length;
@@ -2114,9 +2115,9 @@ Please format your response using standard markdown structure with custom emoji 
                 <button 
                   className="bg-[#21262d] hover:bg-[#30363d] border border-amber-500/30 text-amber-450 hover:text-amber-380 text-xs font-bold py-2 px-4 rounded-xl shadow transition-all shrink-0"
                   onClick={() => {
-                    const saved = localStorage.getItem("np_subjects_custom_v1");
+                    const saved = safeLocalStorage.getItem("np_subjects_custom_v1");
                     if (saved) {
-                      localStorage.removeItem("np_subjects_custom_v1");
+                      safeLocalStorage.removeItem("np_subjects_custom_v1");
                       triggerToast("Mock Test progress reset to factory default! 🛠️", "ok");
                       window.location.reload();
                     } else {
@@ -3973,20 +3974,20 @@ Please format your response using standard markdown structure with custom emoji 
                           triggerToast("Please enter both the URL and Anon Key.", "err");
                           return;
                         }
-                        localStorage.setItem("np_supabase_url", supUrlInput.trim());
-                        localStorage.setItem("np_supabase_anon_key", supKeyInput.trim());
+                        safeLocalStorage.setItem("np_supabase_url", supUrlInput.trim());
+                        safeLocalStorage.setItem("np_supabase_anon_key", supKeyInput.trim());
                         triggerToast("Supabase configuration applied! Refreshing connection...", "ok");
                         setTimeout(() => window.location.reload(), 1000);
                       }}
                     >
                       Apply & Connect 🔌
                     </button>
-                    {localStorage.getItem("np_supabase_url") && (
+                    {safeLocalStorage.getItem("np_supabase_url") && (
                       <button 
                         className="bg-neutral-800 hover:bg-neutral-700 text-white font-extrabold text-xs px-5 py-3 rounded-xl transition-all uppercase tracking-wider cursor-pointer"
                         onClick={() => {
-                          localStorage.removeItem("np_supabase_url");
-                          localStorage.removeItem("np_supabase_anon_key");
+                          safeLocalStorage.removeItem("np_supabase_url");
+                          safeLocalStorage.removeItem("np_supabase_anon_key");
                           setSupUrlInput("");
                           setSupKeyInput("");
                           triggerToast("Cleared Supabase credentials.", "ok");

@@ -2,12 +2,14 @@
 // Client-side Gemini API Service for Pure Static Web Hosting (Hostinger)
 // Connects directly to Google Generative Language APIs without requiring a backend server.
 
+import { safeLocalStorage } from "./safeStorage";
+
 export function getClientGeminiKey(): string {
   // 1. Try env variable VITE_GEMINI_API_KEY
   let key = import.meta.env.VITE_GEMINI_API_KEY;
   // 2. Fallback to localStorage configured by user in UI
   if (!key || key === "MY_GEMINI_API_KEY") {
-    key = localStorage.getItem("np_gemini_api_key") || "";
+    key = safeLocalStorage.getItem("np_gemini_api_key") || "";
   }
   return key;
 }
@@ -19,14 +21,14 @@ export function isGeminiClientConfigured(): boolean {
 
 export function saveClientGeminiKey(key: string) {
   if (key && key.trim().length > 10) {
-    localStorage.setItem("np_gemini_api_key", key.trim());
+    safeLocalStorage.setItem("np_gemini_api_key", key.trim());
     return true;
   }
   return false;
 }
 
 export function clearClientGeminiKey() {
-  localStorage.removeItem("np_gemini_api_key");
+  safeLocalStorage.removeItem("np_gemini_api_key");
 }
 
 /**

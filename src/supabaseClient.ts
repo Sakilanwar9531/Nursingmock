@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { User, Attempt, StreakData, NursingUpdate } from "./types";
+import { safeLocalStorage } from "./services/safeStorage";
 
 let supabaseInstance: SupabaseClient | null = null;
 
@@ -14,8 +15,8 @@ export function getSupabaseClient(): SupabaseClient | null {
 
   // 2. Fallback to localStorage (for easy static setup without rebuilding code)
   if (!url || !anonKey) {
-    url = localStorage.getItem("np_supabase_url") || "";
-    anonKey = localStorage.getItem("np_supabase_anon_key") || "";
+    url = safeLocalStorage.getItem("np_supabase_url") || "";
+    anonKey = safeLocalStorage.getItem("np_supabase_anon_key") || "";
   }
 
   if (url && anonKey && url !== "YOUR_SUPABASE_URL" && anonKey !== "YOUR_SUPABASE_ANON_KEY") {
@@ -42,8 +43,8 @@ export function isSupabaseConnected(): boolean {
 // Helpers to save and load Supabase configuration
 export function saveSupabaseConfig(url: string, key: string) {
   if (url && key) {
-    localStorage.setItem("np_supabase_url", url);
-    localStorage.setItem("np_supabase_anon_key", key);
+    safeLocalStorage.setItem("np_supabase_url", url);
+    safeLocalStorage.setItem("np_supabase_anon_key", key);
     supabaseInstance = null; // reset client to re-initialize next time
     return true;
   }
@@ -51,8 +52,8 @@ export function saveSupabaseConfig(url: string, key: string) {
 }
 
 export function clearSupabaseConfig() {
-  localStorage.removeItem("np_supabase_url");
-  localStorage.removeItem("np_supabase_anon_key");
+  safeLocalStorage.removeItem("np_supabase_url");
+  safeLocalStorage.removeItem("np_supabase_anon_key");
   supabaseInstance = null;
 }
 
