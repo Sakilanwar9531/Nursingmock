@@ -31,8 +31,7 @@ import {
   Moon,
   Bell,
   Megaphone,
-  Newspaper,
-  Stethoscope
+  Newspaper
 } from "lucide-react";
 import { SUBJECTS, PYQ_DATA } from "./data";
 import { STATIC_NURSING_UPDATES } from "./updatesData";
@@ -58,7 +57,6 @@ import {
   clearClientGeminiKey, 
   generateContentDirect 
 } from "./services/geminiClient";
-import { safeLocalStorage } from "./services/safeStorage";
 
 // Dynamically enriches standard explanations with high-yield clinical pointers
 const getDetailedExplain = (q: Question): string => {
@@ -280,7 +278,7 @@ export default function App() {
   };
 
   const [subjects, setSubjects] = useState<Subject[]>(() => {
-    const saved = safeLocalStorage.getItem("np_subjects_custom_v1");
+    const saved = localStorage.getItem("np_subjects_custom_v1");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -305,7 +303,7 @@ export default function App() {
 
   const saveSubjects = (newSubjects: Subject[]) => {
     setSubjects(newSubjects);
-    safeLocalStorage.setItem("np_subjects_custom_v1", JSON.stringify(newSubjects));
+    localStorage.setItem("np_subjects_custom_v1", JSON.stringify(newSubjects));
   };
 
   // --- AI OPEN DISCUSS / CHAT SYSTEM STATE ---
@@ -392,7 +390,7 @@ User message: ${msgText}`;
 
   // Auth State
   const [currentUser, setCurrentUser] = useState<UserType | null>(() => {
-    const saved = safeLocalStorage.getItem("np_user");
+    const saved = localStorage.getItem("np_user");
     return saved ? JSON.parse(saved) : null;
   });
   const [authTab, setAuthTab] = useState<"login" | "register">("login");
@@ -411,7 +409,7 @@ User message: ${msgText}`;
 
   // Theme Mode (Light / Dark) State
   const [theme, setTheme] = useState<"light" | "dark">(
-    () => (safeLocalStorage.getItem("theme") as "light" | "dark") || "dark"
+    () => (localStorage.getItem("theme") as "light" | "dark") || "dark"
   );
 
   useEffect(() => {
@@ -420,7 +418,7 @@ User message: ${msgText}`;
     } else {
       document.body.classList.remove("light");
     }
-    safeLocalStorage.setItem("theme", theme);
+    localStorage.setItem("theme", theme);
   }, [theme]);
 
   // Test Engine State
@@ -436,7 +434,6 @@ User message: ${msgText}`;
   const [correctCount, setCorrectCount] = useState<number>(0);
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [isTestFinished, setIsTestFinished] = useState<boolean>(false);
-  const [showFinishConfirm, setShowFinishConfirm] = useState<boolean>(false);
 
   // AI Tutor State
   const [aiTutorOpen, setAiTutorOpen] = useState<boolean>(false);
@@ -455,8 +452,8 @@ User message: ${msgText}`;
   const [selectedUpdate, setSelectedUpdate] = useState<NursingUpdate | null>(null);
 
   // Client-side Settings States
-  const [supUrlInput, setSupUrlInput] = useState<string>(() => safeLocalStorage.getItem("np_supabase_url") || "");
-  const [supKeyInput, setSupKeyInput] = useState<string>(() => safeLocalStorage.getItem("np_supabase_anon_key") || "");
+  const [supUrlInput, setSupUrlInput] = useState<string>(() => localStorage.getItem("np_supabase_url") || "");
+  const [supKeyInput, setSupKeyInput] = useState<string>(() => localStorage.getItem("np_supabase_anon_key") || "");
   const [gemKeyInput, setGemKeyInput] = useState<string>(() => getClientGeminiKey() || "");
 
   const fetchUpdates = async () => {
@@ -464,15 +461,17 @@ User message: ${msgText}`;
     setUpdatesError("");
     try {
       const res = await fetch("/api/updates");
-      const contentType = res?.headers?.get("content-type") || "";
-      if (res && res.ok && !contentType.includes("text/html")) {
-        const data = await res.json();
-        setUpdates(data);
-      } else {
-        setUpdates(STATIC_NURSING_UPDATES);
+      if (!res.ok) throw new Error("Could not connect to update servers.");
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("text/html")) {
+        throw new Error("No backend API configured. Using offline mock/cache.");
       }
+      const data = await res.json();
+      setUpdates(data);
     } catch (err: any) {
+      console.error(err);
       setUpdates(STATIC_NURSING_UPDATES);
+      setUpdatesError("Could not retrieve real-time data from server. Displaying high-yield cache instead.");
     } finally {
       setLoadingUpdates(false);
     }
@@ -513,288 +512,15 @@ User message: ${msgText}`;
 
   // Sync users in LocalStorage 
   useEffect(() => {
-    const existing = safeLocalStorage.getItem("np_users");
+    const existing = localStorage.getItem("np_users");
     if (!existing) {
       // Bootstrap with initial admin and a clean state
       const initialUsers = [
         { name: "Sakil Ahmed", email: "sakil.net.in@gmail.com", pass: "password", isAdmin: true, joined: Date.now() - 1000 * 60 * 60 * 24 * 5 }
       ];
-      safeLocalStorage.setItem("np_users", JSON.stringify(initialUsers));
+      localStorage.setItem("np_users", JSON.stringify(initialUsers));
     }
   }, []);
-
-  // Mount URL routing detector: initializes page state from window.location.pathname or hash fallback
-  useEffect(() => {
-    try {
-      let path = window.location.pathname;
-      if (window.location.hash) {
-        const hashPart = window.location.hash.replace(/^#\/?/, "/");
-        if (hashPart.startsWith("/")) {
-          path = hashPart;
-        }
-      }
-      const parts = path.split("/").filter(Boolean);
-      
-      if (parts.length === 0) {
-        setActivePage("landing");
-      } else if (parts[0] === "updates") {
-        setActivePage("updates");
-        if (parts[1]) {
-          const matchingUpdate = STATIC_NURSING_UPDATES.find(u => u.id === parts[1]);
-          if (matchingUpdate) {
-            setSelectedUpdate(matchingUpdate);
-          }
-        }
-      } else if (parts[0] === "test" && parts[1] && parts[2]) {
-        const subId = parts[1];
-        const tId = parts[2];
-        const subject = subjects.find(s => s.id === subId);
-        if (subject) {
-          const test = subject.tests.find(t => t.id === tId);
-          if (test) {
-            setActivePage("test");
-            setActiveSubjectId(subId);
-            setActiveTest(test);
-            const params = new URLSearchParams(window.location.search);
-            const mode = params.get("mode") === "practice" ? "practice" : "exam";
-            setExamMode(mode === "exam");
-            setTimeLeft(test.mins * 60);
-            setSelectedOptions(new Array(test.data.length).fill(null));
-            setQuestionAnswers(new Array(test.data.length).fill(null));
-          }
-        }
-      } else {
-        const pageMap: Record<string, string> = {
-          hub: "hub",
-          "mock-tests": "mock_tests",
-          chat: "chat",
-          pyq: "pyq",
-          updates: "updates",
-          analytics: "analytics",
-          auth: "auth",
-          admin: "admin",
-          settings: "settings"
-        };
-        if (pageMap[parts[0]]) {
-          setActivePage(pageMap[parts[0]]);
-        }
-      }
-    } catch (e) {
-      console.error("Routing detection error:", e);
-    }
-  }, []);
-
-  // Synchronizes URL search path when active selected blog post changes
-  useEffect(() => {
-    try {
-      if (activePage === "updates") {
-        if (selectedUpdate) {
-          const path = `/updates/${selectedUpdate.id}`;
-          window.history.replaceState({ page: "updates", subjectId: null, testId: null }, "", path);
-          window.location.hash = `#${path}`;
-        } else {
-          window.history.replaceState({ page: "updates", subjectId: null, testId: null }, "", `/updates`);
-          window.location.hash = "#/updates";
-        }
-      }
-    } catch (e) {
-      console.error("Failed to replaceState in updates effect", e);
-      try {
-        if (activePage === "updates") {
-          if (selectedUpdate) {
-            window.location.hash = `#/updates/${selectedUpdate.id}`;
-          } else {
-            window.location.hash = "#/updates";
-          }
-        }
-      } catch (hashErr) {
-        console.error("Failed hash fallback in updates effect", hashErr);
-      }
-    }
-  }, [selectedUpdate, activePage]);
-
-  // Master SEO and head metadata controller (updates page titles, meta tags, OpenGraph, Canonical, and JSON-LD schemas)
-  useEffect(() => {
-    let seoTitle = "NCBT | Nursing Computer Based Tests | Nursing Mock Tests & Government Nursing Exam Preparation";
-    let seoDesc = "India's leading Nursing CBT exam preparation platform. Access high-quality practice questions, previous year papers, mock tests and study materials for AIIMS NORCET, ESIC, RRB, and WBHRB Staff Nurse examinations.";
-    let canonicalUrl = "https://ncbt.in" + window.location.pathname;
-    let robots = "index, follow";
-    let ogType = "website";
-    let ogImage = "https://images.unsplash.com/photo-1576091160550-2173dba999ef?q=80&w=1200";
-
-    if (activePage === "hub") {
-      seoTitle = "CBT Test Series Hub | NCBT – Nursing Computer Based Tests";
-      seoDesc = "Access our comprehensive suite of nursing subjects and exams. High-yield practice series for Anatomy, Physiology, Medical-Surgical, ObGyn, and Pharmacology.";
-    } else if (activePage === "mock_tests") {
-      seoTitle = "Free Full-Length Mock Tests | NCBT – Nursing Computer Based Tests";
-      seoDesc = "Practice full-length 50-question mock tests calibrated for AIIMS NORCET and other central exams. Real CBT exam environment, time constraints and negative marking.";
-    } else if (activePage === "chat") {
-      seoTitle = "AI Nursing Tutor & Chat | NCBT – Nursing Computer Based Tests";
-      seoDesc = "Discuss clinical scenarios, diagnostic priorities, and medical-surgical concepts with our advanced AI Nursing Professor tailored for NORCET preparation.";
-    } else if (activePage === "pyq") {
-      seoTitle = "Nursing Previous Year Questions (PYQ) | NCBT";
-      seoDesc = "Free access to authentic, solved previous year question papers from AIIMS NORCET, RRB, ESIC, DSSSB, and West Bengal Health recruitment exams.";
-    } else if (activePage === "updates") {
-      if (selectedUpdate) {
-        seoTitle = `${selectedUpdate.title} | NCBT Nursing Blog`;
-        seoDesc = selectedUpdate.summary;
-        ogType = "article";
-        ogImage = selectedUpdate.image;
-      } else {
-        seoTitle = "Daily Pulse - Nursing News & Clinical Study Notes | NCBT";
-        seoDesc = "Stay updated with central and state nursing officer recruitment alerts, updated syllabus guidelines, and high-yield academic study notes.";
-      }
-    } else if (activePage === "test" && activeTest) {
-      seoTitle = `${activeTest.title} | Active CBT Engine | NCBT`;
-      seoDesc = `Attempting ${activeTest.title} on NCBT. Real-time evaluation, diagnostic rationales, and deep analysis.`;
-      robots = "noindex, follow";
-    } else if (activePage === "analytics") {
-      seoTitle = "Performance Dashboard & Analytics | NCBT";
-      seoDesc = "Track your nursing CBT practice scores, active streaks, strengths, and subject-wise accuracy metrics dynamically.";
-      robots = "noindex, nofollow";
-    } else if (activePage === "settings") {
-      seoTitle = "Platform Preferences & Settings | NCBT";
-      seoDesc = "Configure your Supabase cloud sync credentials, local storage configurations, and custom Gemini API keys.";
-      robots = "noindex, nofollow";
-    } else if (activePage === "auth") {
-      seoTitle = "Secure Access & Authorization | NCBT";
-      seoDesc = "Log in or register your NCBT nursing account to enable automatic cloud backup and sync progress across devices.";
-      robots = "noindex, follow";
-    }
-
-    document.title = seoTitle;
-
-    const setMetaTag = (name: string, content: string, isProperty = false) => {
-      const attr = isProperty ? "property" : "name";
-      let element = document.querySelector(`meta[${attr}="${name}"]`);
-      if (!element) {
-        element = document.createElement("meta");
-        element.setAttribute(attr, name);
-        document.head.appendChild(element);
-      }
-      element.setAttribute("content", content);
-    };
-
-    setMetaTag("description", seoDesc);
-    setMetaTag("robots", robots);
-    setMetaTag("og:title", seoTitle, true);
-    setMetaTag("og:description", seoDesc, true);
-    setMetaTag("og:type", ogType, true);
-    setMetaTag("og:url", canonicalUrl, true);
-    setMetaTag("og:image", ogImage, true);
-    setMetaTag("og:site_name", "NCBT – Nursing Computer Based Tests", true);
-    setMetaTag("twitter:card", "summary_large_image");
-    setMetaTag("twitter:title", seoTitle);
-    setMetaTag("twitter:description", seoDesc);
-    setMetaTag("twitter:image", ogImage);
-    setMetaTag("theme-color", theme === "light" ? "#f8fafc" : "#080c12");
-
-    let canonicalLink = document.querySelector('link[rel="canonical"]');
-    if (!canonicalLink) {
-      canonicalLink = document.createElement("link");
-      canonicalLink.setAttribute("rel", "canonical");
-      document.head.appendChild(canonicalLink);
-    }
-    canonicalLink.setAttribute("href", canonicalUrl);
-
-    const existingJsonLd = document.getElementById("ncbt-jsonld");
-    if (existingJsonLd) {
-      existingJsonLd.remove();
-    }
-
-    const jsonLdData: any[] = [
-      {
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        "@id": "https://ncbt.in/#organization",
-        "name": "NCBT",
-        "url": "https://ncbt.in",
-        "logo": "https://ncbt.in/assets/logo.png",
-        "description": "India's Nursing CBT Exam Preparation Platform providing high-quality mock tests, previous year papers, and academic study notes.",
-        "sameAs": []
-      },
-      {
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        "@id": "https://ncbt.in/#website",
-        "url": "https://ncbt.in",
-        "name": "NCBT – Nursing Computer Based Tests",
-        "alternateName": "Nursing CBT Preparation",
-        "publisher": { "@id": "https://ncbt.in/#organization" },
-        "potentialAction": {
-          "@type": "SearchAction",
-          "target": "https://ncbt.in/hub?search={search_term_string}",
-          "query-input": "required name=search_term_string"
-        }
-      },
-      {
-        "@context": "https://schema.org",
-        "@type": "WebPage",
-        "@id": `${canonicalUrl}#webpage`,
-        "url": canonicalUrl,
-        "name": seoTitle,
-        "description": seoDesc,
-        "isPartOf": { "@id": "https://ncbt.in/#website" }
-      }
-    ];
-
-    const breadcrumbItems = [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://ncbt.in" }
-    ];
-    if (activePage !== "landing") {
-      let pageLabel = activePage.toUpperCase();
-      if (activePage === "mock_tests") pageLabel = "Mock Tests";
-      else if (activePage === "pyq") pageLabel = "Previous Year Questions";
-      else if (activePage === "updates") pageLabel = "Daily Pulse News";
-      breadcrumbItems.push({
-        "@type": "ListItem",
-        "position": 2,
-        "name": pageLabel,
-        "item": `https://ncbt.in/${activePage}`
-      });
-
-      if (activePage === "updates" && selectedUpdate) {
-        breadcrumbItems.push({
-          "@type": "ListItem",
-          "position": 3,
-          "name": selectedUpdate.title,
-          "item": `https://ncbt.in/updates/${selectedUpdate.id}`
-        });
-      }
-    }
-
-    jsonLdData.push({
-      "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      "itemListElement": breadcrumbItems
-    });
-
-    if (activePage === "updates" && selectedUpdate) {
-      jsonLdData.push({
-        "@context": "https://schema.org",
-        "@type": "Article",
-        "@id": `https://ncbt.in/updates/${selectedUpdate.id}#article`,
-        "isPartOf": { "@id": `https://ncbt.in/updates/${selectedUpdate.id}#webpage` },
-        "headline": selectedUpdate.title,
-        "description": selectedUpdate.summary,
-        "image": selectedUpdate.image,
-        "datePublished": "2026-06-19T00:00:00+05:30",
-        "dateModified": "2026-06-19T00:00:00+05:30",
-        "author": {
-          "@type": "Organization",
-          "name": "NCBT Editorial Team"
-        },
-        "publisher": { "@id": "https://ncbt.in/#organization" }
-      });
-    }
-
-    const script = document.createElement("script");
-    script.id = "ncbt-jsonld";
-    script.type = "application/ld+json";
-    script.innerHTML = JSON.stringify(jsonLdData);
-    document.head.appendChild(script);
-
-  }, [activePage, selectedUpdate, activeTest, theme]);
 
   // Dismiss navigation dropdown on clicking outside anywhere in the web app
   useEffect(() => {
@@ -810,118 +536,45 @@ User message: ${msgText}`;
     };
   }, [dropdownOpen]);
 
-  // Browser Back Button & Phone Swipe Gesture Support (PopState and HashChange)
+  // Browser Back Button & Phone Swipe Gesture Support
   useEffect(() => {
-    try {
-      if (!window.history.state || !window.history.state.page) {
-        window.history.replaceState({ page: activePage, subjectId: null, testId: null }, "", "");
-      }
-    } catch (e) {
-      console.error("Failed initial history.state check", e);
+    if (!window.history.state || !window.history.state.page) {
+      window.history.replaceState({ page: activePage, subjectId: null, testId: null }, "", "");
     }
 
     const handlePopState = (e: PopStateEvent) => {
-      try {
-        if (e.state && e.state.page) {
-          setActivePage(e.state.page);
-          if (e.state.page === "test" && e.state.testId) {
-            const subId = e.state.subjectId;
-            const tId = e.state.testId;
-            const subject = subjects.find(s => s.id === subId);
-            if (subject) {
-              const test = subject.tests.find(t => t.id === tId);
-              if (test) {
-                setActiveSubjectId(subId);
-                setActiveTest(test);
-              }
-            }
-          } else if (e.state.page !== "test") {
-            if (timerIntervalRef.current) {
-              clearInterval(timerIntervalRef.current);
+      if (e.state && e.state.page) {
+        setActivePage(e.state.page);
+        if (e.state.page === "test" && e.state.testId) {
+          const subId = e.state.subjectId;
+          const tId = e.state.testId;
+          const subject = subjects.find(s => s.id === subId);
+          if (subject) {
+            const test = subject.tests.find(t => t.id === tId);
+            if (test) {
+              setActiveSubjectId(subId);
+              setActiveTest(test);
             }
           }
+        } else if (e.state.page !== "test") {
+          if (timerIntervalRef.current) {
+            clearInterval(timerIntervalRef.current);
+          }
+        }
+      } else {
+        if (currentUser) {
+          setActivePage("hub");
         } else {
-          // Fallback parsing if popstate payload is empty
-          let path = window.location.pathname;
-          if (window.location.hash) {
-            const hashPart = window.location.hash.replace(/^#\/?/, "/");
-            if (hashPart.startsWith("/")) {
-              path = hashPart;
-            }
-          }
-          const parts = path.split("/").filter(Boolean);
-          if (parts.length > 0) {
-            const pageMap: Record<string, string> = {
-              hub: "hub",
-              "mock-tests": "mock_tests",
-              chat: "chat",
-              pyq: "pyq",
-              updates: "updates",
-              analytics: "analytics",
-              auth: "auth",
-              admin: "admin",
-              settings: "settings"
-            };
-            if (pageMap[parts[0]]) {
-              setActivePage(pageMap[parts[0]]);
-              return;
-            }
-          }
-          if (currentUser) {
-            setActivePage("hub");
-          } else {
-            setActivePage("landing");
-          }
+          setActivePage("landing");
         }
-      } catch (err) {
-        console.error("Error in handlePopState", err);
-      }
-    };
-
-    const handleHashChange = () => {
-      try {
-        let path = window.location.pathname;
-        if (window.location.hash) {
-          const hashPart = window.location.hash.replace(/^#\/?/, "/");
-          if (hashPart.startsWith("/")) {
-            path = hashPart;
-          }
-        }
-        const parts = path.split("/").filter(Boolean);
-        if (parts.length > 0) {
-          const pageMap: Record<string, string> = {
-            hub: "hub",
-            "mock-tests": "mock_tests",
-            chat: "chat",
-            pyq: "pyq",
-            updates: "updates",
-            analytics: "analytics",
-            auth: "auth",
-            admin: "admin",
-            settings: "settings"
-          };
-          if (pageMap[parts[0]]) {
-            setActivePage(pageMap[parts[0]]);
-            if (parts[0] === "updates" && parts[1]) {
-              const matchingUpdate = STATIC_NURSING_UPDATES.find(u => u.id === parts[1]);
-              if (matchingUpdate) {
-                setSelectedUpdate(matchingUpdate);
-              }
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Error in handleHashChange", err);
       }
     };
 
     window.addEventListener("popstate", handlePopState);
-    window.addEventListener("hashchange", handleHashChange);
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      window.removeEventListener("hashchange", handleHashChange);
     };
-  }, [subjects, currentUser]);
+  }, [subjects]);
 
   // Timer Effect
   useEffect(() => {
@@ -951,7 +604,7 @@ User message: ${msgText}`;
       const cloudAttempts = await getAttemptsFromCloud(userEmail);
       if (cloudAttempts && cloudAttempts.length > 0) {
         const localAttemptsKey = `np_attempts_${userEmail}`;
-        const localAttempts: Attempt[] = JSON.parse(safeLocalStorage.getItem(localAttemptsKey) || "[]");
+        const localAttempts: Attempt[] = JSON.parse(localStorage.getItem(localAttemptsKey) || "[]");
         
         const attemptMap = new Map<number, Attempt>();
         localAttempts.forEach(a => attemptMap.set(a.timestamp, a));
@@ -961,17 +614,17 @@ User message: ${msgText}`;
           .sort((a, b) => a.timestamp - b.timestamp)
           .slice(-50);
           
-        safeLocalStorage.setItem(localAttemptsKey, JSON.stringify(mergedAttempts));
+        localStorage.setItem(localAttemptsKey, JSON.stringify(mergedAttempts));
       }
 
       // 2. Sync streaks
       const cloudStreak = await getStreakFromCloud(userEmail);
       if (cloudStreak) {
         const localStreakKey = `np_streak_${userEmail}`;
-        const localStreak: StreakData = JSON.parse(safeLocalStorage.getItem(localStreakKey) || '{"streak":0,"last":""}');
+        const localStreak: StreakData = JSON.parse(localStorage.getItem(localStreakKey) || '{"streak":0,"last":""}');
         
         if (cloudStreak.streak > localStreak.streak || cloudStreak.last !== localStreak.last) {
-          safeLocalStorage.setItem(localStreakKey, JSON.stringify(cloudStreak));
+          localStorage.setItem(localStreakKey, JSON.stringify(cloudStreak));
         }
       }
     } catch (e) {
@@ -1025,7 +678,7 @@ User message: ${msgText}`;
     
     if (isSupabaseConnected()) {
       // Direct Supabase OTP Simulation with actual registered profiles
-      const simulatedEmail = `${phoneClean}@ncbt.in`;
+      const simulatedEmail = `${phoneClean}@nursingmock.com`;
       const simulatedPassword = `supa-otp-pass-${phoneClean}`;
       
       setAuthError("");
@@ -1043,7 +696,7 @@ User message: ${msgText}`;
       
       if (res.user) {
         setCurrentUser(res.user);
-        safeLocalStorage.setItem("np_user", JSON.stringify(res.user));
+        localStorage.setItem("np_user", JSON.stringify(res.user));
         triggerToast(`Welcome back, ${res.user.name}! Verified securely via Supabase 🔓`, "ok");
         
         setAuthPhone("");
@@ -1055,29 +708,29 @@ User message: ${msgText}`;
     }
 
     const isAdminUser = phoneClean === "9531659828";
-    const users: UserType[] = JSON.parse(safeLocalStorage.getItem("np_users") || "[]");
+    const users: UserType[] = JSON.parse(localStorage.getItem("np_users") || "[]");
 
-    let found = users.find(u => u.phone === phoneClean || (u.email && u.email.toLowerCase() === `${phoneClean}@ncbt.in`));
+    let found = users.find(u => u.phone === phoneClean || (u.email && u.email.toLowerCase() === `${phoneClean}@nursingmock.com`));
 
     if (!found) {
       found = {
         name: isAdminUser ? "Sakil Ahmed (Admin)" : `Nurse Student ${phoneClean.slice(-4)}`,
-        email: isAdminUser ? "sakil.net.in@gmail.com" : `${phoneClean}@ncbt.in`,
+        email: isAdminUser ? "sakil.net.in@gmail.com" : `${phoneClean}@nursingmock.com`,
         phone: phoneClean,
         isAdmin: isAdminUser,
         joined: Date.now()
       };
       users.push(found);
-      safeLocalStorage.setItem("np_users", JSON.stringify(users));
+      localStorage.setItem("np_users", JSON.stringify(users));
     } else {
       if (isAdminUser && !found.isAdmin) {
         found.isAdmin = true;
-        safeLocalStorage.setItem("np_users", JSON.stringify(users));
+        localStorage.setItem("np_users", JSON.stringify(users));
       }
     }
 
     setCurrentUser(found);
-    safeLocalStorage.setItem("np_user", JSON.stringify(found));
+    localStorage.setItem("np_user", JSON.stringify(found));
     setAuthError("");
     triggerToast(`Welcome back, ${found.name}! Verified successfully 🔓`, "ok");
 
@@ -1103,21 +756,21 @@ User message: ${msgText}`;
       }
       if (res.user) {
         setCurrentUser(res.user);
-        safeLocalStorage.setItem("np_user", JSON.stringify(res.user));
+        localStorage.setItem("np_user", JSON.stringify(res.user));
         triggerToast(`Welcome back, ${res.user.name}! Connected via Supabase 👋`, "ok");
         showPage("hub");
         return;
       }
     }
 
-    const users: UserType[] = JSON.parse(safeLocalStorage.getItem("np_users") || "[]");
+    const users: UserType[] = JSON.parse(localStorage.getItem("np_users") || "[]");
     const found = users.find(u => u.email.toLowerCase() === authEmail.toLowerCase().trim() && (u as any).pass === authPassword);
     if (!found) {
       setAuthError("Invalid email or password.");
       return;
     }
     setCurrentUser(found);
-    safeLocalStorage.setItem("np_user", JSON.stringify(found));
+    localStorage.setItem("np_user", JSON.stringify(found));
     setAuthError("");
     triggerToast(`Welcome back, ${found.name}! 👋`, "ok");
     showPage("hub");
@@ -1143,14 +796,14 @@ User message: ${msgText}`;
       }
       if (res.user) {
         setCurrentUser(res.user);
-        safeLocalStorage.setItem("np_user", JSON.stringify(res.user));
+        localStorage.setItem("np_user", JSON.stringify(res.user));
         triggerToast(`Account created on Supabase, welcome ${res.user.name}! 🎉`, "ok");
         showPage("hub");
         return;
       }
     }
 
-    const users: UserType[] = JSON.parse(safeLocalStorage.getItem("np_users") || "[]");
+    const users: UserType[] = JSON.parse(localStorage.getItem("np_users") || "[]");
     if (users.some(u => u.email.toLowerCase() === authEmail.toLowerCase().trim())) {
       setAuthError("Email is already registered.");
       return;
@@ -1164,9 +817,9 @@ User message: ${msgText}`;
     } as any;
     
     users.push(newUser);
-    safeLocalStorage.setItem("np_users", JSON.stringify(users));
+    localStorage.setItem("np_users", JSON.stringify(users));
     setCurrentUser(newUser);
-    safeLocalStorage.setItem("np_user", JSON.stringify(newUser));
+    localStorage.setItem("np_user", JSON.stringify(newUser));
     setAuthError("");
     triggerToast(`Account created successfully, ${newUser.name}! 🎉`, "ok");
     showPage("hub");
@@ -1178,7 +831,7 @@ User message: ${msgText}`;
         await supabaseSignOut();
       }
       setCurrentUser(null);
-      safeLocalStorage.removeItem("np_user");
+      localStorage.removeItem("np_user");
       triggerToast("Logged out successfully.", "ok");
       showPage("landing");
     }
@@ -1187,12 +840,12 @@ User message: ${msgText}`;
   const guestLogin = () => {
     const guestUser: UserType = {
       name: "Guest Student",
-      email: "guest@ncbt.in",
+      email: "guest@nursingmock.com",
       isAdmin: false,
       guest: true
     };
     setCurrentUser(guestUser);
-    safeLocalStorage.setItem("np_user", JSON.stringify(guestUser));
+    localStorage.setItem("np_user", JSON.stringify(guestUser));
     triggerToast("Continuing as Guest 👤", "ok");
     showPage("hub");
   };
@@ -1209,12 +862,12 @@ User message: ${msgText}`;
       } as any;
       
       setCurrentUser(googleUserObj);
-      safeLocalStorage.setItem("np_user", JSON.stringify(googleUserObj));
+      localStorage.setItem("np_user", JSON.stringify(googleUserObj));
       
-      const users: UserType[] = JSON.parse(safeLocalStorage.getItem("np_users") || "[]");
+      const users: UserType[] = JSON.parse(localStorage.getItem("np_users") || "[]");
       if (!users.some(u => u.email.toLowerCase() === "sakil.net.in@gmail.com")) {
         users.push(googleUserObj);
-        safeLocalStorage.setItem("np_users", JSON.stringify(users));
+        localStorage.setItem("np_users", JSON.stringify(users));
       }
 
       triggerToast("Authenticated successfully with Google! 🛡️", "ok");
@@ -1388,8 +1041,8 @@ User message: ${msgText}`;
   };
 
   const toggleUserAdmin = (email: string) => {
-    const users: UserType[] = JSON.parse(safeLocalStorage.getItem("np_users") || "[]");
-    const currentUserInStorage = JSON.parse(safeLocalStorage.getItem("np_user") || "null");
+    const users: UserType[] = JSON.parse(localStorage.getItem("np_users") || "[]");
+    const currentUserInStorage = JSON.parse(localStorage.getItem("np_user") || "null");
 
     const updated = users.map(u => {
       if (u.email.toLowerCase() === email.toLowerCase()) {
@@ -1397,14 +1050,14 @@ User message: ${msgText}`;
         // If editing active user, sync their runtime state
         if (currentUser && currentUser.email.toLowerCase() === email.toLowerCase()) {
           setCurrentUser({ ...currentUser, isAdmin: nextAdminVal });
-          safeLocalStorage.setItem("np_user", JSON.stringify({ ...currentUser, isAdmin: nextAdminVal }));
+          localStorage.setItem("np_user", JSON.stringify({ ...currentUser, isAdmin: nextAdminVal }));
         }
         return { ...u, isAdmin: nextAdminVal };
       }
       return u;
     });
 
-    safeLocalStorage.setItem("np_users", JSON.stringify(updated));
+    localStorage.setItem("np_users", JSON.stringify(updated));
     triggerToast("User authorization settings successfully parsed!", "ok");
   };
 
@@ -1424,44 +1077,9 @@ User message: ${msgText}`;
           subjectId: customState ? customState.subjectId : activeSubjectId,
           testId: customState ? customState.testId : (activeTest?.id || null)
         };
-        let path = "/";
-        if (pageId !== "landing") {
-          if (pageId === "mock_tests") {
-            path = "/mock-tests";
-          } else if (pageId === "test" && (customState?.subjectId || activeSubjectId) && (customState?.testId || activeTest?.id)) {
-            path = `/test/${customState?.subjectId || activeSubjectId}/${customState?.testId || activeTest?.id}`;
-          } else {
-            path = `/${pageId}`;
-          }
-        }
-        
-        // Push state for dynamic SPA servers
-        window.history.pushState(stateToPush, "", path);
-        
-        // Synchronize hash state for static hostings (like Hostinger)
-        if (path !== "/") {
-          window.location.hash = `#${path}`;
-        } else {
-          window.location.hash = "";
-        }
+        window.history.pushState(stateToPush, "", "");
       } catch (e) {
         console.error("Failed to pushState", e);
-        // Fallback to update hash only if pushState is blocked or fails
-        try {
-          let hashPath = "";
-          if (pageId !== "landing") {
-            if (pageId === "mock_tests") {
-              hashPath = "mock-tests";
-            } else if (pageId === "test" && (customState?.subjectId || activeSubjectId) && (customState?.testId || activeTest?.id)) {
-              hashPath = `test/${customState?.subjectId || activeSubjectId}/${customState?.testId || activeTest?.id}`;
-            } else {
-              hashPath = pageId;
-            }
-          }
-          window.location.hash = hashPath ? `/${hashPath}` : "";
-        } catch (hashErr) {
-          console.error("Failed hash fallback", hashErr);
-        }
       }
     }
   };
@@ -1488,16 +1106,9 @@ User message: ${msgText}`;
     setCorrectCount(0);
     setTimeLeft(test.mins * 60);
     setIsTestFinished(false);
-    setShowFinishConfirm(false);
     setAiTutorOpen(false);
     showPage("test", true, { subjectId, testId });
-    triggerToast("NCBT.in Assessment Started. Good luck! 🩺", "ok");
-
-    try {
-      if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      }
-    } catch (e) {}
+    triggerToast(`Good luck on your mock! 📖`, "ok");
   };
 
   const triggerTestInit = (subjectId: string, testId: string) => {
@@ -1559,27 +1170,6 @@ User message: ${msgText}`;
     }
   };
 
-  const handleClearResponse = () => {
-    if (!activeTest) return;
-    const currentQuestion = activeTest.data[currentQuestionIndex];
-    const previousSelection = selectedOptions[currentQuestionIndex];
-    if (previousSelection === null) return;
-
-    const updatedSelected = [...selectedOptions];
-    updatedSelected[currentQuestionIndex] = null;
-    setSelectedOptions(updatedSelected);
-
-    const updatedAnswers = [...questionAnswers];
-    updatedAnswers[currentQuestionIndex] = null;
-    setQuestionAnswers(updatedAnswers);
-
-    const wasCorrect = previousSelection === currentQuestion.ans;
-    if (wasCorrect) {
-      setCorrectCount(prev => Math.max(0, prev - 1));
-    }
-    triggerToast("Response cleared! 🧹", "ok");
-  };
-
   const handleNextQuestion = () => {
     if (!activeTest) return;
     if (currentQuestionIndex === activeTest.data.length - 1) {
@@ -1601,7 +1191,7 @@ User message: ${msgText}`;
     
     // Save to statistics analytics in LocalStorage
     const key = `np_attempts_${currentUser?.email || "guest"}`;
-    const attempts: Attempt[] = JSON.parse(safeLocalStorage.getItem(key) || "[]");
+    const attempts: Attempt[] = JSON.parse(localStorage.getItem(key) || "[]");
     
     const total = activeTest?.data.length || 0;
     const skipped = selectedOptions.filter(o => o === null).length;
@@ -1623,12 +1213,12 @@ User message: ${msgText}`;
     if (attempts.length > 50) {
       attempts.splice(0, attempts.length - 50); // limit historical logs
     }
-    safeLocalStorage.setItem(key, JSON.stringify(attempts));
+    localStorage.setItem(key, JSON.stringify(attempts));
 
     // Handle streaks
     const today = new Date().toDateString();
     const streakKey = `np_streak_${currentUser?.email || "guest"}`;
-    const sd: StreakData = JSON.parse(safeLocalStorage.getItem(streakKey) || '{"streak":0,"last":""}');
+    const sd: StreakData = JSON.parse(localStorage.getItem(streakKey) || '{"streak":0,"last":""}');
     const yesterday = new Date(Date.now() - 86400000).toDateString();
     
     if (sd.last === today) {
@@ -1640,7 +1230,7 @@ User message: ${msgText}`;
       sd.streak = 1;
       sd.last = today;
     }
-    safeLocalStorage.setItem(streakKey, JSON.stringify(sd));
+    localStorage.setItem(streakKey, JSON.stringify(sd));
 
     // Cloud backup to Supabase
     if (isSupabaseConnected() && currentUser && !currentUser.guest) {
@@ -1648,13 +1238,7 @@ User message: ${msgText}`;
       saveStreakToCloud(currentUser.email, sd);
     }
 
-    triggerToast("NCBT.in Assessment Completed. Performance metrics updated. 📊", "ok");
-
-    try {
-      if (document.fullscreenElement && document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
-      }
-    } catch (e) {}
+    triggerToast(`Test completed! Dynamic analytics saved 🎉`, "ok");
   };
 
   // Set modes
@@ -1736,7 +1320,7 @@ Please format your response using standard markdown structure with custom emoji 
       "Keep practicing! 💪";
 
     const text = [
-      "🩺 *NCBT.in CBT ASSESSMENT RESULTS* 🩺",
+      "🩺 *NURSING MOCK TEST RESULTS* 🩺",
       "------------------------------------------",
       `📋 *Topic:* ${title}`,
       `🎯 *Total MCQs:* ${total}`,
@@ -1747,7 +1331,7 @@ Please format your response using standard markdown structure with custom emoji 
       "------------------------------------------",
       `📊 *Feedback:* ${feedback}`,
       "",
-      "👉 *Attend Free Test* ➡️ https://ncbt.in",
+      "👉 *Attend Free Test* ➡️ https://nursingmock.com",
       "⚡ _No Ads • Premium Rationales • AI Tutor_"
     ].filter(Boolean).join("\n");
 
@@ -1758,9 +1342,9 @@ Please format your response using standard markdown structure with custom emoji 
   // Analytics calculator helpers
   const getAnalytics = () => {
     const key = `np_attempts_${currentUser?.email || "guest"}`;
-    const attempts: Attempt[] = JSON.parse(safeLocalStorage.getItem(key) || "[]");
+    const attempts: Attempt[] = JSON.parse(localStorage.getItem(key) || "[]");
     const streakKey = `np_streak_${currentUser?.email || "guest"}`;
-    const sd: StreakData = JSON.parse(safeLocalStorage.getItem(streakKey) || '{"streak":0,"last":""}');
+    const sd: StreakData = JSON.parse(localStorage.getItem(streakKey) || '{"streak":0,"last":""}');
 
     if (attempts.length === 0) return null;
 
@@ -1797,7 +1381,7 @@ Please format your response using standard markdown structure with custom emoji 
 
   // Admin stats helper
   const getAdminStats = () => {
-    const users: UserType[] = JSON.parse(safeLocalStorage.getItem("np_users") || "[]");
+    const users: UserType[] = JSON.parse(localStorage.getItem("np_users") || "[]");
     const totalQs = subjects.flatMap(s => s.tests).filter(t => t.ready).reduce((acc, t) => acc + t.questions, 0);
     const liveTests = subjects.flatMap(s => s.tests).filter(t => t.ready).length;
     const totalTestsNum = subjects.flatMap(s => s.tests).length;
@@ -1824,79 +1408,60 @@ Please format your response using standard markdown structure with custom emoji 
     <div className="min-h-screen bg-[#080c12] text-[#e6edf3] font-sans relative">
       
       {/* Dynamic Toast popup */}
-      <div 
-        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-3 px-4 py-3.5 rounded-xl border shadow-2xl backdrop-blur-md transition-all duration-300 ${
-          toastVisible 
-            ? "opacity-100 translate-y-0 scale-100" 
-            : "opacity-0 translate-y-4 scale-95 pointer-events-none"
-        } ${
-          toastType === "ok" 
-            ? "bg-[#091e14]/95 border-emerald-500/30 text-emerald-300 shadow-emerald-500/10" 
-            : "bg-[#1f0f11]/95 border-rose-500/30 text-rose-300 shadow-rose-500/10"
-        }`}
-      >
-        {toastType === "ok" ? (
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-        ) : (
-          <XCircle className="w-5 h-5 text-rose-400 shrink-0" />
-        )}
-        <span className="text-xs sm:text-sm font-semibold tracking-wide">{toastMessage}</span>
+      <div className={`toast transition-all duration-300 ${toastVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12 pointer-events-none"} ${toastType === "ok" ? "ok" : "err"}`}>
+        {toastType === "ok" ? "✅ " : "❌ "}
+        {toastMessage}
       </div>
 
       {/* Main sticky navigation bar */}
-      {activePage !== "test" && (
-        <nav id="main-nav">
-          <div className="flex items-center gap-2.5 cursor-pointer select-none" onClick={() => showPage("landing")}>
-            <div className="relative flex items-center justify-center w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 via-yellow-400 to-amber-600 shadow-md shadow-amber-500/15 hover:scale-105 transition-all duration-300">
-              <Stethoscope className="w-4.5 h-4.5 text-slate-950 stroke-[2.5]" />
-              <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-            </div>
-            <div className="flex items-baseline gap-0.5">
-              <span className="text-xl font-black tracking-tight bg-gradient-to-r from-white via-slate-100 to-amber-400 bg-clip-text text-transparent">NCBT</span>
-              <span className="text-[10px] bg-amber-500 text-slate-950 px-1.5 py-0.5 rounded font-black tracking-widest leading-none" style={{ WebkitTextFillColor: '#080c12', color: '#080c12' }}>.in</span>
-            </div>
-          </div>
+      <nav id="main-nav">
+        <div className="nav-logo" onClick={() => showPage("landing")}>
+          Nursing Mock
+        </div>
 
-          <div className="nav-links" id="nav-links">
-            <button 
-              className={`nav-link flex items-center gap-1.5 ${activePage === "hub" ? "active" : ""}`} 
-              onClick={() => showPage("hub")}
-            >
-              <BookOpen className="w-4 h-4" /> Tests
-            </button>
-            <button 
-              className={`nav-link flex items-center gap-1.5 ${activePage === "mock_tests" ? "active" : ""}`} 
-              onClick={() => showPage("mock_tests")}
-            >
-              <Flame className="w-4 h-4 text-[#ff9e22]" /> Mock Tests
-            </button>
-            <button 
-              className={`nav-link flex items-center gap-1.5 ${activePage === "pyq" ? "active" : ""}`} 
-              onClick={() => showPage("pyq")}
-            >
-              <FileText className="w-4 h-4" /> PYQ
-            </button>
-            <button 
-              className={`nav-link flex items-center gap-1.5 ${activePage === "updates" ? "active" : ""}`} 
-              onClick={() => showPage("updates")}
-            >
-              <Newspaper className="w-4 h-4 text-emerald-400" /> Daily Pulse
-            </button>
-            <button 
-              className={`nav-link flex items-center gap-1.5 ${activePage === "analytics" ? "active" : ""}`} 
-              onClick={() => showPage("analytics")}
-            >
-              <Award className="w-4 h-4" /> Analytics
-            </button>
-            <button 
-              className={`nav-link flex items-center gap-1.5 ${activePage === "settings" ? "active" : ""}`} 
-              onClick={() => showPage("settings")}
-            >
-              <Settings className="w-4 h-4 text-amber-300" /> Settings
-            </button>
+        <div className="nav-links" id="nav-links">
+          <button 
+            className={`nav-link flex items-center gap-1.5 ${activePage === "hub" ? "active" : ""}`} 
+            onClick={() => showPage("hub")}
+          >
+            <BookOpen className="w-4 h-4" /> Tests
+          </button>
+          <button 
+            className={`nav-link flex items-center gap-1.5 ${activePage === "mock_tests" ? "active" : ""}`} 
+            onClick={() => showPage("mock_tests")}
+          >
+            <Flame className="w-4 h-4 text-[#ff9e22]" /> Mock Tests
+          </button>
+          <button 
+            className={`nav-link flex items-center gap-1.5 ${activePage === "chat" ? "active" : ""}`} 
+            onClick={() => showPage("chat")}
+          >
+            <MessageSquare className="w-4 h-4 text-[#58a6ff]" /> AI Chat
+          </button>
+          <button 
+            className={`nav-link flex items-center gap-1.5 ${activePage === "pyq" ? "active" : ""}`} 
+            onClick={() => showPage("pyq")}
+          >
+            <FileText className="w-4 h-4" /> PYQ
+          </button>
+          <button 
+            className={`nav-link flex items-center gap-1.5 ${activePage === "updates" ? "active" : ""}`} 
+            onClick={() => showPage("updates")}
+          >
+            <Newspaper className="w-4 h-4 text-emerald-400" /> Daily Pulse
+          </button>
+          <button 
+            className={`nav-link flex items-center gap-1.5 ${activePage === "analytics" ? "active" : ""}`} 
+            onClick={() => showPage("analytics")}
+          >
+            <Award className="w-4 h-4" /> Analytics
+          </button>
+          <button 
+            className={`nav-link flex items-center gap-1.5 ${activePage === "settings" ? "active" : ""}`} 
+            onClick={() => showPage("settings")}
+          >
+            <Settings className="w-4 h-4 text-amber-300" /> Settings
+          </button>
           {currentUser && currentUser.isAdmin && (
             <button 
               className={`nav-link flex items-center gap-1.5 ${activePage === "admin" ? "active" : ""}`} 
@@ -1929,6 +1494,12 @@ Please format your response using standard markdown structure with custom emoji 
                 onClick={() => { showPage("mock_tests"); setDropdownOpen(false); }}
               >
                 <Flame className="w-3.5 h-3.5 text-[#ff9e22]" /> Mock Tests
+              </button>
+              <button 
+                className="w-full text-left px-4 py-2 text-xs text-[#e6edf3] hover:bg-[#151f30] flex items-center gap-2 transition-colors font-medium"
+                onClick={() => { showPage("chat"); setDropdownOpen(false); }}
+              >
+                <MessageSquare className="w-3.5 h-3.5 text-[#58a6ff]" /> AI Chat
               </button>
               <button 
                 className="w-full text-left px-4 py-2 text-xs text-[#e6edf3] hover:bg-[#151f30] flex items-center gap-2 transition-colors font-medium"
@@ -1981,7 +1552,6 @@ Please format your response using standard markdown structure with custom emoji 
 
         {/* Navigate ▾ dropdown serves as primary active navigator on all devices */}
       </nav>
-      )}
 
       {/* Pages Container */}
       <main className="transition-all duration-300">
@@ -1994,18 +1564,18 @@ Please format your response using standard markdown structure with custom emoji 
               <div className="hero-glow2"></div>
               <div className="hero-eyebrow">
                 <span className="pulse-dot"></span>
-                NCBT.in | Nursing Computer Based Test
+                India's Cleanest Nursing Mock
               </div>
               <h1 id="landing-hero-heading">
                 Stop Cramming.<br />
-                Start <span className="grad font-black text-amber-400">Understanding.</span>
+                Start <span className="grad">Understanding.</span>
               </h1>
               <p className="hero-sub" id="landing-hero-body">
-                Subject-wise real exam MCQs — AIIMS NORCET, RRB, ESIC, DSSSB, RPSC — with high-yield clinical rationales, exam-precise conditions, and zero distracting ads.
+                Subject-wise MCQs from real exams — AIIMS, RRB, ESIC, DSSSB, RPSC — with instant rationale, AI tutor, and zero distractions.
               </p>
               <div className="hero-ctas">
                 <button className="btn-hero-primary" onClick={() => showPage("hub")} id="btn-start-practicing">
-                  Start CBT Practising Free →
+                  Start Practising Free →
                 </button>
               </div>
               <div className="hero-stats">
@@ -2015,20 +1585,20 @@ Please format your response using standard markdown structure with custom emoji 
                 </div>
                 <div className="hero-stat">
                   <div className="hero-stat-val">6</div>
-                  <div className="hero-stat-lbl">CBT Modules</div>
+                  <div className="hero-stat-lbl">Tests Ready</div>
                 </div>
                 <div className="hero-stat">
                   <div className="hero-stat-val">8+</div>
-                  <div className="hero-stat-lbl">Clinical Subjects</div>
+                  <div className="hero-stat-lbl">Subjects</div>
                 </div>
               </div>
             </div>
 
             {/* USP GRID */}
             <div className="usp-section" id="usp-section">
-              <div className="section-eyebrow">Why NCBT.in</div>
+              <div className="section-eyebrow">Why Nursing Mock</div>
               <h2 className="section-title">Built different.<br />On purpose.</h2>
-              <p className="section-sub">We don't throw ads or slow video lectures at you. We focus strictly on clean, computer-based assessment and detailed medical explanations.</p>
+              <p className="section-sub">Every other platform throws 10,000 ads and pop-ups at you. We just give you the best MCQs.</p>
               
               <div className="usp-grid">
                 <div className="usp-card">
@@ -2039,13 +1609,13 @@ Please format your response using standard markdown structure with custom emoji 
                 </div>
                 <div className="usp-card">
                   <div className="usp-icon">🧠</div>
-                  <div className="usp-title">Expert Clinical Rationales</div>
-                  <div className="usp-text">Detailed, professional, evidence-based textbook rationales explaining the core physiology, mnemonics, and common exam traps for every single question.</div>
-                  <span className="usp-tag">High Yield</span>
+                  <div className="usp-title">AI Tutor on every question</div>
+                  <div className="usp-text">Hit "Deep Dive" on any MCQ for a crisp, structured AI explanation. No 20-tab Googling. Understand it once, remember it forever.</div>
+                  <span className="usp-tag">AI-Powered</span>
                 </div>
                 <div className="usp-card">
-                  <div className="usp-icon">🔬</div><div className="usp-title">Practice & CBT Exam modes</div>
-                  <div className="usp-text">Practice mode: instant feedback with clinical explanations. Exam mode: full computer-based test conditions with negative marking.</div>
+                  <div className="usp-icon">🔬</div><div className="usp-title">Practice & Exam modes</div>
+                  <div className="usp-text">Practice mode: instant feedback after each answer. Exam mode: replicate real test conditions — reveal everything only at the end.</div>
                   <span className="usp-tag">Two Modes</span>
                 </div>
                 <div className="usp-card">
@@ -2074,7 +1644,7 @@ Please format your response using standard markdown structure with custom emoji 
               <div className="section-eyebrow">Coverage</div>
               <h2 className="section-title">Every major exam.<br />One platform.</h2>
               <div className="exam-bands mt-6">
-                <span className="exam-band">AIIMS NORCET</span>
+                <span className="exam-band">AIIMS Nursing Officer</span>
                 <span className="exam-band">RRB Staff Nurse</span>
                 <span className="exam-band">ESIC Staff Nurse</span>
                 <span className="exam-band">DSSSB Staff Nurse</span>
@@ -2092,16 +1662,16 @@ Please format your response using standard markdown structure with custom emoji 
             {/* CTA BANNER */}
             <div className="cta-banner">
               <h2>Ready to ace your exam?</h2>
-              <p>Join thousands of nursing students preparing smarter, not harder on India's premier computer-based test platform.</p>
+              <p>Join thousands of nursing students preparing smarter, not harder.</p>
               <div className="flex gap-3 justify-center flex-wrap">
                 <button className="btn-hero-primary" onClick={() => showPage("hub")}>
-                  Browse CBT Modules →
+                  Browse Tests →
                 </button>
               </div>
             </div>
 
             <footer>
-              NCBT.in · Built for India's Nursing Candidates ·{" "}
+              Nursing Mock · Built for India's Nursing Students ·{" "}
               <a onClick={() => showPage("hub")}>Tests</a> ·{" "}
               <a onClick={() => showPage("pyq")}>PYQ</a> ·{" "}
               <a onClick={() => showPage("analytics")}>Analytics</a> · For educational use only
@@ -2267,7 +1837,7 @@ Please format your response using standard markdown structure with custom emoji 
               })}
             </div>
            
-            <footer>NCBT.in · Nursing Computer Based Test</footer>
+            <footer>Nursing Mock · Built for India's Nursing Students</footer>
           </div>
         )}
 
@@ -2291,9 +1861,9 @@ Please format your response using standard markdown structure with custom emoji 
                 <button 
                   className="bg-[#21262d] hover:bg-[#30363d] border border-amber-500/30 text-amber-450 hover:text-amber-380 text-xs font-bold py-2 px-4 rounded-xl shadow transition-all shrink-0"
                   onClick={() => {
-                    const saved = safeLocalStorage.getItem("np_subjects_custom_v1");
+                    const saved = localStorage.getItem("np_subjects_custom_v1");
                     if (saved) {
-                      safeLocalStorage.removeItem("np_subjects_custom_v1");
+                      localStorage.removeItem("np_subjects_custom_v1");
                       triggerToast("Mock Test progress reset to factory default! 🛠️", "ok");
                       window.location.reload();
                     } else {
@@ -2370,7 +1940,7 @@ Please format your response using standard markdown structure with custom emoji 
               </button>
             </div>
             
-            <footer className="mt-12 text-center text-xs text-[#8b949e] pb-6">NCBT.in · Nursing Computer Based Test</footer>
+            <footer className="mt-12 text-center text-xs text-[#8b949e] pb-6">Nursing Mock · Built for India's Nursing Students</footer>
           </div>
         )}
 
@@ -2486,277 +2056,205 @@ Please format your response using standard markdown structure with custom emoji 
               </div>
             </div>
 
-            <footer className="mt-12 text-center text-xs text-[#8b949e] pb-6">NCBT.in · Nursing Computer Based Test</footer>
+            <footer className="mt-12 text-center text-xs text-[#8b949e] pb-6">Nursing Mock · Built for India's Nursing Students</footer>
           </div>
         )}
 
         {/* =============== TEST / EXAM PAGE =============== */}
         {activePage === "test" && activeTest && (
-          <div 
-            className="page active flex flex-col bg-[#080c14] overflow-hidden" 
-            id="page-test" 
-            style={!isTestFinished ? { height: "calc(100vh - 58px)", maxHeight: "calc(100vh - 58px)", paddingBottom: 0 } : { minHeight: "calc(100vh - 58px)", paddingBottom: "40px" }}
-          >
+          <div className="page active" id="page-test">
             
             {/* Topbar inside test */}
-            <div className="test-topbar" style={{ top: 0 }}>
+            <div className="test-topbar">
               <button className="back-btn" onClick={goHub}>
                 ← Back
               </button>
               <span className="topbar-sep">|</span>
-              <span className="topbar-title text-sm truncate max-w-[150px] sm:max-w-xs">{activeTest.title}</span>
+              <span className="topbar-title">{activeTest.title}</span>
               
               <div className="flex-1" />
 
-              {!isTestFinished && (
-                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border mr-2 hidden sm:inline-block ${examMode ? "bg-red-950/20 text-red-400 border-red-900/40" : "bg-purple-950/20 text-purple-400 border-purple-900/40"}`}>
-                  {examMode ? "⏱️ CBT Exam" : "💡 Practice"}
-                </span>
-              )}
+              <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border mr-2 hidden sm:inline-block ${examMode ? "bg-red-950/20 text-red-400 border-red-900/40" : "bg-purple-950/20 text-purple-400 border-purple-900/40"}`}>
+                {examMode ? "⏱️ CBT Exam" : "💡 Practice"}
+              </span>
 
-              {examMode && !isTestFinished && (
-                <div className={`timer-pill ${timeLeft <= 120 ? "warn" : ""}`}>
-                  <span className="t-dot"></span>
-                  <span>{formatTime(timeLeft)}</span>
-                </div>
-              )}
-
-              {!isTestFinished && (
-                <button 
-                  className="ml-2 bg-red-650 hover:bg-red-700 text-white text-xs font-extrabold px-3 py-1.5 rounded-lg transition-all cursor-pointer shadow-md active:scale-95"
-                  onClick={() => setShowFinishConfirm(true)}
-                >
-                  Finish Test ✓
-                </button>
-              )}
+              <div className={`timer-pill ${timeLeft <= 120 ? "warn" : ""}`}>
+                <span className="t-dot"></span>
+                <span>{formatTime(timeLeft)}</span>
+              </div>
             </div>
 
-            {/* Main CBT Screen */}
+            {/* Statistics Bar at test progression */}
             {!isTestFinished && (
-              <div className="max-w-[1400px] w-full mx-auto px-4 py-3 sm:py-4 flex-1 flex flex-col min-h-0 overflow-hidden">
-                {showFinishConfirm ? (
-                  /* ================= PREMIUM SUBMIT ASSESSMENT DIALOG ================= */
-                  <div className="max-w-md mx-auto bg-[#0d121f] border border-[#1e2d45] rounded-2xl p-6 shadow-2xl text-center animate-fade-in my-8">
-                    <div className="w-16 h-16 bg-red-950/30 border border-red-500/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <HelpCircle className="w-8 h-8 text-red-400" />
-                    </div>
-                    <h3 className="text-lg font-black text-white mb-2">Submit Assessment?</h3>
-                    <p className="text-sm text-slate-300 leading-relaxed mb-6">
-                      You have attempted <strong className="text-amber-400">{selectedOptions.filter(o => o !== null).length}</strong> out of <strong className="text-white">{activeTest.data.length}</strong> questions in this assessment module. 
-                    </p>
-                    
-                    <div className="space-y-3">
-                      <button 
-                        className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl transition-all shadow-md active:scale-95 text-sm cursor-pointer"
-                        onClick={() => {
-                          setShowFinishConfirm(false);
-                          finishTest();
-                        }}
-                      >
-                        Yes, Submit & View Scorecard
-                      </button>
-                      <button 
-                        className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-2.5 rounded-xl transition-all active:scale-95 text-sm cursor-pointer"
-                        onClick={() => setShowFinishConfirm(false)}
-                      >
-                        No, Continue Assessment
-                      </button>
-                    </div>
+              <>
+                <div className="stats-bar">
+                  <div className="stat">
+                    <div className="stat-val">{activeTest.data.length}</div>
+                    <div className="stat-lbl">Questions</div>
                   </div>
-                ) : (
-                  /* ================= CBT INTERACTIVE LAYOUT ================= */
-                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 items-stretch flex-1 min-h-0 overflow-hidden">
-                    
-                    {/* Left Column: Question Arena */}
-                    <div className="lg:col-span-3 flex flex-col min-h-0 h-full overflow-y-auto pr-1 space-y-4">
-                      <div id="quiz-wrap" className="overflow-hidden relative">
-                        <AnimatePresence mode="wait">
-                          <motion.div
-                            key={currentQuestionIndex}
-                            initial={{ opacity: 0, x: 24 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -24 }}
-                            transition={{ duration: 0.2, ease: "easeInOut" }}
-                            className="q-card active"
-                          >
-                            <div className="q-meta">
-                              <span className="q-num">Question {currentQuestionIndex + 1} of {activeTest.data.length}</span>
-                              <span className="q-src">{activeTest.data[currentQuestionIndex].source}</span>
-                            </div>
-
-                            <p className="q-text text-white font-medium text-base leading-relaxed mb-6">
-                              {activeTest.data[currentQuestionIndex].q}
-                            </p>
-
-                            <div className="opts space-y-3">
-                              {activeTest.data[currentQuestionIndex].opts.map((option, idx) => {
-                                let optClass = "opt";
-                                const isSelected = selectedOptions[currentQuestionIndex] === idx;
-                                const isAnswered = questionAnswers[currentQuestionIndex] !== null;
-
-                                if (!examMode) {
-                                  if (isAnswered) {
-                                    optClass += " locked";
-                                    if (idx === activeTest.data[currentQuestionIndex].ans) {
-                                      optClass += " correct";
-                                    } else if (isSelected) {
-                                      optClass += " wrong";
-                                    }
-                                  } else if (isSelected) {
-                                    optClass += " sel";
-                                  }
-                                } else {
-                                  if (isSelected) {
-                                    optClass += " exam-sel";
-                                  }
-                                }
-
-                                const L = ["A", "B", "C", "D"];
-
-                                return (
-                                  <button 
-                                    key={idx} 
-                                    className={optClass}
-                                    onClick={() => handleOptionSelect(idx)}
-                                  >
-                                    <span className="opt-letter">{L[idx]}</span>
-                                    <span>{option}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-
-                            {/* Premium Clinical Explanation / Feedback in Practice Mode */}
-                            {!examMode && questionAnswers[currentQuestionIndex] !== null && (
-                              <div className="mt-6 p-4 rounded-xl border flex gap-3 animate-fade-in bg-emerald-950/15 border-emerald-500/20 text-emerald-300">
-                                <div className="mt-0.5">
-                                  {questionAnswers[currentQuestionIndex] === 1 ? (
-                                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                                  ) : (
-                                    <XCircle className="w-5 h-5 text-rose-400 shrink-0" />
-                                  )}
-                                </div>
-                                <div className="text-sm">
-                                  <span className="font-extrabold block mb-1">
-                                    {questionAnswers[currentQuestionIndex] === 1 ? "CORRECT ANSWER" : `INCORRECT ANSWER · CORRECT IS OPTION ${["A", "B", "C", "D"][activeTest.data[currentQuestionIndex].ans]}`}
-                                  </span>
-                                  <span className="opacity-90 block leading-relaxed" style={{ whiteSpace: "pre-line" }}>
-                                    {getDetailedExplain(activeTest.data[currentQuestionIndex])}
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Navigation control footer */}
-                            <div className="nav-row mt-8 pt-4 border-t border-[#1e2d45] flex items-center justify-between gap-2">
-                              <button 
-                                className="btn-prev" 
-                                disabled={currentQuestionIndex === 0}
-                                onClick={handlePrevQuestion}
-                              >
-                                ← Prev Question
-                              </button>
-
-                              {selectedOptions[currentQuestionIndex] !== null && (
-                                <button
-                                  className="px-4 py-2.5 text-xs font-bold text-rose-400 hover:text-rose-300 bg-rose-950/20 hover:bg-rose-950/40 rounded-xl border border-rose-900/40 transition-all duration-200"
-                                  onClick={handleClearResponse}
-                                >
-                                  Clear Response 🧹
-                                </button>
-                              )}
-
-                              <button 
-                                className="btn-next"
-                                onClick={handleNextQuestion}
-                              >
-                                {currentQuestionIndex === activeTest.data.length - 1 ? "Review & Finish" : "Next Question →"}
-                              </button>
-                            </div>
-                          </motion.div>
-                        </AnimatePresence>
-                      </div>
+                  <div className="stat">
+                    <div className="stat-val">
+                      {selectedOptions.filter(o => o !== null).length}
                     </div>
+                    <div className="stat-lbl">Answered</div>
+                  </div>
+                  <div className="stat">
+                    <div className="stat-val">
+                      {examMode ? "—" : correctCount}
+                    </div>
+                    <div className="stat-lbl">Correct</div>
+                  </div>
+                  <div className="stat">
+                    <div className="stat-val">
+                      {examMode ? "—" : (
+                        selectedOptions.filter(o => o !== null).length > 0 
+                          ? `${Math.round((correctCount / selectedOptions.filter(o => o !== null).length) * 100)}%` 
+                          : "0%"
+                      )}
+                    </div>
+                    <div className="stat-lbl">Score</div>
+                  </div>
+                </div>
 
-                    {/* Right Column: Console Sidebar */}
-                    <div className="lg:col-span-1 flex flex-col min-h-0 h-full overflow-y-auto pr-1 bg-[#0d121f] border border-[#1e2d45] rounded-2xl p-4 shadow-xl space-y-4">
-                      <div className="border-b border-[#1e2d45] pb-3 mb-3">
-                        <h4 className="text-[11px] font-extrabold text-amber-400 uppercase tracking-widest">CBT Console</h4>
-                        <span className="text-[10px] text-slate-400 font-sans block mt-0.5">Live assessment dashboard</span>
+                {/* Progress bar state */}
+                <div className="progress-wrap">
+                  <div className="prog-info">
+                    <span>Q {currentQuestionIndex + 1}</span>
+                    <span>
+                      {Math.round((selectedOptions.filter(o => o !== null).length / activeTest.data.length) * 100)}%
+                    </span>
+                  </div>
+                  <div className="prog-bar">
+                    <div 
+                      className="prog-fill" 
+                      style={{ 
+                        width: `${Math.round((selectedOptions.filter(o => o !== null).length / activeTest.data.length) * 100)}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Question dots visual navigation helper */}
+                <div className="dot-nav">
+                  {activeTest.data.map((_, i) => {
+                    let dClass = "dot";
+                    if (currentQuestionIndex === i) {
+                      dClass += " cur";
+                    } else if (selectedOptions[i] !== null) {
+                      if (examMode) {
+                        dClass += " done-e";
+                      } else {
+                        dClass += questionAnswers[i] === 1 ? " done-c" : " done-w";
+                      }
+                    }
+                    return (
+                      <button 
+                        key={i} 
+                        className={dClass}
+                        onClick={() => setCurrentQuestionIndex(i)}
+                      >
+                        {i + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Test quiz screen */}
+                <div id="quiz-wrap" className="mt-4 overflow-hidden relative">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={currentQuestionIndex}
+                      initial={{ opacity: 0, x: 24 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -24 }}
+                      transition={{ duration: 0.2, ease: "easeInOut" }}
+                      className="q-card active"
+                    >
+                      <div className="q-meta">
+                        <span className="q-num">Q {currentQuestionIndex + 1} / {activeTest.data.length}</span>
+                        <span className="q-src">{activeTest.data[currentQuestionIndex].source}</span>
                       </div>
 
-                      {/* Statistics Board */}
-                      <div className="grid grid-cols-2 gap-2 text-center">
-                        <div className="bg-[#121a2a] rounded-xl p-2.5 border border-[#1e2d45]/50">
-                          <div className="text-white text-base font-black">{activeTest.data.length}</div>
-                          <div className="text-[9px] text-slate-400 uppercase font-bold tracking-wider mt-0.5">Questions</div>
-                        </div>
-                        <div className="bg-[#121a2a] rounded-xl p-2.5 border border-[#1e2d45]/50">
-                          <div className="text-amber-400 text-base font-black">
-                            {selectedOptions.filter(o => o !== null).length}
-                          </div>
-                          <div className="text-[9px] text-slate-400 uppercase font-bold tracking-wider mt-0.5">Answered</div>
-                        </div>
-                        {!examMode && (
-                          <>
-                            <div className="bg-[#121a2a] rounded-xl p-2.5 border border-[#1e2d45]/50 col-span-2">
-                              <div className="text-emerald-400 text-sm font-black">{correctCount} Correct</div>
-                              <div className="text-[9px] text-slate-400 uppercase font-bold tracking-wider mt-0.5">Practice Performance</div>
-                            </div>
-                          </>
-                        )}
-                      </div>
+                      <p className="q-text">
+                        {activeTest.data[currentQuestionIndex].q}
+                      </p>
 
-                      {/* Progress Bar */}
-                      <div className="space-y-1 pt-2">
-                        <div className="flex justify-between text-[10px] text-slate-400 font-bold">
-                          <span>PROGRESS</span>
-                          <span>{Math.round((selectedOptions.filter(o => o !== null).length / activeTest.data.length) * 100)}%</span>
-                        </div>
-                        <div className="h-1.5 bg-[#162235] rounded-full overflow-hidden">
-                          <div 
-                            className="bg-gradient-to-r from-amber-400 to-amber-500 h-full transition-all duration-300"
-                            style={{ width: `${Math.round((selectedOptions.filter(o => o !== null).length / activeTest.data.length) * 100)}%` }}
-                          />
-                        </div>
-                      </div>
+                      <div className="opts">
+                        {activeTest.data[currentQuestionIndex].opts.map((option, idx) => {
+                          let optClass = "opt";
+                          const isSelected = selectedOptions[currentQuestionIndex] === idx;
+                          const isAnswered = questionAnswers[currentQuestionIndex] !== null;
 
-                      {/* Question Palette Grid */}
-                      <div className="pt-3 border-t border-[#1e2d45]/60">
-                        <span className="text-[10px] font-extrabold text-slate-300 uppercase tracking-wider block mb-2">Assessment Palette</span>
-                        <div className="grid grid-cols-5 gap-1.5 max-h-[180px] overflow-y-auto pr-1">
-                          {activeTest.data.map((_, i) => {
-                            let dClass = "w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center transition-all border cursor-pointer ";
-                            if (currentQuestionIndex === i) {
-                              dClass += "bg-[#ffd558]/20 text-[#ffd558] border-[#ffd558] shadow-[0_0_8px_rgba(255,213,88,0.15)]";
-                            } else if (selectedOptions[i] !== null) {
-                              if (examMode) {
-                                dClass += "bg-amber-550/20 text-amber-300 border-amber-500/40";
-                              } else {
-                                dClass += questionAnswers[i] === 1 
-                                  ? "bg-emerald-950/20 text-[#56d364] border-[#2ea043]/40" 
-                                  : "bg-rose-950/20 text-[#f85149] border-[#da3633]/40";
+                          if (!examMode) {
+                            if (isAnswered) {
+                              optClass += " locked";
+                              if (idx === activeTest.data[currentQuestionIndex].ans) {
+                                optClass += " correct";
+                              } else if (isSelected) {
+                                optClass += " wrong";
                               }
-                            } else {
-                              dClass += "bg-[#0d1117]/60 text-slate-400 border-slate-800 hover:border-slate-700";
+                            } else if (isSelected) {
+                              optClass += " sel";
                             }
-                            return (
-                              <button 
-                                key={i} 
-                                className={dClass}
-                                onClick={() => setCurrentQuestionIndex(i)}
-                              >
-                                {i + 1}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
+                          } else {
+                            if (isSelected) {
+                              optClass += " exam-sel";
+                            }
+                          }
 
-                  </div>
-                )}
-              </div>
+                          const L = ["A", "B", "C", "D"];
+
+                          return (
+                            <button 
+                              key={idx} 
+                              className={optClass}
+                              onClick={() => handleOptionSelect(idx)}
+                            >
+                              <span className="opt-letter">{L[idx]}</span>
+                              <span>{option}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Feedback wrapper in practice mode */}
+                      {!examMode && questionAnswers[currentQuestionIndex] !== null && (
+                        <div className="mt-4 animate-fade-in">
+                          <div className={`fb show ${questionAnswers[currentQuestionIndex] === 1 ? "fb-ok" : "fb-no"}`}>
+                            {questionAnswers[currentQuestionIndex] === 1 ? "✅ Correct! " : `❌ Wrong. Correct Answer: ${activeTest.data[currentQuestionIndex].opts[activeTest.data[currentQuestionIndex].ans]}. `}
+                            <span style={{ whiteSpace: "pre-line" }}>{getDetailedExplain(activeTest.data[currentQuestionIndex])}</span>
+                          </div>
+
+                          {/* AI Tutor integrated button */}
+                          <button 
+                            className="ai-tutor-btn" 
+                            onClick={() => openAiTutor(currentQuestionIndex)}
+                          >
+                            <Activity className="w-4 h-4" /> 🤖 AI Deep Dive — Explain this topic in detail
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Navigation control footer */}
+                      <div className="nav-row">
+                        <button 
+                          className="btn-prev" 
+                          disabled={currentQuestionIndex === 0}
+                          onClick={handlePrevQuestion}
+                        >
+                          ← Prev
+                        </button>
+                        <button 
+                          className="btn-next"
+                          onClick={handleNextQuestion}
+                        >
+                          {currentQuestionIndex === activeTest.data.length - 1 ? "Finish ✓" : "Next →"}
+                        </button>
+                      </div>
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+              </>
             )}
 
             {/* =============== RESULTS WRAPPER INTERFACE =============== */}
@@ -2893,6 +2391,12 @@ Please format your response using standard markdown structure with custom emoji 
                                 💡 {getDetailedExplain(q)}
                                 <span className="rq-src block mt-2 text-xs opacity-75 font-semibold" style={{ whiteSpace: "normal" }}>📌 Source: {q.source}</span>
                               </div>
+                              <button
+                                className="mt-2 sm:mt-0 self-start sm:self-center bg-[#a181ff]/10 hover:bg-[#a181ff]/20 border border-[#a181ff]/30 text-[#d4c0ff] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all text-xs cursor-pointer shadow-sm active:scale-95"
+                                onClick={() => openAiTutor(idx)}
+                              >
+                                <Activity className="w-3.5 h-3.5 text-[#a181ff]" /> AI Deep Dive 🤖
+                              </button>
                             </div>
                           </div>
                         );
@@ -2904,7 +2408,7 @@ Please format your response using standard markdown structure with custom emoji 
               </div>
             )}
 
-            <footer>NCBT.in · Nursing Computer Based Test</footer>
+            <footer>Nursing Mock · Built for India's Nursing Students</footer>
           </div>
         )}
 
@@ -2946,7 +2450,7 @@ Please format your response using standard markdown structure with custom emoji 
               ))}
             </div>
 
-            <footer>NCBT.in · Nursing Computer Based Test</footer>
+            <footer>Nursing Mock · Built for India's Nursing Students</footer>
           </div>
         )}
 
@@ -3298,7 +2802,7 @@ Please format your response using standard markdown structure with custom emoji 
               })()}
             </AnimatePresence>
 
-            <footer>NCBT.in · Nursing Computer Based Test</footer>
+            <footer>Nursing Mock · Built for India's Nursing Students</footer>
           </div>
         )}
 
@@ -3312,24 +2816,44 @@ Please format your response using standard markdown structure with custom emoji 
               {/* Analytics Content Block */}
               {(!currentUser || currentUser.guest) ? (
                 <div className="google-auth-lock-card max-w-sm mx-auto my-6 p-6 bg-[#0f1520] border border-[#1e293b] rounded-xl text-center shadow-xl animate-fade-in duration-300">
-                  <div className="w-12 h-12 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">
-                    <Award className="w-6 h-6 text-amber-400" />
+                  <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">
+                    📊
                   </div>
-                  <h3 className="text-base font-bold mb-2">Access Personal Analytics</h3>
+                  <h3 className="text-base font-bold mb-2">Google Authentication Required</h3>
                   <p className="text-xs text-[#8b949e] mb-6 leading-relaxed">
-                    Sign in or create a free NCBT.in account to track your CBT scores, mock test history, accuracy metrics, and build your study streak.
+                    To track daily scores, anatomical test attempts, accuracy metrics, and build your study streak, connect using Google Auto Authentication.
                   </p>
 
-                  <button 
-                    className="w-full bg-amber-500 hover:bg-amber-600 text-black text-xs font-extrabold py-3 px-4 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer flex items-center justify-center gap-2"
-                    onClick={() => showPage("auth")}
-                  >
-                    🔐 Log In / Register Now
-                  </button>
+                  {/* Google Auto-Auth One Tap Panel (Like other premium web pages) */}
+                  <div className="border border-[#1e293b] bg-[#0c1017] rounded-xl p-4 text-left relative overflow-hidden mb-6">
+                    <div className="absolute top-2 right-2 text-[9px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Auto Auth</div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow">
+                        S
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] text-[#8b949e]">Sign in with Google</div>
+                        <div className="text-xs font-semibold text-[#e6edf3] truncate">Sakil</div>
+                        <div className="text-[10px] text-[#58a6ff] truncate">sakil.net.in@gmail.com</div>
+                      </div>
+                    </div>
+                    <button 
+                      className="mt-4 w-full bg-white text-gray-950 hover:bg-slate-100 text-xs font-bold py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-2 shadow-sm"
+                      onClick={triggerGoogleAutoAuth}
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22-.03-.63z" />
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                      </svg>
+                      Continue as Sakil
+                    </button>
+                  </div>
 
-                  <div className="flex items-center justify-center gap-1.5 text-[10px] text-[#8b949e] mt-4">
+                  <div className="flex items-center justify-center gap-1.5 text-[10px] text-[#8b949e]">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                    NCBT.in Secure Verification System
+                    Instant secure connection with Google
                   </div>
                 </div>
               ) : !analytics ? (
@@ -3430,77 +2954,62 @@ Please format your response using standard markdown structure with custom emoji 
               )}
             </div>
 
-            <footer>NCBT.in · Nursing Computer Based Test</footer>
+            <footer>Nursing Mock · Built for India's Nursing Students</footer>
           </div>
         )}
 
         {/* =============== AUTHENTICATION SCREEN PAGE =============== */}
         {activePage === "auth" && (
           <div className="page active" id="page-auth">
-            <div className="auth-wrap flex items-center justify-center min-h-[80vh] px-4 py-8">
-              <div className="auth-card max-w-md w-full bg-[#0d121f] border border-[#1e2d45] rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden font-sans">
-                {/* Visual accent */}
-                <div className="absolute top-0 inset-x-0 h-[3px] bg-gradient-to-r from-amber-500 via-indigo-500 to-amber-500"></div>
+            <div className="auth-wrap">
+              <div className="auth-card font-sans">
+                <div className="auth-logo">Nursing Mock</div>
+                <div className="auth-tagline font-sans font-medium text-xs">India's cleanest nursing competitive exam platform</div>
                 
-                <div className="flex flex-col items-center justify-center gap-2.5 mb-6">
-                  <div className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 via-yellow-400 to-amber-600 shadow-md shadow-amber-500/15">
-                    <Stethoscope className="w-5.5 h-5.5 text-slate-950 stroke-[2.5]" />
-                    <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </span>
-                  </div>
-                  <div className="flex items-baseline gap-0.5">
-                    <span className="text-2xl font-black tracking-tight bg-gradient-to-r from-white via-slate-100 to-amber-400 bg-clip-text text-transparent">NCBT</span>
-                    <span className="text-[11px] bg-amber-500 text-slate-950 px-1.5 py-0.5 rounded font-black tracking-widest leading-none" style={{ WebkitTextFillColor: '#080c12', color: '#080c12' }}>.in</span>
-                  </div>
-                  <div className="text-[11px] text-[#8b949e] font-sans font-semibold uppercase tracking-widest text-center">Nursing Computer Based Test Platform</div>
-                </div>
-                
-                <div className="flex bg-[#070b13] p-1 rounded-xl border border-[#1e2d45]/60 mb-6">
+                <div className="auth-tabs">
                   <button 
-                    className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${authTab === "login" ? "bg-amber-500 text-black shadow-md" : "text-[#8b949e] hover:text-white bg-transparent border-none"}`}
+                    className={`auth-tab ${authTab === "login" ? "active" : ""}`}
                     onClick={() => {
                       setAuthTab("login");
                       setAuthError("");
                     }}
                   >
-                    🔐 Log In
+                    Log In
                   </button>
                   <button 
-                    className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${authTab === "register" ? "bg-amber-500 text-black shadow-md" : "text-[#8b949e] hover:text-white bg-transparent border-none"}`}
+                    className={`auth-tab ${authTab === "register" ? "active" : ""}`}
                     onClick={() => {
                       setAuthTab("register");
                       setAuthError("");
                     }}
                   >
-                    📝 Register
+                    Register
                   </button>
                 </div>
 
                 {authError && (
-                  <div className="bg-red-500/10 border border-red-500/25 text-red-200 text-xs rounded-xl px-4 py-3 mb-5 text-center animate-shake">
-                    ⚠️ {authError}
+                  <div className="auth-err show">
+                    {authError}
                   </div>
                 )}
 
                 {/* Login Form view */}
                 {authTab === "login" ? (
-                  <div className="space-y-5">
-                    <div className="flex justify-center gap-2 bg-[#070b13]/50 p-1 rounded-lg border border-[#1e2d45]/30 mb-2">
+                  <div className="space-y-4">
+                    <div className="flex justify-center gap-4 mb-4 border-b border-[#1e293b]/70 pb-3 text-xs">
                       <button 
                         type="button"
-                        className={`flex-1 py-1.5 text-[11px] font-bold rounded transition-all bg-transparent border-none cursor-pointer ${loginMethod === "otp" ? "bg-indigo-600/25 text-amber-300 border border-amber-500/20" : "text-[#8b949e] hover:text-white"}`}
+                        className={`pb-1 px-2 font-bold transition-all bg-transparent border-none cursor-pointer ${loginMethod === "otp" ? "text-amber-400 border-b-2 border-amber-400" : "text-[#8b949e] hover:text-[#e6edf3]"}`}
                         onClick={() => {
                           setLoginMethod("otp");
                           setAuthError("");
                         }}
                       >
-                        ⚡ Phone OTP
+                        ⚡ Phone OTP (Fast)
                       </button>
                       <button 
                         type="button"
-                        className={`flex-1 py-1.5 text-[11px] font-bold rounded transition-all bg-transparent border-none cursor-pointer ${loginMethod === "email" ? "bg-indigo-600/25 text-indigo-300 border border-indigo-500/20" : "text-[#8b949e] hover:text-white"}`}
+                        className={`pb-1 px-2 font-bold transition-all bg-transparent border-none cursor-pointer ${loginMethod === "email" ? "text-blue-400 border-b-2 border-blue-400" : "text-[#8b949e] hover:text-[#e6edf3]"}`}
                         onClick={() => {
                           setLoginMethod("email");
                           setAuthError("");
@@ -3512,18 +3021,15 @@ Please format your response using standard markdown structure with custom emoji 
 
                     {loginMethod === "otp" ? (
                       <form onSubmit={handleOtpLogin} className="space-y-4">
-                        <div className="text-left">
-                          <p className="text-[11px] text-[#8b949e] leading-relaxed mb-3">
-                            Enter your registered mobile number below to log in instantly via SMS OTP simulation.
-                          </p>
-                          <label className="text-[#8492a6] font-bold text-[11px] uppercase tracking-wider mb-1 block">Phone Number</label>
+                        <div className="form-group text-left">
+                          <label className="form-label text-[#8b949e] font-semibold text-xs mb-1 block">Phone Number</label>
                           <div className="flex gap-2">
-                            <span className="flex items-center justify-center bg-[#070b13] border border-[#1e2d45] rounded-xl px-3.5 text-xs text-[#8b949e] font-sans font-black tracking-wide">+91</span>
+                            <span className="flex items-center justify-center bg-[#0d1117] border border-[#1e2d45] rounded-xl px-3 text-xs text-[#8b949e] font-sans font-extrabold">+91</span>
                             <input 
-                              className="flex-1 bg-[#161b22] border border-[#30363d] focus:border-amber-500 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none transition-all placeholder-[#4e5a6a]" 
+                              className="form-input flex-1 bg-[#161b22] border border-[#30363d] rounded-xl px-3 py-2 text-sm text-white focus:border-amber-400 focus:outline-none" 
                               type="tel" 
                               maxLength={10}
-                              placeholder="Enter 10-digit number"
+                              placeholder="9531659828"
                               value={authPhone}
                               onChange={(e) => setAuthPhone(e.target.value.replace(/\D/g, ""))}
                             />
@@ -3531,13 +3037,13 @@ Please format your response using standard markdown structure with custom emoji 
                         </div>
 
                         {otpSent && (
-                          <div className="text-left animate-fade-in space-y-1.5">
-                            <div className="flex justify-between items-center">
-                              <label className="text-[#8492a6] font-bold text-[11px] uppercase tracking-wider">Simulated 6-Digit OTP</label>
-                              <span className="text-[10px] text-green-400 font-black flex items-center gap-1">✨ Instant SMS Simulated</span>
+                          <div className="form-group text-left animate-fade-in">
+                            <div className="flex justify-between items-center mb-1">
+                              <label className="form-label text-[#8b949e] font-semibold text-xs">Enter 6-Digit OTP</label>
+                              <span className="text-[10px] text-green-400 font-extrabold">✓ Simulated Code Sent</span>
                             </div>
                             <input 
-                              className="w-full bg-[#161b22] border border-[#30363d] focus:border-green-400 rounded-xl px-4 py-3 text-sm text-center font-mono tracking-[0.4em] text-[#7ee8a2] font-black focus:outline-none transition-all" 
+                              className="form-input bg-[#161b22] border border-[#30363d] rounded-xl px-3 py-2.5 text-sm text-center font-mono tracking-widest text-[#7ee8a2] font-black focus:border-green-400 focus:outline-none" 
                               type="text" 
                               maxLength={6}
                               placeholder="••••••"
@@ -3549,23 +3055,20 @@ Please format your response using standard markdown structure with custom emoji 
 
                         {!otpSent ? (
                           <button 
-                            className="w-full py-3 rounded-xl font-bold text-xs uppercase tracking-wider text-black bg-amber-500 hover:bg-amber-600 active:scale-[0.98] transition-all border-none cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-amber-500/10 font-syne" 
+                            className="btn-auth w-full flex items-center justify-center gap-2 cursor-pointer py-2.5 rounded-xl font-bold bg-amber-500 hover:bg-amber-600 transition-all border-none text-black animate-pulse" 
                             type="button" 
                             disabled={isSendingOtp}
                             onClick={requestOtpCode}
                           >
-                            {isSendingOtp ? "Simulating SMS dispatch..." : "Request Instant OTP ⚡"}
+                            {isSendingOtp ? "Sending code..." : "Request Instant OTP ⚡"}
                           </button>
                         ) : (
-                          <div className="flex flex-col gap-2.5">
-                            <button 
-                              className="w-full py-3 rounded-xl font-bold text-xs uppercase tracking-wider text-black bg-green-400 hover:bg-green-500 active:scale-[0.98] transition-all border-none cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-green-400/10 font-syne" 
-                              type="submit"
-                            >
-                              Verify Code & Access Hub 🔓
+                          <div className="flex flex-col gap-2">
+                            <button className="btn-auth w-full py-2.5 rounded-xl font-bold bg-[#7ee8a2] hover:bg-[#5cd484] transition-all border-none text-black cursor-pointer" type="submit">
+                              Verify & Log In instantly 🔓
                             </button>
                             <button 
-                              className="text-xs text-[#8b949e] hover:text-white transition-all bg-transparent border-none cursor-pointer mt-1 font-semibold hover:underline" 
+                              className="text-xs text-[#8b949e] hover:text-white transition-all underline bg-transparent border-none cursor-pointer mt-1" 
                               type="button"
                               onClick={requestOtpCode}
                             >
@@ -3576,90 +3079,73 @@ Please format your response using standard markdown structure with custom emoji 
                       </form>
                     ) : (
                       <form onSubmit={handleLogin} className="space-y-4">
-                        <div className="text-left space-y-1.5">
-                          <label className="text-[#8492a6] font-bold text-[11px] uppercase tracking-wider">Email Address</label>
+                        <div className="form-group text-left">
+                          <label className="form-label text-[#8b949e] font-semibold text-xs mb-1 block">Email Address</label>
                           <input 
-                            className="bg-[#161b22] border border-[#30363d] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none transition-all w-full placeholder-[#4e5a6a]" 
+                            className="form-input bg-[#161b22] border border-[#30363d] rounded-xl px-3 py-2 text-sm text-white focus:border-blue-400 focus:outline-none w-full" 
                             type="email" 
-                            placeholder="Enter your email address"
+                            placeholder="you@example.com"
                             value={authEmail}
                             onChange={(e) => setAuthEmail(e.target.value)}
                           />
                         </div>
-                        <div className="text-left space-y-1.5">
-                          <label className="text-[#8492a6] font-bold text-[11px] uppercase tracking-wider">Password</label>
+                        <div className="form-group text-left">
+                          <label className="form-label text-[#8b949e] font-semibold text-xs mb-1 block">Password</label>
                           <input 
-                            className="bg-[#161b22] border border-[#30363d] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none transition-all w-full placeholder-[#4e5a6a]" 
+                            className="form-input bg-[#161b22] border border-[#30363d] rounded-xl px-3 py-2 text-sm text-white focus:border-blue-400 focus:outline-none w-full" 
                             type="password" 
                             placeholder="••••••••"
                             value={authPassword}
                             onChange={(e) => setAuthPassword(e.target.value)}
                           />
                         </div>
-                        <button 
-                          className="w-full py-3 rounded-xl font-bold text-xs uppercase tracking-wider text-white bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] transition-all border-none cursor-pointer shadow-md shadow-indigo-600/10 font-syne" 
-                          type="submit"
-                        >
-                          Sign In Securely 🛡️
+                        <button className="btn-auth w-full py-2.5 rounded-xl font-bold bg-blue-500 hover:bg-blue-600 transition-all border-none text-white cursor-pointer" type="submit">
+                          Log In securely 🛡️
                         </button>
                       </form>
                     )}
                   </div>
                 ) : (
                   // Register Form view
-                  <form onSubmit={handleRegister} className="space-y-4 text-left">
-                    <p className="text-[11px] text-[#8b949e] leading-relaxed mb-1">
-                      Register a free account to track your mock histories, dynamic accuracy levels, and high-yield subject strengths.
-                    </p>
-                    <div className="space-y-1.5">
-                      <label className="text-[#8492a6] font-bold text-[11px] uppercase tracking-wider">Full Name</label>
+                  <form onSubmit={handleRegister} className="space-y-4">
+                    <div className="form-group">
+                      <label className="form-label">Full Name</label>
                       <input 
-                        className="bg-[#161b22] border border-[#30363d] focus:border-amber-500 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none transition-all w-full placeholder-[#4e5a6a]" 
+                        className="form-input" 
                         type="text" 
-                        placeholder="Enter your full name"
+                        placeholder="Sakil Ahmed"
                         value={authName}
                         onChange={(e) => setAuthName(e.target.value)}
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[#8492a6] font-bold text-[11px] uppercase tracking-wider">Email Address</label>
+                    <div className="form-group">
+                      <label className="form-label">Email</label>
                       <input 
-                        className="bg-[#161b22] border border-[#30363d] focus:border-amber-500 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none transition-all w-full placeholder-[#4e5a6a]" 
+                        className="form-input" 
                         type="email" 
-                        placeholder="Enter your active email"
+                        placeholder="you@example.com"
                         value={authEmail}
                         onChange={(e) => setAuthEmail(e.target.value)}
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[#8492a6] font-bold text-[11px] uppercase tracking-wider">Password</label>
+                    <div className="form-group">
+                      <label className="form-label">Password</label>
                       <input 
-                        className="bg-[#161b22] border border-[#30363d] focus:border-amber-500 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none transition-all w-full placeholder-[#4e5a6a]" 
+                        className="form-input" 
                         type="password" 
-                        placeholder="Minimum 6 characters"
+                        placeholder="Min. 6 characters"
                         value={authPassword}
                         onChange={(e) => setAuthPassword(e.target.value)}
                       />
                     </div>
-                    <button 
-                      className="w-full mt-2 py-3 rounded-xl font-bold text-xs uppercase tracking-wider text-black bg-amber-500 hover:bg-amber-600 active:scale-[0.98] transition-all border-none cursor-pointer shadow-md shadow-amber-500/10 font-syne" 
-                      type="submit"
-                    >
-                      Create Free Account 🩺
+                    <button className="btn-auth" type="submit">
+                      Create Student Account
                     </button>
                   </form>
                 )}
 
-                <div className="flex items-center gap-3 my-5">
-                  <div className="flex-1 h-[1px] bg-[#1e2d45]/40"></div>
-                  <span className="text-[10px] text-[#4e5a6a] uppercase font-bold tracking-wider font-sans">Quick Practice</span>
-                  <div className="flex-1 h-[1px] bg-[#1e2d45]/40"></div>
-                </div>
-
-                <button 
-                  className="w-full py-2.5 border border-[#1e2d45] hover:bg-white/5 rounded-xl text-xs font-bold text-[#8492a6] hover:text-white transition-all cursor-pointer flex items-center justify-center gap-2" 
-                  onClick={guestLogin}
-                >
+                <div className="auth-divider">or</div>
+                <button className="auth-guest" onClick={guestLogin}>
                   Continue as Guest Student →
                 </button>
               </div>
@@ -4165,7 +3651,7 @@ Please format your response using standard markdown structure with custom emoji 
 
             </div>
             
-            <footer className="mt-12 text-center text-xs text-[#8b949e] pb-6">NCBT.in · Nursing Computer Based Test</footer>
+            <footer className="mt-12 text-center text-xs text-[#8b949e] pb-6">Nursing Mock · Built for India's Nursing Students</footer>
           </div>
         )}
 
@@ -4234,20 +3720,20 @@ Please format your response using standard markdown structure with custom emoji 
                           triggerToast("Please enter both the URL and Anon Key.", "err");
                           return;
                         }
-                        safeLocalStorage.setItem("np_supabase_url", supUrlInput.trim());
-                        safeLocalStorage.setItem("np_supabase_anon_key", supKeyInput.trim());
+                        localStorage.setItem("np_supabase_url", supUrlInput.trim());
+                        localStorage.setItem("np_supabase_anon_key", supKeyInput.trim());
                         triggerToast("Supabase configuration applied! Refreshing connection...", "ok");
                         setTimeout(() => window.location.reload(), 1000);
                       }}
                     >
                       Apply & Connect 🔌
                     </button>
-                    {safeLocalStorage.getItem("np_supabase_url") && (
+                    {localStorage.getItem("np_supabase_url") && (
                       <button 
                         className="bg-neutral-800 hover:bg-neutral-700 text-white font-extrabold text-xs px-5 py-3 rounded-xl transition-all uppercase tracking-wider cursor-pointer"
                         onClick={() => {
-                          safeLocalStorage.removeItem("np_supabase_url");
-                          safeLocalStorage.removeItem("np_supabase_anon_key");
+                          localStorage.removeItem("np_supabase_url");
+                          localStorage.removeItem("np_supabase_anon_key");
                           setSupUrlInput("");
                           setSupKeyInput("");
                           triggerToast("Cleared Supabase credentials.", "ok");
@@ -4576,11 +4062,6 @@ Please format your response using standard markdown structure with custom emoji 
   function goHub() {
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     showPage(testReferrer || "hub");
-    try {
-      if (document.fullscreenElement && document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
-      }
-    } catch (e) {}
   }
 
   // Quick mode handler

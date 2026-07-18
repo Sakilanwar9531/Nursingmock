@@ -5,15 +5,8 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    // CRITICAL: For Vercel root domain deployment (ncbt.in), ALWAYS use base: '/'
-    // DO NOT change to './' unless deploying to a subdirectory
-    // Relative paths break asset loading on root domains
-    base: '/',
+    base: './',
     plugins: [react(), tailwindcss()],
-    build: {
-      cssCodeSplit: true,
-      chunkSizeWarningLimit: 2000,
-    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
