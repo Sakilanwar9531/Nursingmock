@@ -1,8 +1,10 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
+<img width="1200" height="475" alt="NCBT Banner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
 </div>
 
-# Run and deploy your AI Studio app
+# NCBT - Nursing Computer Based Test Exams
+
+Welcome to **NCBT** - a new age destination for Nursing competitive exam Computer Based Tests. This platform provides comprehensive mock tests designed to help nursing professionals prepare for their competitive exams.
 
 This contains everything you need to run your app locally.
 
