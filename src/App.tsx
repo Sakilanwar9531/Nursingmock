@@ -521,64 +521,92 @@ User message: ${msgText}`;
     }
   }, []);
 
-  // Mount URL routing detector: initializes page state from window.location.pathname
+  // Mount URL routing detector: initializes page state from window.location.pathname or hash fallback
   useEffect(() => {
-    const path = window.location.pathname;
-    const parts = path.split("/").filter(Boolean);
-    
-    if (parts.length === 0) {
-      setActivePage("landing");
-    } else if (parts[0] === "updates") {
-      setActivePage("updates");
-      if (parts[1]) {
-        const matchingUpdate = STATIC_NURSING_UPDATES.find(u => u.id === parts[1]);
-        if (matchingUpdate) {
-          setSelectedUpdate(matchingUpdate);
+    try {
+      let path = window.location.pathname;
+      if (window.location.hash) {
+        const hashPart = window.location.hash.replace(/^#\/?/, "/");
+        if (hashPart.startsWith("/")) {
+          path = hashPart;
         }
       }
-    } else if (parts[0] === "test" && parts[1] && parts[2]) {
-      const subId = parts[1];
-      const tId = parts[2];
-      const subject = subjects.find(s => s.id === subId);
-      if (subject) {
-        const test = subject.tests.find(t => t.id === tId);
-        if (test) {
-          setActivePage("test");
-          setActiveSubjectId(subId);
-          setActiveTest(test);
-          const params = new URLSearchParams(window.location.search);
-          const mode = params.get("mode") === "practice" ? "practice" : "exam";
-          setExamMode(mode === "exam");
-          setTimeLeft(test.mins * 60);
-          setSelectedOptions(new Array(test.data.length).fill(null));
-          setQuestionAnswers(new Array(test.data.length).fill(null));
+      const parts = path.split("/").filter(Boolean);
+      
+      if (parts.length === 0) {
+        setActivePage("landing");
+      } else if (parts[0] === "updates") {
+        setActivePage("updates");
+        if (parts[1]) {
+          const matchingUpdate = STATIC_NURSING_UPDATES.find(u => u.id === parts[1]);
+          if (matchingUpdate) {
+            setSelectedUpdate(matchingUpdate);
+          }
+        }
+      } else if (parts[0] === "test" && parts[1] && parts[2]) {
+        const subId = parts[1];
+        const tId = parts[2];
+        const subject = subjects.find(s => s.id === subId);
+        if (subject) {
+          const test = subject.tests.find(t => t.id === tId);
+          if (test) {
+            setActivePage("test");
+            setActiveSubjectId(subId);
+            setActiveTest(test);
+            const params = new URLSearchParams(window.location.search);
+            const mode = params.get("mode") === "practice" ? "practice" : "exam";
+            setExamMode(mode === "exam");
+            setTimeLeft(test.mins * 60);
+            setSelectedOptions(new Array(test.data.length).fill(null));
+            setQuestionAnswers(new Array(test.data.length).fill(null));
+          }
+        }
+      } else {
+        const pageMap: Record<string, string> = {
+          hub: "hub",
+          "mock-tests": "mock_tests",
+          chat: "chat",
+          pyq: "pyq",
+          updates: "updates",
+          analytics: "analytics",
+          auth: "auth",
+          admin: "admin",
+          settings: "settings"
+        };
+        if (pageMap[parts[0]]) {
+          setActivePage(pageMap[parts[0]]);
         }
       }
-    } else {
-      const pageMap: Record<string, string> = {
-        hub: "hub",
-        "mock-tests": "mock_tests",
-        chat: "chat",
-        pyq: "pyq",
-        updates: "updates",
-        analytics: "analytics",
-        auth: "auth",
-        admin: "admin",
-        settings: "settings"
-      };
-      if (pageMap[parts[0]]) {
-        setActivePage(pageMap[parts[0]]);
-      }
+    } catch (e) {
+      console.error("Routing detection error:", e);
     }
   }, []);
 
   // Synchronizes URL search path when active selected blog post changes
   useEffect(() => {
-    if (activePage === "updates") {
-      if (selectedUpdate) {
-        window.history.replaceState({ page: "updates", subjectId: null, testId: null }, "", `/updates/${selectedUpdate.id}`);
-      } else {
-        window.history.replaceState({ page: "updates", subjectId: null, testId: null }, "", `/updates`);
+    try {
+      if (activePage === "updates") {
+        if (selectedUpdate) {
+          const path = `/updates/${selectedUpdate.id}`;
+          window.history.replaceState({ page: "updates", subjectId: null, testId: null }, "", path);
+          window.location.hash = `#${path}`;
+        } else {
+          window.history.replaceState({ page: "updates", subjectId: null, testId: null }, "", `/updates`);
+          window.location.hash = "#/updates";
+        }
+      }
+    } catch (e) {
+      console.error("Failed to replaceState in updates effect", e);
+      try {
+        if (activePage === "updates") {
+          if (selectedUpdate) {
+            window.location.hash = `#/updates/${selectedUpdate.id}`;
+          } else {
+            window.location.hash = "#/updates";
+          }
+        }
+      } catch (hashErr) {
+        console.error("Failed hash fallback in updates effect", hashErr);
       }
     }
   }, [selectedUpdate, activePage]);
@@ -780,45 +808,118 @@ User message: ${msgText}`;
     };
   }, [dropdownOpen]);
 
-  // Browser Back Button & Phone Swipe Gesture Support
+  // Browser Back Button & Phone Swipe Gesture Support (PopState and HashChange)
   useEffect(() => {
-    if (!window.history.state || !window.history.state.page) {
-      window.history.replaceState({ page: activePage, subjectId: null, testId: null }, "", "");
+    try {
+      if (!window.history.state || !window.history.state.page) {
+        window.history.replaceState({ page: activePage, subjectId: null, testId: null }, "", "");
+      }
+    } catch (e) {
+      console.error("Failed initial history.state check", e);
     }
 
     const handlePopState = (e: PopStateEvent) => {
-      if (e.state && e.state.page) {
-        setActivePage(e.state.page);
-        if (e.state.page === "test" && e.state.testId) {
-          const subId = e.state.subjectId;
-          const tId = e.state.testId;
-          const subject = subjects.find(s => s.id === subId);
-          if (subject) {
-            const test = subject.tests.find(t => t.id === tId);
-            if (test) {
-              setActiveSubjectId(subId);
-              setActiveTest(test);
+      try {
+        if (e.state && e.state.page) {
+          setActivePage(e.state.page);
+          if (e.state.page === "test" && e.state.testId) {
+            const subId = e.state.subjectId;
+            const tId = e.state.testId;
+            const subject = subjects.find(s => s.id === subId);
+            if (subject) {
+              const test = subject.tests.find(t => t.id === tId);
+              if (test) {
+                setActiveSubjectId(subId);
+                setActiveTest(test);
+              }
+            }
+          } else if (e.state.page !== "test") {
+            if (timerIntervalRef.current) {
+              clearInterval(timerIntervalRef.current);
             }
           }
-        } else if (e.state.page !== "test") {
-          if (timerIntervalRef.current) {
-            clearInterval(timerIntervalRef.current);
+        } else {
+          // Fallback parsing if popstate payload is empty
+          let path = window.location.pathname;
+          if (window.location.hash) {
+            const hashPart = window.location.hash.replace(/^#\/?/, "/");
+            if (hashPart.startsWith("/")) {
+              path = hashPart;
+            }
+          }
+          const parts = path.split("/").filter(Boolean);
+          if (parts.length > 0) {
+            const pageMap: Record<string, string> = {
+              hub: "hub",
+              "mock-tests": "mock_tests",
+              chat: "chat",
+              pyq: "pyq",
+              updates: "updates",
+              analytics: "analytics",
+              auth: "auth",
+              admin: "admin",
+              settings: "settings"
+            };
+            if (pageMap[parts[0]]) {
+              setActivePage(pageMap[parts[0]]);
+              return;
+            }
+          }
+          if (currentUser) {
+            setActivePage("hub");
+          } else {
+            setActivePage("landing");
           }
         }
-      } else {
-        if (currentUser) {
-          setActivePage("hub");
-        } else {
-          setActivePage("landing");
+      } catch (err) {
+        console.error("Error in handlePopState", err);
+      }
+    };
+
+    const handleHashChange = () => {
+      try {
+        let path = window.location.pathname;
+        if (window.location.hash) {
+          const hashPart = window.location.hash.replace(/^#\/?/, "/");
+          if (hashPart.startsWith("/")) {
+            path = hashPart;
+          }
         }
+        const parts = path.split("/").filter(Boolean);
+        if (parts.length > 0) {
+          const pageMap: Record<string, string> = {
+            hub: "hub",
+            "mock-tests": "mock_tests",
+            chat: "chat",
+            pyq: "pyq",
+            updates: "updates",
+            analytics: "analytics",
+            auth: "auth",
+            admin: "admin",
+            settings: "settings"
+          };
+          if (pageMap[parts[0]]) {
+            setActivePage(pageMap[parts[0]]);
+            if (parts[0] === "updates" && parts[1]) {
+              const matchingUpdate = STATIC_NURSING_UPDATES.find(u => u.id === parts[1]);
+              if (matchingUpdate) {
+                setSelectedUpdate(matchingUpdate);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error in handleHashChange", err);
       }
     };
 
     window.addEventListener("popstate", handlePopState);
+    window.addEventListener("hashchange", handleHashChange);
     return () => {
       window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("hashchange", handleHashChange);
     };
-  }, [subjects]);
+  }, [subjects, currentUser]);
 
   // Timer Effect
   useEffect(() => {
@@ -1331,9 +1432,34 @@ User message: ${msgText}`;
             path = `/${pageId}`;
           }
         }
+        
+        // Push state for dynamic SPA servers
         window.history.pushState(stateToPush, "", path);
+        
+        // Synchronize hash state for static hostings (like Hostinger)
+        if (path !== "/") {
+          window.location.hash = `#${path}`;
+        } else {
+          window.location.hash = "";
+        }
       } catch (e) {
         console.error("Failed to pushState", e);
+        // Fallback to update hash only if pushState is blocked or fails
+        try {
+          let hashPath = "";
+          if (pageId !== "landing") {
+            if (pageId === "mock_tests") {
+              hashPath = "mock-tests";
+            } else if (pageId === "test" && (customState?.subjectId || activeSubjectId) && (customState?.testId || activeTest?.id)) {
+              hashPath = `test/${customState?.subjectId || activeSubjectId}/${customState?.testId || activeTest?.id}`;
+            } else {
+              hashPath = pageId;
+            }
+          }
+          window.location.hash = hashPath ? `/${hashPath}` : "";
+        } catch (hashErr) {
+          console.error("Failed hash fallback", hashErr);
+        }
       }
     }
   };
