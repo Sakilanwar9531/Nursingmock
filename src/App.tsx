@@ -95,6 +95,15 @@ const getDetailedExplain = (q: Question): string => {
   return `${base} \n\n📍 clinical memory link: ${highYield}`;
 };
 
+// Safe confirm helper to handle sandboxed iframes where confirm() can throw an exception
+const safeConfirm = (message: string): boolean => {
+  try {
+    return window.confirm(message);
+  } catch (e) {
+    return true; // proceed inside sandboxed preview environment
+  }
+};
+
 // Render micro-formatted markdown in white text with custom bold styles
 const renderFormattedAiResponse = (text: string) => {
   if (!text) return null;
@@ -306,59 +315,6 @@ export default function App() {
     localStorage.setItem("np_subjects_custom_v1", JSON.stringify(newSubjects));
   };
 
-  // --- AI OPEN DISCUSS / CHAT SYSTEM STATE ---
-  const [chatInput, setChatInput] = useState<string>("");
-  const [chatHistory, setChatHistory] = useState<{ role: "user" | "model"; text: string }[]>([
-    { role: "model", text: "Greetings, Colleague! I am your clinical Nursing Professor & NORCET residency tutor. Ask me any medical-surgical or pharmacology topic and we will unpack it with depth, precision, and crisp active-recall mnemonics." }
-  ]);
-  const [chatLoading, setChatLoading] = useState<boolean>(false);
-
-  const handleSendChatMessage = async (msgText: string) => {
-    if (!msgText.trim()) return;
-    const userMessage = { role: "user" as const, text: msgText };
-    const updatedHistory = [...chatHistory, userMessage];
-    setChatHistory(updatedHistory);
-    setChatInput("");
-    setChatLoading(true);
-
-    if (isGeminiClientConfigured()) {
-      try {
-        const prompt = `You are a clinical Nursing Professor & NORCET residency tutor. Answer the following message with medical-surgical/pharmacology depth, precision, and active-recall mnemonics. Keep formatting neat with bold highlights.
-User message: ${msgText}`;
-        const reply = await generateContentDirect(prompt);
-        setChatHistory([...updatedHistory, { role: "model" as const, text: reply }]);
-      } catch (e: any) {
-        setChatHistory([...updatedHistory, { role: "model" as const, text: "**Gemini API Key Error:** " + (e.message || "Could not generate content from Gemini API directly. Please check your credentials in settings.") }]);
-      } finally {
-        setChatLoading(false);
-      }
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msgText, history: chatHistory }),
-      });
-      const contentType = response.headers.get("content-type") || "";
-      if (contentType.includes("text/html") || !response.ok) {
-        throw new Error("No backend API available.");
-      }
-      const data = await response.json();
-      if (data.text) {
-        setChatHistory([...updatedHistory, { role: "model" as const, text: data.text }]);
-      } else {
-        throw new Error(data.error || "Unable to load explanation.");
-      }
-    } catch (e) {
-      const fallbackText = `**Fallback Expert Mode Active:** As an elite nursing professor, I am currently delivering pre-configured core high-yield answers.\n\nFor your topic, always prioritize **Airway, Breathing, and Circulation (ABCs)**. In clinical nursing officer examinations like **AIIMS NORCET**, remember that **acute interventions** always take priority over routine monitoring or teaching vectors.\n\n*Configure a valid GEMINI_API_KEY in Settings to activate real-time AI tutor queries.*`;
-      setChatHistory([...updatedHistory, { role: "model" as const, text: fallbackText }]);
-    } finally {
-      setChatLoading(false);
-    }
-  };
-
   // --- PROGRAMMATIC ADMIN PANEL CRUD STATE ---
   const [adminTab, setAdminTab] = useState<"tests" | "users">("tests");
   const [adminActiveSubjId, setAdminActiveSubjId] = useState<string>("mock_tests");
@@ -435,12 +391,6 @@ User message: ${msgText}`;
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [isTestFinished, setIsTestFinished] = useState<boolean>(false);
 
-  // AI Tutor State
-  const [aiTutorOpen, setAiTutorOpen] = useState<boolean>(false);
-  const [aiTutorLoading, setAiTutorLoading] = useState<boolean>(false);
-  const [aiTutorResponse, setAiTutorResponse] = useState<string>("");
-  const [aiTutorQIdx, setAiTutorQIdx] = useState<number>(-1);
-
   // PYQ Filter State
   const [pyqFilter, setPyqFilter] = useState<string>("all");
 
@@ -454,7 +404,6 @@ User message: ${msgText}`;
   // Client-side Settings States
   const [supUrlInput, setSupUrlInput] = useState<string>(() => localStorage.getItem("np_supabase_url") || "");
   const [supKeyInput, setSupKeyInput] = useState<string>(() => localStorage.getItem("np_supabase_anon_key") || "");
-  const [gemKeyInput, setGemKeyInput] = useState<string>(() => getClientGeminiKey() || "");
 
   const fetchUpdates = async () => {
     setLoadingUpdates(true);
@@ -678,7 +627,7 @@ User message: ${msgText}`;
     
     if (isSupabaseConnected()) {
       // Direct Supabase OTP Simulation with actual registered profiles
-      const simulatedEmail = `${phoneClean}@nursingmock.com`;
+      const simulatedEmail = `${phoneClean}@ncbt.in`;
       const simulatedPassword = `supa-otp-pass-${phoneClean}`;
       
       setAuthError("");
@@ -710,12 +659,12 @@ User message: ${msgText}`;
     const isAdminUser = phoneClean === "9531659828";
     const users: UserType[] = JSON.parse(localStorage.getItem("np_users") || "[]");
 
-    let found = users.find(u => u.phone === phoneClean || (u.email && u.email.toLowerCase() === `${phoneClean}@nursingmock.com`));
+    let found = users.find(u => u.phone === phoneClean || (u.email && (u.email.toLowerCase() === `${phoneClean}@ncbt.in` || u.email.toLowerCase() === `${phoneClean}@nursingmock.com`)));
 
     if (!found) {
       found = {
         name: isAdminUser ? "Sakil Ahmed (Admin)" : `Nurse Student ${phoneClean.slice(-4)}`,
-        email: isAdminUser ? "sakil.net.in@gmail.com" : `${phoneClean}@nursingmock.com`,
+        email: isAdminUser ? "sakil.net.in@gmail.com" : `${phoneClean}@ncbt.in`,
         phone: phoneClean,
         isAdmin: isAdminUser,
         joined: Date.now()
@@ -826,21 +775,19 @@ User message: ${msgText}`;
   };
 
   const handleLogout = async () => {
-    if (confirm("Are you sure you want to log out?")) {
-      if (isSupabaseConnected()) {
-        await supabaseSignOut();
-      }
-      setCurrentUser(null);
-      localStorage.removeItem("np_user");
-      triggerToast("Logged out successfully.", "ok");
-      showPage("landing");
+    if (isSupabaseConnected()) {
+      await supabaseSignOut();
     }
+    setCurrentUser(null);
+    localStorage.removeItem("np_user");
+    triggerToast("Logged out successfully.", "ok");
+    showPage("landing");
   };
 
   const guestLogin = () => {
     const guestUser: UserType = {
       name: "Guest Student",
-      email: "guest@nursingmock.com",
+      email: "guest@ncbt.in",
       isAdmin: false,
       guest: true
     };
@@ -896,7 +843,7 @@ User message: ${msgText}`;
   };
 
   const deleteTest = (subjectId: string, testId: string) => {
-    if (!confirm(`Are you absolutely sure you want to delete this test module (${testId})? This will wipe all its questions permanently.`)) return;
+    if (!safeConfirm(`Are you absolutely sure you want to delete this test module (${testId})? This will wipe all its questions permanently.`)) return;
     const updated = subjects.map(s => {
       if (s.id === subjectId) {
         return {
@@ -958,7 +905,7 @@ User message: ${msgText}`;
   };
 
   const deleteQuestion = (subjectId: string, testId: string, qIdx: number) => {
-    if (!confirm("Remove this question from the module permanently?")) return;
+    if (!safeConfirm("Remove this question from the module permanently?")) return;
     
     const updated = subjects.map(s => {
       if (s.id === subjectId) {
@@ -1106,7 +1053,6 @@ User message: ${msgText}`;
     setCorrectCount(0);
     setTimeLeft(test.mins * 60);
     setIsTestFinished(false);
-    setAiTutorOpen(false);
     showPage("test", true, { subjectId, testId });
     triggerToast(`Good luck on your mock! 📖`, "ok");
   };
@@ -1247,68 +1193,6 @@ User message: ${msgText}`;
     triggerToast(`Switched to ${modeType === "exam" ? "Exam" : "Practice"} Mode 🔒`, "ok");
   };
 
-  // AI Tutor Integration
-  const openAiTutor = async (qIdx: number) => {
-    if (!activeTest) return;
-    const question = activeTest.data[qIdx];
-    setAiTutorQIdx(qIdx);
-    setAiTutorOpen(true);
-    setAiTutorLoading(true);
-    setAiTutorResponse("");
-
-    if (isGeminiClientConfigured()) {
-      try {
-        const prompt = `Explain this clinical nursing question in detail for active-recall study.
-Question: ${question.q}
-Correct Answer: ${question.opts[question.ans]}
-Base rationale provided: ${question.explain}
-
-Please format your response using standard markdown structure with custom emoji headers like:
-🔑 KEY PHYSIOLOGY
-📖 CLINICAL REASONING
-💡 NURSING MEMORY TRICK / MNEMONIC`;
-        const reply = await generateContentDirect(prompt);
-        setAiTutorResponse(reply);
-      } catch (e: any) {
-        setAiTutorResponse(`Could not load direct AI guidance (${e.message || "API key error"}). Here is the standard textbook rationale:\n\n💡 ${question.explain}`);
-      } finally {
-        setAiTutorLoading(false);
-      }
-      return;
-    }
-
-    try {
-      const payload = {
-        q: question.q,
-        correctAnswer: question.opts[question.ans],
-        explain: question.explain
-      };
-
-      const res = await fetch("/api/explain", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      const contentType = res.headers.get("content-type") || "";
-      if (contentType.includes("text/html") || !res.ok) {
-        throw new Error("No backend API configured.");
-      }
-      const data = await res.json();
-      setAiTutorResponse(data.text || data.error || "Unable to extract response.");
-    } catch (err: any) {
-      console.error(err);
-      const concept = question.explain || "Important physiological, pharmacological or clinical principle tested in central nursing officer exams.";
-      const reasoning = `The selected answer '${question.opts[question.ans]}' aligns perfectly with established medical-surgical nursing protocols, INC guidelines, and AIIMS NORCET standards.`;
-      const rememberMnemonic = "ABC Priority Rule: Always prioritize Airway, Breathing, and Circulation (safety parameters) before secondary diagnostic inquiries or procedural preparation.";
-      const mistake = "Confusing clinical priorities (e.g., getting distracted by stable lab values instead of addressing acute changes in patient status)";
-      
-      const fallbackText = `🔑 MASTER CONCEPT (DEPTH)\n${concept}\n\n📖 WHY THIS ANSWER\n${reasoning}\n\n💡 CLINICAL MNEMONIC\n${rememberMnemonic}\n\n⚠️ EXAM TRAP\n${mistake}\n\n*(Configure a valid GEMINI_API_KEY in Settings to activate live AI reasoning)*`;
-      setAiTutorResponse(fallbackText);
-    } finally {
-      setAiTutorLoading(false);
-    }
-  };
-
   // Share score via WhatsApp
   const shareToWhatsApp = (pct: number, correct: number, total: number, title: string) => {
     const skipped = selectedOptions.filter(o => o === null).length;
@@ -1320,7 +1204,7 @@ Please format your response using standard markdown structure with custom emoji 
       "Keep practicing! 💪";
 
     const text = [
-      "🩺 *NURSING MOCK TEST RESULTS* 🩺",
+      "🩺 *NCBT.IN NURSING CBT TEST RESULTS* 🩺",
       "------------------------------------------",
       `📋 *Topic:* ${title}`,
       `🎯 *Total MCQs:* ${total}`,
@@ -1331,8 +1215,8 @@ Please format your response using standard markdown structure with custom emoji 
       "------------------------------------------",
       `📊 *Feedback:* ${feedback}`,
       "",
-      "👉 *Attend Free Test* ➡️ https://nursingmock.com",
-      "⚡ _No Ads • Premium Rationales • AI Tutor_"
+      "👉 *Attend Free Test* ➡️ https://ncbt.in",
+      "⚡ _No Ads • Premium Rationales_"
     ].filter(Boolean).join("\n");
 
     window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
@@ -1415,8 +1299,15 @@ Please format your response using standard markdown structure with custom emoji 
 
       {/* Main sticky navigation bar */}
       <nav id="main-nav">
-        <div className="nav-logo" onClick={() => showPage("landing")}>
-          Nursing Mock
+        <div className="nav-logo cursor-pointer select-none group" onClick={() => showPage("landing")}>
+          <div className="flex items-baseline font-sans relative">
+            <span className="text-xl font-extrabold tracking-tight text-white group-hover:text-[#4f9eff] transition-colors duration-300">
+              NCBT
+            </span>
+            <span className="text-xl font-black text-[#7ee8a2] group-hover:text-white transition-colors duration-300">
+              .in
+            </span>
+          </div>
         </div>
 
         <div className="nav-links" id="nav-links">
@@ -1431,12 +1322,6 @@ Please format your response using standard markdown structure with custom emoji 
             onClick={() => showPage("mock_tests")}
           >
             <Flame className="w-4 h-4 text-[#ff9e22]" /> Mock Tests
-          </button>
-          <button 
-            className={`nav-link flex items-center gap-1.5 ${activePage === "chat" ? "active" : ""}`} 
-            onClick={() => showPage("chat")}
-          >
-            <MessageSquare className="w-4 h-4 text-[#58a6ff]" /> AI Chat
           </button>
           <button 
             className={`nav-link flex items-center gap-1.5 ${activePage === "pyq" ? "active" : ""}`} 
@@ -1456,12 +1341,7 @@ Please format your response using standard markdown structure with custom emoji 
           >
             <Award className="w-4 h-4" /> Analytics
           </button>
-          <button 
-            className={`nav-link flex items-center gap-1.5 ${activePage === "settings" ? "active" : ""}`} 
-            onClick={() => showPage("settings")}
-          >
-            <Settings className="w-4 h-4 text-amber-300" /> Settings
-          </button>
+
           {currentUser && currentUser.isAdmin && (
             <button 
               className={`nav-link flex items-center gap-1.5 ${activePage === "admin" ? "active" : ""}`} 
@@ -1497,12 +1377,6 @@ Please format your response using standard markdown structure with custom emoji 
               </button>
               <button 
                 className="w-full text-left px-4 py-2 text-xs text-[#e6edf3] hover:bg-[#151f30] flex items-center gap-2 transition-colors font-medium"
-                onClick={() => { showPage("chat"); setDropdownOpen(false); }}
-              >
-                <MessageSquare className="w-3.5 h-3.5 text-[#58a6ff]" /> AI Chat
-              </button>
-              <button 
-                className="w-full text-left px-4 py-2 text-xs text-[#e6edf3] hover:bg-[#151f30] flex items-center gap-2 transition-colors font-medium"
                 onClick={() => { showPage("pyq"); setDropdownOpen(false); }}
               >
                 <FileText className="w-3.5 h-3.5 text-[#56d364]" /> PYQ
@@ -1519,12 +1393,7 @@ Please format your response using standard markdown structure with custom emoji 
               >
                 <Award className="w-3.5 h-3.5 text-[#f1e05a]" /> Analytics
               </button>
-              <button 
-                className="w-full text-left px-4 py-2 text-xs text-[#e6edf3] hover:bg-[#151f30] flex items-center gap-2 transition-colors font-medium"
-                onClick={() => { showPage("settings"); setDropdownOpen(false); }}
-              >
-                <Settings className="w-3.5 h-3.5 text-amber-300" /> Settings
-              </button>
+
 
               <div className="h-[1px] bg-[#1e293b] my-2"></div>
 
@@ -1539,7 +1408,7 @@ Please format your response using standard markdown structure with custom emoji 
                 <div className="px-4 py-1.5 flex flex-col gap-1.5">
                   <span className="text-[10px] text-[#8b949e] truncate leading-tight">Logged: {currentUser.name}</span>
                   <button 
-                    className="text-left text-[11px] text-red-00 hover:text-red-350 font-semibold"
+                    className="text-left text-[11px] text-red-400 hover:text-red-300 font-semibold transition-colors"
                     onClick={() => { handleLogout(); setDropdownOpen(false); }}
                   >
                     Logout 👤
@@ -1564,14 +1433,14 @@ Please format your response using standard markdown structure with custom emoji 
               <div className="hero-glow2"></div>
               <div className="hero-eyebrow">
                 <span className="pulse-dot"></span>
-                India's Cleanest Nursing Mock
+                NCBT | Nursing CBT Exam Preparation
               </div>
               <h1 id="landing-hero-heading">
                 Stop Cramming.<br />
                 Start <span className="grad">Understanding.</span>
               </h1>
               <p className="hero-sub" id="landing-hero-body">
-                Subject-wise MCQs from real exams — AIIMS, RRB, ESIC, DSSSB, RPSC — with instant rationale, AI tutor, and zero distractions.
+                Subject-wise MCQs from real exams — AIIMS, RRB, ESIC, DSSSB, RPSC — with instant organized rationale, and zero distractions.
               </p>
               <div className="hero-ctas">
                 <button className="btn-hero-primary" onClick={() => showPage("hub")} id="btn-start-practicing">
@@ -1594,53 +1463,27 @@ Please format your response using standard markdown structure with custom emoji 
               </div>
             </div>
 
-            {/* USP GRID */}
-            <div className="usp-section" id="usp-section">
-              <div className="section-eyebrow">Why Nursing Mock</div>
+
+
+            {/* WHY NCBT SECTION */}
+            <div className="exam-section pb-4">
+              <div className="section-eyebrow">WHY NCBT.IN</div>
               <h2 className="section-title">Built different.<br />On purpose.</h2>
-              <p className="section-sub">Every other platform throws 10,000 ads and pop-ups at you. We just give you the best MCQs.</p>
-              
-              <div className="usp-grid">
-                <div className="usp-card">
-                  <div className="usp-icon">🎯</div>
-                  <div className="usp-title">Clean, distraction-free UI</div>
-                  <div className="usp-text">No banners, no upsells mid-session, no notification spam. Just you and the question. Your focus is the product.</div>
-                  <span className="usp-tag">Core USP</span>
-                </div>
-                <div className="usp-card">
-                  <div className="usp-icon">🧠</div>
-                  <div className="usp-title">AI Tutor on every question</div>
-                  <div className="usp-text">Hit "Deep Dive" on any MCQ for a crisp, structured AI explanation. No 20-tab Googling. Understand it once, remember it forever.</div>
-                  <span className="usp-tag">AI-Powered</span>
-                </div>
-                <div className="usp-card">
-                  <div className="usp-icon">🔬</div><div className="usp-title">Practice & Exam modes</div>
-                  <div className="usp-text">Practice mode: instant feedback after each answer. Exam mode: replicate real test conditions — reveal everything only at the end.</div>
-                  <span className="usp-tag">Two Modes</span>
-                </div>
-                <div className="usp-card">
-                  <div className="usp-icon">📊</div>
-                  <div className="usp-title">Personal analytics dashboard</div>
-                  <div className="usp-text">See your score trends, topic mastery percentages, and daily streak. Know exactly where you're weak before the real exam does.</div>
-                  <span className="usp-tag">Analytics</span>
-                </div>
-                <div className="usp-card">
-                  <div className="usp-icon">📋</div>
-                  <div className="usp-title">Real PYQ bank</div>
-                  <div className="usp-text">Filter previous year questions by exam (AIIMS, RRB, ESIC…), year, and subject. The exact questions that actually appeared.</div>
-                  <span className="usp-tag">PYQ Bank</span>
-                </div>
-                <div className="usp-card">
-                  <div className="usp-icon">📤</div>
-                  <div className="usp-title">Share your scorecard</div>
-                  <div className="usp-text">One tap to generate a beautiful scorecard image and share directly to WhatsApp. Challenge your batchmates.</div>
-                  <span className="usp-tag">Social</span>
-                </div>
+            </div>
+
+            {/* CTA BANNER */}
+            <div className="cta-banner">
+              <h2>Ready to ace your exam?</h2>
+              <p>Join thousands of nursing students preparing smarter, not harder.</p>
+              <div className="flex gap-3 justify-center flex-wrap">
+                <button className="btn-hero-primary" onClick={() => showPage("hub")}>
+                  Browse Tests →
+                </button>
               </div>
             </div>
 
             {/* EXAM COVERAGE BANDS */}
-            <div className="exam-section">
+            <div className="exam-section pt-4">
               <div className="section-eyebrow">Coverage</div>
               <h2 className="section-title">Every major exam.<br />One platform.</h2>
               <div className="exam-bands mt-6">
@@ -1659,19 +1502,8 @@ Please format your response using standard markdown structure with custom emoji 
               </div>
             </div>
 
-            {/* CTA BANNER */}
-            <div className="cta-banner">
-              <h2>Ready to ace your exam?</h2>
-              <p>Join thousands of nursing students preparing smarter, not harder.</p>
-              <div className="flex gap-3 justify-center flex-wrap">
-                <button className="btn-hero-primary" onClick={() => showPage("hub")}>
-                  Browse Tests →
-                </button>
-              </div>
-            </div>
-
             <footer>
-              Nursing Mock · Built for India's Nursing Students ·{" "}
+              NCBT · India's Nursing CBT Exam Preparation Platform ·{" "}
               <a onClick={() => showPage("hub")}>Tests</a> ·{" "}
               <a onClick={() => showPage("pyq")}>PYQ</a> ·{" "}
               <a onClick={() => showPage("analytics")}>Analytics</a> · For educational use only
@@ -1837,7 +1669,7 @@ Please format your response using standard markdown structure with custom emoji 
               })}
             </div>
            
-            <footer>Nursing Mock · Built for India's Nursing Students</footer>
+            <footer>NCBT · India's Nursing CBT Exam Preparation Platform</footer>
           </div>
         )}
 
@@ -1855,7 +1687,7 @@ Please format your response using standard markdown structure with custom emoji 
                   </div>
                   <h2 className="text-2xl sm:text-3xl font-black text-white font-syne tracking-tight">Full Mock Test Series</h2>
                   <p className="text-[#8492a6] font-sans text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
-                    Simulate real competitive nurse officer assessments with **50 high-yield questions** per test, a **50-minute timer**, and instant professor-level AI rationale.
+                    Simulate real competitive nurse officer assessments with **50 high-yield questions** per test, a **50-minute timer**, and instant professor-level organized rationales.
                   </p>
                 </div>
                 <button 
@@ -1940,125 +1772,11 @@ Please format your response using standard markdown structure with custom emoji 
               </button>
             </div>
             
-            <footer className="mt-12 text-center text-xs text-[#8b949e] pb-6">Nursing Mock · Built for India's Nursing Students</footer>
+            <footer className="mt-12 text-center text-xs text-[#8b949e] pb-6">NCBT · India's Nursing CBT Exam Preparation Platform</footer>
           </div>
         )}
 
-        {/* =============== INTERACTIVE AI CHAT PAGE =============== */}
-        {activePage === "chat" && (
-          <div className="page active" id="page-chat">
-            <div className="hub-header bg-gradient-to-r from-blue-950/20 to-indigo-950/20 border border-blue-900/20 rounded-2xl p-6 sm:p-8 mb-6 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl pointer-events-none"></div>
-              <div>
-                <span className="bg-blue-500/15 text-blue-300 text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full border border-blue-500/20 mb-2 inline-flex items-center gap-1">
-                  <MessageSquare className="w-3 h-3 text-blue-400" /> 24/7 Academic Support
-                </span>
-                <h2 className="text-2xl sm:text-3xl font-black text-white font-syne tracking-tight">Open AI Discuss</h2>
-                <p className="text-[#8492a6] font-sans text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
-                  Deep dive into any medical, clinical, or nursing pharmacology topic. Get crisp, graduate-level explanations with high-yield recall mnemonics instantly.
-                </p>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-              {/* Quick Prompt Starters */}
-              <div className="lg:col-span-1 flex flex-col gap-3">
-                <span className="text-xs font-bold text-[#8b949e] uppercase tracking-wider px-1">Quick Starters 💡</span>
-                <button 
-                  className="w-full text-left bg-[#0f1520] hover:bg-[#151f30] border border-[#1e293b] p-3 rounded-xl transition-all text-xs font-semibold text-[#e6edf3] hover:border-blue-500/30 flex flex-col gap-1 shadow"
-                  onClick={() => handleSendChatMessage("Explain Glasgow Coma Scale (GCS) scoring criteria and clinical action thresholds")}
-                >
-                  <span className="text-blue-400">🧠 Glasgow Coma Scale</span>
-                  <span className="text-[10px] text-[#8b949e] font-normal font-sans">Learn component scores and the airway safeguard rule.</span>
-                </button>
-                <button 
-                  className="w-full text-left bg-[#0f1520] hover:bg-[#151f30] border border-[#1e293b] p-3 rounded-xl transition-all text-xs font-semibold text-[#e6edf3] hover:border-blue-500/30 flex flex-col gap-1 shadow"
-                  onClick={() => handleSendChatMessage("Unpack Heparin vs Warfarin monitoring and their respective clinical antidotes")}
-                >
-                  <span className="text-green-400">💉 Heparin vs Warfarin</span>
-                  <span className="text-[10px] text-[#8b949e] font-normal font-sans">Contrast aPTT vs PT/INR therapeutic indices.</span>
-                </button>
-                <button 
-                  className="w-full text-left bg-[#0f1520] hover:bg-[#151f30] border border-[#1e293b] p-3 rounded-xl transition-all text-xs font-semibold text-[#e6edf3] hover:border-blue-500/30 flex flex-col gap-1 shadow"
-                  onClick={() => handleSendChatMessage("Explain ECG changes in Hyperkalemia and clinical administration of Calcium Gluconate")}
-                >
-                  <span className="text-red-400">🫀 Hyperkalemia & ECG</span>
-                  <span className="text-[10px] text-[#8b949e] font-normal font-sans">Analyze peaked T-waves, QRS widening, and pharmacology.</span>
-                </button>
-                <button 
-                  className="w-full text-left bg-[#0f1520] hover:bg-[#151f30] border border-[#1e293b] p-3 rounded-xl transition-all text-xs font-semibold text-[#e6edf3] hover:border-blue-500/30 flex flex-col gap-1 shadow"
-                  onClick={() => handleSendChatMessage("What are the classic symptoms of Digoxin toxicity and how does hypokalemia affect it?")}
-                >
-                  <span className="text-amber-400">💊 Digoxin Toxicity</span>
-                  <span className="text-[10px] text-[#8b949e] font-normal font-sans">Understand visual changes, anorexia, and potassium binds.</span>
-                </button>
-              </div>
-
-              {/* Chat Area */}
-              <div className="lg:col-span-3 bg-[#0f1520] border border-[#1e293b] rounded-2xl flex flex-col h-[520px] shadow-xl overflow-hidden relative">
-                {/* Chat Message List */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 font-sans text-xs sm:text-sm">
-                  {chatHistory.map((chat, idx) => (
-                    <div 
-                      key={idx} 
-                      className={`flex gap-3 max-w-[85%] ${chat.role === "user" ? "ml-auto flex-row-reverse" : "mr-auto"}`}
-                    >
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 font-bold ${chat.role === "user" ? "bg-blue-600 text-white text-xs" : "bg-[#151f30] text-blue-400 text-xs"}`}>
-                        {chat.role === "user" ? "👤" : "👩‍🏫"}
-                      </div>
-                      <div className={`rounded-xl p-3.5 shadow border ${chat.role === "user" ? "bg-blue-950/40 border-blue-900/50 text-[#e6edf3]" : "bg-[#161b22] border-[#21262d] text-[#c9d1d9]"}`}>
-                        {chat.role === "model" ? (
-                          <div className="chat-ai-response text-white prose prose-invert prose-xs max-w-none">
-                            {renderFormattedAiResponse(chat.text)}
-                          </div>
-                        ) : (
-                          <p className="font-medium whitespace-pre-wrap">{chat.text}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {chatLoading && (
-                    <div className="flex gap-3 max-w-[80%] mr-auto items-center animate-pulse">
-                      <div className="w-7 h-7 rounded-lg bg-[#151f30] text-blue-400 flex items-center justify-center font-bold text-xs">
-                        👩‍🏫
-                      </div>
-                      <div className="bg-[#161b22] border border-[#21262d] rounded-xl p-3 text-xs text-[#8b949e]">
-                        The Nursing Professor is typing precise clinical insights... 🩺
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Chat Input Bar */}
-                <form 
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (!chatLoading) handleSendChatMessage(chatInput);
-                  }}
-                  className="border-t border-[#1e293b] p-3 bg-[#080c12] flex gap-2 items-center"
-                >
-                  <input 
-                    type="text" 
-                    placeholder="Ask standard topics (e.g. 'lithium toxicity', 'apgar score', 'tetralogy of fallot')..." 
-                    className="flex-1 bg-[#151f30] border border-[#1e293b] rounded-xl px-4 py-3.5 text-xs sm:text-sm text-white placeholder-[#8b949e] focus:outline-none focus:border-blue-500 transition-colors"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    disabled={chatLoading}
-                  />
-                  <button 
-                    type="submit" 
-                    className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm px-5 py-3 rounded-xl shadow transition-all shrink-0 active:scale-95 disabled:opacity-50"
-                    disabled={chatLoading || !chatInput.trim()}
-                  >
-                    Discuss →
-                  </button>
-                </form>
-              </div>
-            </div>
-
-            <footer className="mt-12 text-center text-xs text-[#8b949e] pb-6">Nursing Mock · Built for India's Nursing Students</footer>
-          </div>
-        )}
 
         {/* =============== TEST / EXAM PAGE =============== */}
         {activePage === "test" && activeTest && (
@@ -2224,14 +1942,6 @@ Please format your response using standard markdown structure with custom emoji 
                             {questionAnswers[currentQuestionIndex] === 1 ? "✅ Correct! " : `❌ Wrong. Correct Answer: ${activeTest.data[currentQuestionIndex].opts[activeTest.data[currentQuestionIndex].ans]}. `}
                             <span style={{ whiteSpace: "pre-line" }}>{getDetailedExplain(activeTest.data[currentQuestionIndex])}</span>
                           </div>
-
-                          {/* AI Tutor integrated button */}
-                          <button 
-                            className="ai-tutor-btn" 
-                            onClick={() => openAiTutor(currentQuestionIndex)}
-                          >
-                            <Activity className="w-4 h-4" /> 🤖 AI Deep Dive — Explain this topic in detail
-                          </button>
                         </div>
                       )}
 
@@ -2386,17 +2096,11 @@ Please format your response using standard markdown structure with custom emoji 
                               })}
                             </div>
 
-                            <div className="rq-rationale font-sans flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="rq-rationale font-sans">
                               <div className="flex-1 text-sm leading-relaxed" style={{ whiteSpace: "pre-line" }}>
                                 💡 {getDetailedExplain(q)}
                                 <span className="rq-src block mt-2 text-xs opacity-75 font-semibold" style={{ whiteSpace: "normal" }}>📌 Source: {q.source}</span>
                               </div>
-                              <button
-                                className="mt-2 sm:mt-0 self-start sm:self-center bg-[#a181ff]/10 hover:bg-[#a181ff]/20 border border-[#a181ff]/30 text-[#d4c0ff] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all text-xs cursor-pointer shadow-sm active:scale-95"
-                                onClick={() => openAiTutor(idx)}
-                              >
-                                <Activity className="w-3.5 h-3.5 text-[#a181ff]" /> AI Deep Dive 🤖
-                              </button>
                             </div>
                           </div>
                         );
@@ -2408,7 +2112,7 @@ Please format your response using standard markdown structure with custom emoji 
               </div>
             )}
 
-            <footer>Nursing Mock · Built for India's Nursing Students</footer>
+            <footer>NCBT · India's Nursing CBT Exam Preparation Platform</footer>
           </div>
         )}
 
@@ -2450,7 +2154,7 @@ Please format your response using standard markdown structure with custom emoji 
               ))}
             </div>
 
-            <footer>Nursing Mock · Built for India's Nursing Students</footer>
+            <footer>NCBT · India's Nursing CBT Exam Preparation Platform</footer>
           </div>
         )}
 
@@ -2802,7 +2506,7 @@ Please format your response using standard markdown structure with custom emoji 
               })()}
             </AnimatePresence>
 
-            <footer>Nursing Mock · Built for India's Nursing Students</footer>
+            <footer>NCBT · India's Nursing CBT Exam Preparation Platform</footer>
           </div>
         )}
 
@@ -2954,7 +2658,7 @@ Please format your response using standard markdown structure with custom emoji 
               )}
             </div>
 
-            <footer>Nursing Mock · Built for India's Nursing Students</footer>
+            <footer>NCBT · India's Nursing CBT Exam Preparation Platform</footer>
           </div>
         )}
 
@@ -2963,8 +2667,11 @@ Please format your response using standard markdown structure with custom emoji 
           <div className="page active" id="page-auth">
             <div className="auth-wrap">
               <div className="auth-card font-sans">
-                <div className="auth-logo">Nursing Mock</div>
-                <div className="auth-tagline font-sans font-medium text-xs">India's cleanest nursing competitive exam platform</div>
+                <div className="auth-logo flex items-baseline justify-center select-none font-sans">
+                  <span className="text-3xl font-extrabold tracking-tight text-white">NCBT</span>
+                  <span className="text-2xl font-black text-[#7ee8a2]">.in</span>
+                </div>
+                <div className="auth-tagline font-sans font-medium text-xs text-[#8b949e] mt-1 text-center">India's Nursing CBT Exam Preparation Platform</div>
                 
                 <div className="auth-tabs">
                   <button 
@@ -3651,7 +3358,7 @@ Please format your response using standard markdown structure with custom emoji 
 
             </div>
             
-            <footer className="mt-12 text-center text-xs text-[#8b949e] pb-6">Nursing Mock · Built for India's Nursing Students</footer>
+            <footer className="mt-12 text-center text-xs text-[#8b949e] pb-6">NCBT · India's Nursing CBT Exam Preparation Platform</footer>
           </div>
         )}
 
@@ -3747,74 +3454,7 @@ Please format your response using standard markdown structure with custom emoji 
                 </div>
               </div>
 
-              {/* SECTION 2: GEMINI API */}
-              <div className="bg-[#0f1520] border border-[#1e293b] rounded-2xl p-6 shadow-xl relative overflow-hidden">
-                <div className="absolute top-4 right-4 flex items-center gap-1.5">
-                  {isGeminiClientConfigured() ? (
-                    <span className="bg-indigo-950/40 text-indigo-400 border border-indigo-900/50 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide">
-                      🟢 Direct AI Active
-                    </span>
-                  ) : (
-                    <span className="bg-amber-950/40 text-amber-400 border border-amber-900/50 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide">
-                      🔴 Direct Server Fallback
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2 mb-4">
-                  <Activity className="w-5 h-5 text-indigo-400" />
-                  <h3 className="font-syne text-sm font-extrabold text-white uppercase tracking-wider m-0">Gemini Client-Side API Key</h3>
-                </div>
-
-                <p className="text-xs text-[#8b949e] mb-4 leading-relaxed">
-                  Provide your Gemini API key to trigger AI synthesis directly from the browser, completely removing any reliance on an Express backend proxy. This enables 100% static hosting on platforms like Hostinger.
-                </p>
-
-                <div className="space-y-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-extrabold text-[#8b949e] uppercase tracking-wider">Gemini API Key</label>
-                    <input 
-                      type="password" 
-                      placeholder="AIzaSy..." 
-                      className="bg-[#151f30] border border-[#1e293b] p-3 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500 w-full"
-                      value={gemKeyInput}
-                      onChange={(e) => setGemKeyInput(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="flex gap-2 pt-2">
-                    <button 
-                      className="bg-indigo-500 hover:bg-indigo-600 text-white font-extrabold text-xs px-5 py-3 rounded-xl transition-all shadow-md uppercase tracking-wider cursor-pointer"
-                      onClick={() => {
-                        if (!gemKeyInput.trim()) {
-                          triggerToast("Please enter a valid API key.", "err");
-                          return;
-                        }
-                        saveClientGeminiKey(gemKeyInput.trim());
-                        triggerToast("Gemini key applied successfully! 🤖", "ok");
-                        setTimeout(() => window.location.reload(), 1000);
-                      }}
-                    >
-                      Save Key 💾
-                    </button>
-                    {isGeminiClientConfigured() && (
-                      <button 
-                        className="bg-neutral-800 hover:bg-neutral-700 text-white font-extrabold text-xs px-5 py-3 rounded-xl transition-all uppercase tracking-wider cursor-pointer"
-                        onClick={() => {
-                          clearClientGeminiKey();
-                          setGemKeyInput("");
-                          triggerToast("Gemini credentials deleted.", "ok");
-                          setTimeout(() => window.location.reload(), 1000);
-                        }}
-                      >
-                        Clear Key 🗑️
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 3: DEPLOYMENT PROCEDURES */}
+              {/* SECTION 2: DEPLOYMENT PROCEDURES */}
               <div className="bg-[#0f1520] border border-[#1e293b] rounded-2xl p-6 shadow-xl relative overflow-hidden">
                 <div className="flex items-center gap-2 mb-4">
                   <FileText className="w-5 h-5 text-amber-400" />
@@ -3827,7 +3467,7 @@ Please format your response using standard markdown structure with custom emoji 
                   </p>
                   <ol className="list-decimal pl-5 space-y-2 text-[#8b949e]">
                     <li>
-                      <strong className="text-white">Configure Secrets</strong>: On this page, configure your Supabase URL, Supabase Anon Key, and Gemini API key, then verify the connection.
+                      <strong className="text-white">Configure Secrets</strong>: On this page, configure your Supabase URL and Supabase Anon Key, then verify the connection.
                     </li>
                     <li>
                       <strong className="text-white">Build Static Files</strong>: Download your code ZIP, extract it on your desktop, and run <code className="bg-[#151f30] px-1.5 py-0.5 rounded text-amber-300 font-mono text-[11px]">npm run build</code> in your command line or terminal.
@@ -3850,54 +3490,7 @@ Please format your response using standard markdown structure with custom emoji 
 
       </main>
 
-      {/* =============== AI TUTOR ACCORDION MODAL =============== */}
-      {aiTutorOpen && (
-        <div className="modal-overlay" style={{ display: "flex" }}>
-          <div className="modal">
-            <button className="modal-close" onClick={() => setAiTutorOpen(false)}>
-              ✕
-            </button>
-            <div className="modal-title flex items-center gap-1.5 text-purple font-bold">
-              <Activity className="w-4 h-4" /> 🤖 AI Tutor — Smart Deep Dive
-            </div>
 
-            <div id="ai-modal-content" className="pt-2">
-              {activeTest && aiTutorQIdx > -1 && (
-                <>
-                  <p className="text-xs text-[#8b949e] italic mb-4 border-l border-[#1e2d45] pl-3 py-1">
-                    "{activeTest.data[aiTutorQIdx].q}"
-                  </p>
-
-                  {aiTutorLoading ? (
-                    <div className="ai-loading py-6 flex justify-center items-center">
-                      <div className="ai-loading-dots mr-2">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                      </div>
-                      <span className="text-xs font-semibold">Gemini is synthesizing detailed rationale...</span>
-                    </div>
-                  ) : (
-                    <div className="pt-1">
-                      {renderFormattedAiResponse(aiTutorResponse)}
-                    </div>
-                  )}
-
-                  <div className="text-[11px] text-[#8b949e] border-t border-[#1e2d45] pt-3 mt-4 flex items-center justify-between">
-                    <span>📌 Source: {activeTest.data[aiTutorQIdx].source}</span>
-                    <button 
-                      className="text-accent underline text-[10px]"
-                      onClick={() => setAiTutorOpen(false)}
-                    >
-                      Close rationale
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
       
       {/* =============== CBT EXAM INSTRUCTIONS MODAL =============== */}
       {pendingTest && (

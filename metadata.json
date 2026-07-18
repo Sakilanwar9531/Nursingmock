@@ -1,6 +1,6 @@
 {
-  "name": "Nursing Mock",
-  "description": "Nursing Competitive Exam Platform featuring practice and exam modes, performance analytics, and structured AI tutor deep dives.",
+  "name": "NCBT",
+  "description": "NCBT – Nursing Computer Based Tests: India's Nursing CBT Exam Preparation Platform. Providing high-quality CBT-based mock tests, previous year questions, quizzes, study materials and exam preparation resources for Indian nursing aspirants preparing for Government Nursing recruitment examinations.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

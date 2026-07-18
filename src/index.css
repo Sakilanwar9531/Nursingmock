@@ -120,13 +120,6 @@ nav {
 }
 
 .nav-logo {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 16px;
-  font-weight: 700;
-  background: linear-gradient(90deg, var(--accent), var(--green));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
   cursor: pointer;
   white-space: nowrap;
   margin-right: 8px;
