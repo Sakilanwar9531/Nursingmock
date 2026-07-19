@@ -497,6 +497,7 @@ export default function App() {
     let initialSubjId: string | null = null;
     let initialTestId: string | null = null;
     let foundTest: Test | null = null;
+    let foundUpdateOnLoad: any = null;
 
     if (cleanPath === "/pyq") {
       initialPage = "hub";
@@ -510,6 +511,13 @@ export default function App() {
     } else if (cleanPath === "/short-sprints") {
       initialPage = "hub";
       initialTab = "short";
+    } else if (cleanPath.startsWith("/updates/")) {
+      initialPage = "updates";
+      const uId = path.split("/")[2];
+      const foundU = STATIC_NURSING_UPDATES.find(u => u.id === uId);
+      if (foundU) {
+        foundUpdateOnLoad = foundU;
+      }
     } else if (cleanPath === "/updates") {
       initialPage = "updates";
     } else if (cleanPath === "/analytics") {
@@ -544,6 +552,9 @@ export default function App() {
     // Apply Hydrated state
     setActivePage(initialPage);
     setHubTab(initialTab as any);
+    if (foundUpdateOnLoad) {
+      setSelectedUpdate(foundUpdateOnLoad);
+    }
     if (initialPage === "test" && foundTest) {
       setActiveSubjectId(initialSubjId);
       setActiveTest(foundTest);
@@ -557,7 +568,8 @@ export default function App() {
       page: initialPage,
       hubTab: initialTab,
       subjectId: initialSubjId,
-      testId: initialTestId
+      testId: initialTestId,
+      updateId: foundUpdateOnLoad ? foundUpdateOnLoad.id : null
     };
     window.history.replaceState(stateObj, "", window.location.pathname);
 
@@ -568,6 +580,17 @@ export default function App() {
         if (e.state.hubTab) {
           setHubTab(e.state.hubTab);
         }
+        if (e.state.page === "updates" && e.state.updateId) {
+          const foundU = STATIC_NURSING_UPDATES.find(u => u.id === e.state.updateId);
+          if (foundU) {
+            setSelectedUpdate(foundU);
+          } else {
+            setSelectedUpdate(null);
+          }
+        } else {
+          setSelectedUpdate(null);
+        }
+
         if (e.state.page === "test" && e.state.testId) {
           const subId = e.state.subjectId;
           const tId = e.state.testId;
@@ -586,6 +609,7 @@ export default function App() {
         }
       } else {
         setActivePage("landing");
+        setSelectedUpdate(null);
       }
     };
 
@@ -618,8 +642,13 @@ export default function App() {
         desc = "Time crunch? Boost your active recall with rapid-fire 10-question nursing practice sprints. Dynamically shuffled clinical questions with smart feedback.";
       }
     } else if (activePage === "updates") {
-      title = "Nursing Recruitment Jobs, Vacancy Notifications & Syllabus Updates | NCBT.in";
-      desc = "Latest announcements for Staff Nurse vacancies in AIIMS, ESIC, RRB, JIPMER, and central government health systems. Includes high-yield PDF nursing study notes.";
+      if (selectedUpdate) {
+        title = `${selectedUpdate.title} | High-Yield Nursing Officer Guide | NCBT.in`;
+        desc = selectedUpdate.summary;
+      } else {
+        title = "Nursing Recruitment Jobs, Vacancy Notifications & Syllabus Updates | NCBT.in";
+        desc = "Latest announcements for Staff Nurse vacancies in AIIMS, ESIC, RRB, JIPMER, and central government health systems. Includes high-yield PDF nursing study notes.";
+      }
     } else if (activePage === "analytics") {
       title = "Nursing CBT Exam Performance Analytics & Detailed Reports | NCBT.in";
       desc = "Review your detailed diagnostic logs, subject-wise accuracy mapping, active recall streaks, and CBT percentiles to unlock NORCET success.";
@@ -1201,6 +1230,38 @@ export default function App() {
       } catch (e) {
         console.error("Failed to pushState", e);
       }
+    }
+  };
+
+  const viewUpdate = (item: NursingUpdate) => {
+    setSelectedUpdate(item);
+    try {
+      const stateToPush = {
+        page: "updates",
+        hubTab: hubTab,
+        subjectId: activeSubjectId,
+        testId: activeTest?.id || null,
+        updateId: item.id
+      };
+      window.history.pushState(stateToPush, "", `/updates/${item.id}`);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const closeUpdate = () => {
+    setSelectedUpdate(null);
+    try {
+      const stateToPush = {
+        page: "updates",
+        hubTab: hubTab,
+        subjectId: activeSubjectId,
+        testId: activeTest?.id || null,
+        updateId: null
+      };
+      window.history.pushState(stateToPush, "", "/updates");
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -2730,7 +2791,7 @@ export default function App() {
                               <span>{item.readTime}</span>
                             </div>
                             <h3 
-                              onClick={() => setSelectedUpdate(item)}
+                              onClick={() => viewUpdate(item)}
                               className="text-sm md:text-base font-extrabold text-[var(--text)] hover:text-indigo-400 cursor-pointer line-clamp-2 transition-colors inline-block leading-snug"
                             >
                               {item.title}
@@ -2741,7 +2802,7 @@ export default function App() {
                           </div>
 
                           <button 
-                            onClick={() => setSelectedUpdate(item)}
+                            onClick={() => viewUpdate(item)}
                             className="flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-indigo-400 hover:text-indigo-300 transition-colors bg-transparent border-none p-0 cursor-pointer self-start"
                           >
                             Read Full Details →
@@ -2892,7 +2953,7 @@ export default function App() {
                         <div className="absolute inset-0 bg-gradient-to-t from-[#0b1220] via-black/30 to-transparent" />
                         
                         <button 
-                          onClick={() => setSelectedUpdate(null)}
+                          onClick={() => closeUpdate()}
                           className="absolute top-4 right-4 bg-black/60 hover:bg-black/90 p-2 rounded-full border border-white/10 text-white w-8 h-8 flex items-center justify-center font-bold text-xs transition-transform cursor-pointer hover:scale-105 active:scale-95 z-10"
                         >
                           ✕
@@ -2920,6 +2981,36 @@ export default function App() {
                         <div className="font-sans select-text">
                           {renderFormattedUpdateContent(selectedUpdate.content)}
                         </div>
+
+                        {/* High-converting mock test promotional CTA block (similar to Testbook/Adda247) */}
+                        <div className="mt-8 bg-gradient-to-r from-indigo-950/40 via-purple-950/20 to-indigo-950/40 border border-indigo-500/20 rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 select-none">
+                          <div className="flex items-start gap-3">
+                            <span className="text-2xl mt-0.5">⚡</span>
+                            <div>
+                              <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-400">PRACTICE THIS EXAM PATTERN</h4>
+                              <p className="text-[#c4d1ec] text-xs mt-0.5 font-medium leading-normal">
+                                {selectedUpdate.category === "jobs" ? "AIIMS NORCET high-yield board mock CBT series is currently open. Revise under strict negative-marking exam mode." :
+                                 selectedUpdate.category === "syllabus" ? "Clinical Nursing Unit-Wise Specialty Mock tests are ready. Practice and review detailed rationales." :
+                                 "Take our daily 10-MCQ Rapid Speed Sprints to test your active recall with quick rationale cards."}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              if (selectedUpdate.category === "jobs") {
+                                showPage("mock_tests");
+                              } else if (selectedUpdate.category === "syllabus") {
+                                showPage("subject_mocks");
+                              } else {
+                                showPage("short_sprints");
+                              }
+                              closeUpdate();
+                            }}
+                            className="w-full md:w-auto shrink-0 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase px-4.5 py-2.5 rounded-xl transition-all cursor-pointer shadow-lg shadow-indigo-600/15 text-center active:scale-95"
+                          >
+                            Start Practice CBT →
+                          </button>
+                        </div>
                       </div>
 
                       {/* Modal Actions Footer */}
@@ -2934,7 +3025,7 @@ export default function App() {
                           <span>🔗</span> Copy study link
                         </button>
                         <button 
-                          onClick={() => setSelectedUpdate(null)}
+                          onClick={() => closeUpdate()}
                           className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-black text-white shadow-md active:scale-95 transition-all cursor-pointer"
                         >
                           Acknowledge & Close
