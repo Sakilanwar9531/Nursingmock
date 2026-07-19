@@ -316,12 +316,24 @@ export default function App() {
   };
 
   // --- PROGRAMMATIC ADMIN PANEL CRUD STATE ---
-  const [adminTab, setAdminTab] = useState<"tests" | "users">("tests");
+  const [adminTab, setAdminTab] = useState<"tests" | "users" | "updates">("tests");
   const [adminActiveSubjId, setAdminActiveSubjId] = useState<string>("mock_tests");
   const [adminActiveTestId, setAdminActiveTestId] = useState<string | null>(null);
   const [adminIsManagingQuestions, setAdminIsManagingQuestions] = useState<boolean>(false);
   const [adminEditingQIdx, setAdminEditingQIdx] = useState<number>(-1); // -1 for adding new question
   
+  // Updates CMS Inputs
+  const [adminUpdateTitle, setAdminUpdateTitle] = useState("");
+  const [adminUpdateCategory, setAdminUpdateCategory] = useState<"jobs" | "syllabus" | "motivation" | "notes">("jobs");
+  const [adminUpdateBadge, setAdminUpdateBadge] = useState("");
+  const [adminUpdateDate, setAdminUpdateDate] = useState(() => new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }));
+  const [adminUpdateReadTime, setAdminUpdateReadTime] = useState("5 min read");
+  const [adminUpdateSummary, setAdminUpdateSummary] = useState("");
+  const [adminUpdateContent, setAdminUpdateContent] = useState("");
+  const [adminUpdateImage, setAdminUpdateImage] = useState("");
+  const [adminUpdatePdfUrl, setAdminUpdatePdfUrl] = useState("");
+  const [adminIsGeneratingUpdate, setAdminIsGeneratingUpdate] = useState(false);
+
   // Question CRUD Inputs
   const [adminQText, setAdminQText] = useState<string>("");
   const [adminQOpt0, setAdminQOpt0] = useState<string>("");
@@ -410,18 +422,45 @@ export default function App() {
     setLoadingUpdates(true);
     setUpdatesError("");
     try {
-      const res = await fetch("/api/updates");
-      if (!res.ok) throw new Error("Could not connect to update servers.");
-      const contentType = res.headers.get("content-type") || "";
-      if (contentType.includes("text/html")) {
-        throw new Error("No backend API configured. Using offline mock/cache.");
+      let fetchedList: NursingUpdate[] | null = null;
+      if (isSupabaseConnected()) {
+        fetchedList = await getNursingUpdatesFromCloud();
       }
-      const data = await res.json();
-      setUpdates(data);
+
+      if (fetchedList && fetchedList.length > 0) {
+        // Merge Supabase updates (prepending them) with static updates that aren't overwritten
+        const supabaseIds = new Set(fetchedList.map(u => u.id));
+        const merged = [...fetchedList, ...STATIC_NURSING_UPDATES.filter(u => !supabaseIds.has(u.id))];
+        setUpdates(merged);
+      } else {
+        // Fallback to Express backend
+        const res = await fetch("/api/updates");
+        if (!res.ok) throw new Error("Could not connect to update servers.");
+        const contentType = res.headers.get("content-type") || "";
+        if (contentType.includes("text/html")) {
+          throw new Error("No backend API configured. Using offline mock/cache.");
+        }
+        const data = await res.json();
+        setUpdates(data);
+      }
     } catch (err: any) {
       console.error(err);
-      setUpdates(STATIC_NURSING_UPDATES);
-      setUpdatesError("Could not retrieve real-time data from server. Displaying high-yield cache instead.");
+      // Local backup if they saved any updates in localStorage while offline
+      const localCustom = localStorage.getItem("np_custom_updates");
+      let merged = [...STATIC_NURSING_UPDATES];
+      if (localCustom) {
+        try {
+          const parsed = JSON.parse(localCustom);
+          if (Array.isArray(parsed)) {
+            const customIds = new Set(parsed.map(u => u.id));
+            merged = [...parsed, ...STATIC_NURSING_UPDATES.filter(u => !customIds.has(u.id))];
+          }
+        } catch (e) {}
+      }
+      setUpdates(merged);
+      if (isSupabaseConnected()) {
+        setUpdatesError("Displaying static & locally saved updates.");
+      }
     } finally {
       setLoadingUpdates(false);
     }
@@ -430,6 +469,200 @@ export default function App() {
   useEffect(() => {
     fetchUpdates();
   }, []);
+
+  const clearAdminUpdateForm = () => {
+    setAdminUpdateTitle("");
+    setAdminUpdateCategory("jobs");
+    setAdminUpdateBadge("");
+    setAdminUpdateDate(new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }));
+    setAdminUpdateReadTime("5 min read");
+    setAdminUpdateSummary("");
+    setAdminUpdateContent("");
+    setAdminUpdateImage("");
+    setAdminUpdatePdfUrl("");
+  };
+
+  const handleAiGenerateUpdate = async () => {
+    setAdminIsGeneratingUpdate(true);
+    try {
+      const topics = [
+        "AIIMS NORCET-IX Nursing Officer recruitment notice release dates and vacancy projections",
+        "Clinical Nursing Note on Pediatric fluid volume calculations, deficit calculations, and urine output thresholds",
+        "High-yield guide on ECG changes in Myocardial Infarction (STEMI vs NSTEMI), hyperkalemia, and therapeutic Digoxin use",
+        "Official guidelines on infection control (Incision/site protocols, bio-hazard color coding bags, and standard precautions)",
+        "NORCET Strategy: How to master priority questions using the Maslow's Hierarchy of Needs framework",
+        "DSSSB Staff Nurse 2026: Zonal recruitment vacancy circular, exam syllabus breakdown, and selection stages"
+      ];
+      const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+      
+      let generatedText = "";
+      let generatedTitle = "";
+      let generatedBadge = "NORCET Focus";
+      let generatedCategory: "jobs" | "syllabus" | "motivation" | "notes" = "notes";
+      let generatedSummary = "";
+
+      if (isGeminiClientConfigured()) {
+        const key = getClientGeminiKey();
+        const prompt = `Generate a highly professional, mock nursing notification update or study note for our platform (NCBT.in).
+Topic: ${randomTopic}
+
+Return a valid JSON string containing:
+{
+  "title": "A captivating, official-sounding title",
+  "category": "either 'jobs', 'syllabus', 'motivation', or 'notes'",
+  "badge": "A short, eye-catching badge (max 3 words)",
+  "summary": "A high-yield 1-2 sentence preview summary of the post",
+  "content": "A detailed, deep, academic article or notification with professional markdown formatting (including headings, bullet points, and clinical notes). Always include high-yield takeaways and direct references to B.Sc nursing standards (e.g., Brunner, Potter & Perry)."
+}
+Do not return any wrapping codeblock or conversational preamble, return ONLY the raw JSON string.`;
+
+        const resText = await generateContentDirect(key, prompt);
+        if (resText) {
+          try {
+            let cleanRes = resText.trim();
+            if (cleanRes.startsWith("```json")) {
+              cleanRes = cleanRes.substring(7, cleanRes.length - 3).trim();
+            } else if (cleanRes.startsWith("```")) {
+              cleanRes = cleanRes.substring(3, cleanRes.length - 3).trim();
+            }
+            const data = JSON.parse(cleanRes);
+            generatedTitle = data.title;
+            generatedCategory = data.category;
+            generatedBadge = data.badge;
+            generatedSummary = data.summary;
+            generatedText = data.content;
+          } catch (e) {
+            console.error("Failed to parse Gemini response as JSON:", e);
+          }
+        }
+      }
+
+      if (!generatedText) {
+        if (randomTopic.includes("recruitment") || randomTopic.includes("DSSSB")) {
+          generatedTitle = "AIIMS NORCET-IX Nursing Officer: Preliminary Screening Dates & Selection Criteria Released";
+          generatedCategory = "jobs";
+          generatedBadge = "AIIMS Notice";
+          generatedSummary = "The examination committee has officially published the tentative calendar, level-7 pay matrix details, and online application criteria.";
+          generatedText = `🩺 **NORCET-IX Central Recruitment Notification:**\n\nThe central exam board has officially declared tentative guidelines for the upcoming selection stages:\n\n### 📈 VACANCY PROJECTIONS\n- Cumulative openings: **1,980+ Level-7 Positions**\n- Participating AIIMS: AIIMS Delhi, AIIMS Patna, AIIMS Rishikesh, AIIMS Nagpur, AIIMS Bhopal.\n\n### ⚡ ELIGIBILITY CRITERIA\n1. **B.Sc. Nursing / Post Basic B.Sc.**: Registered with any State Nursing Council with active license.\n2. **GNM Diploma**: Registered with State Nursing Council + **2 years of clinical experience** in a minimum 50-bedded hospital.\n\n### ⚠️ IMPORTANT EXAM STRUCTURING\n- **Stage-I Preliminary**: 100 MCQs (80 Clinical Nursing subjects, 20 General Knowledge & Aptitude) to screen for Stage-II.\n- **Stage-II Mains**: Scenario-based, case-study clinical questions targeting safety prioritization.`;
+        } else if (randomTopic.includes("ECG") || randomTopic.includes("Pediatric") || randomTopic.includes("infection")) {
+          generatedTitle = "Clinical Nursing Guide: Advanced ECG Analysis & Critical Care Priority Interventions";
+          generatedCategory = "notes";
+          generatedBadge = "CBT Academic Note";
+          generatedSummary = "A high-yield clinical breakdown of cardiac dysrhythmias, electrode positioning, and emergency nursing protocols for AIIMS NORCET.";
+          generatedText = `📖 **Nursing Officer Clinical Review — Cardiac Electrocardiology:**\n\nRecognizing lethal heart rhythms in the Emergency Ward is a primary board exam target. Let's break down critical ECG diagnostics:\n\n### 🫀 LETHAL VENTRICULAR RHYTHMS\n1. **Ventricular Fibrillation (V-Fib)**: Completely chaotic, irregular waveforms with no discernible P, QRS, or T waves. **Priority action: Defibrillate immediately (200J biphasic / 360J monophasic) + continuous CPR!**\n2. **Pulseless Ventricular Tachycardia (pVT)**: Rapid, uniform, wide-complex QRS complexes (150-250 bpm). Treat identically to V-Fib.\n3. **Asystole**: Completely flat line. **Do NOT shock asystole!** Priority action: Confirm in multiple leads, administer Epinephrine 1mg IV/IO every 3-5 minutes, and continuous CPR.\n\n### ⚠️ ELECTROMYOCARDIAL INJURY SIGNALS\n- **STEMI**: ST-segment elevation in two or more contiguous leads, indicating acute transmural myocardial infarction.\n- **Ischemia**: ST-segment depression or T-wave inversion.\n- **Hyperkalemia**: Tall, peaked T-waves, widening QRS complexes, flattened P-waves. Administer **Calcium Gluconate 10% IV** to stabilize the myocardium!`;
+        } else {
+          generatedTitle = "The Maslow Priority Framework: Decelerate Exam Fatigue & Master Negative Marking";
+          generatedCategory = "motivation";
+          generatedBadge = "Exam Strategy";
+          generatedSummary = "An essential guide to mastering high-stakes nursing officer CBT exams without falling into typical negative marking traps.";
+          generatedText = `✨ **NURSING growth & MOTIVATION:**\n\nCBT exams in India test psychological resilience just as much as medical memorization. Here is how to construct a perfect answers matrix:\n\n### 🧠 THE MASLOW PRIORITY PROTOCOL\nWhen faced with multiple 'correct' options, always filter them through the lens of human priority:\n1. **Physiological Safety**: Airway, breathing, circulation, severe pain, hydration, elimination. (Always address these first!)\n2. **Physical/Emotional Security**: Patient falls, side rails, lock wheels, infection prevention, clear signage.\n3. **Social Belonging**: Family support, spiritual resources, patient-centered orientation.\n\n### 🛑 HOW TO AVOID THE -0.33 MARKS TRAP\n- **The Rule of 50/50**: If you cannot confidently rule out at least 2 distractors, **DO NOT COMPROMISE YOUR PROGRESS.** Skip the question.\n- **The Over-Analysis Trap**: Your initial clinical instinct is correct 82% of the time. Do not change answers unless you have recalled a specific, non-negotiable diagnostic value.`;
+        }
+      }
+
+      setAdminUpdateTitle(generatedTitle);
+      setAdminUpdateCategory(generatedCategory);
+      setAdminUpdateBadge(generatedBadge);
+      setAdminUpdateSummary(generatedSummary);
+      setAdminUpdateContent(generatedText);
+      setAdminUpdateImage("https://images.unsplash.com/photo-1576091160550-2173dba999ef?q=80&w=800");
+      
+      triggerToast("✨ AI generated high-yield update successfully!", "ok");
+    } catch (e: any) {
+      console.error(e);
+      triggerToast("AI generation failed. Manual entry template populated.", "err");
+    } finally {
+      setAdminIsGeneratingUpdate(false);
+    }
+  };
+
+  const handleSaveUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminUpdateTitle.trim() || !adminUpdateContent.trim() || !adminUpdateSummary.trim()) {
+      triggerToast("Please fill in Title, Summary, and Article Content!", "err");
+      return;
+    }
+
+    const slug = adminUpdateTitle.toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)+/g, "");
+    
+    const newUpdate: NursingUpdate = {
+      id: `update-${Date.now()}-${slug}`,
+      title: adminUpdateTitle.trim(),
+      category: adminUpdateCategory,
+      badge: adminUpdateBadge.trim() || "Update",
+      date: adminUpdateDate.trim() || new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+      readTime: adminUpdateReadTime.trim() || "3 min read",
+      summary: adminUpdateSummary.trim(),
+      content: adminUpdateContent.trim(),
+      image: adminUpdateImage.trim() || "https://images.unsplash.com/photo-1576091160550-2173dba999ef?q=80&w=800",
+      pdfUrl: adminUpdatePdfUrl.trim() || undefined
+    };
+
+    let success = false;
+    if (isSupabaseConnected()) {
+      success = await saveNursingUpdateToCloud(newUpdate);
+    }
+
+    const localCustom = localStorage.getItem("np_custom_updates");
+    let localUpdates: NursingUpdate[] = [];
+    if (localCustom) {
+      try {
+        localUpdates = JSON.parse(localCustom);
+      } catch (e) {}
+    }
+    localUpdates = [newUpdate, ...localUpdates];
+    localStorage.setItem("np_custom_updates", JSON.stringify(localUpdates));
+    
+    if (!isSupabaseConnected()) {
+      success = true;
+    }
+
+    if (success) {
+      triggerToast("📰 Update published successfully!", "ok");
+      setAdminUpdateTitle("");
+      setAdminUpdateBadge("");
+      setAdminUpdateSummary("");
+      setAdminUpdateContent("");
+      setAdminUpdateImage("");
+      setAdminUpdatePdfUrl("");
+      fetchUpdates();
+    } else {
+      triggerToast("Could not publish update to Supabase. Saved locally.", "err");
+      fetchUpdates();
+    }
+  };
+
+  const handleDeleteUpdate = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this news update?")) return;
+
+    let success = false;
+    if (isSupabaseConnected()) {
+      success = await deleteNursingUpdateFromCloud(id);
+    }
+
+    const localCustom = localStorage.getItem("np_custom_updates");
+    if (localCustom) {
+      try {
+        const parsed = JSON.parse(localCustom);
+        if (Array.isArray(parsed)) {
+          const filtered = parsed.filter((u: any) => u.id !== id);
+          localStorage.setItem("np_custom_updates", JSON.stringify(filtered));
+        }
+      } catch (e) {}
+    }
+
+    if (!isSupabaseConnected()) {
+      success = true;
+    }
+
+    if (success) {
+      triggerToast("📰 Update deleted successfully!", "ok");
+      fetchUpdates();
+    } else {
+      triggerToast("Failed to delete update from Supabase.", "err");
+    }
+  };
 
   // TOAST Notification State
   const [toastMessage, setToastMessage] = useState<string>("");
@@ -2982,6 +3215,27 @@ export default function App() {
                           {renderFormattedUpdateContent(selectedUpdate.content)}
                         </div>
 
+                        {/* Government Notice PDF link banner if provided */}
+                        {selectedUpdate.pdfUrl && (
+                          <div className="mt-6 p-4 bg-rose-950/20 border border-rose-900/30 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                              <span className="text-2xl text-rose-500">📄</span>
+                              <div className="text-center sm:text-left">
+                                <h4 className="text-xs font-bold text-rose-300">Official Government Notification / Notice</h4>
+                                <p className="text-[#8b949e] text-[10px] mt-0.5">Original announcement attachment</p>
+                              </div>
+                            </div>
+                            <a 
+                              href={selectedUpdate.pdfUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="w-full sm:w-auto px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 shrink-0"
+                            >
+                              Download Notice PDF
+                            </a>
+                          </div>
+                        )}
+
                         {/* High-converting mock test promotional CTA block (similar to Testbook/Adda247) */}
                         <div className="mt-8 bg-gradient-to-r from-indigo-950/40 via-purple-950/20 to-indigo-950/40 border border-indigo-500/20 rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 select-none">
                           <div className="flex items-start gap-3">
@@ -3401,12 +3655,18 @@ export default function App() {
                   <h2 className="text-2xl sm:text-3xl font-black font-syne tracking-tight text-white m-0">⚙️ Admin CMS Panel</h2>
                   <div className="admin-badge mt-1 inline-flex items-center gap-1.5"><Shield className="w-3.5 h-3.5 text-[#ff9f9f]" /> Active Administrator Program Control</div>
                 </div>
-                <div className="flex bg-[#0f1520] border border-[#1e293b] rounded-xl p-1 shrink-0">
+                <div className="flex bg-[#0f1520] border border-[#1e293b] rounded-xl p-1 shrink-0 flex-wrap gap-1">
                   <button 
                     className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${adminTab === "tests" ? "bg-amber-500 text-black shadow" : "text-[#8b949e] hover:text-white"}`}
                     onClick={() => { setAdminTab("tests"); setAdminIsManagingQuestions(false); }}
                   >
                     📚 Test & MCQ CMS
+                  </button>
+                  <button 
+                    className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${adminTab === "updates" ? "bg-amber-500 text-black shadow" : "text-[#8b949e] hover:text-white"}`}
+                    onClick={() => { setAdminTab("updates"); setAdminIsManagingQuestions(false); }}
+                  >
+                    📰 News & Updates CMS
                   </button>
                   <button 
                     className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${adminTab === "users" ? "bg-amber-500 text-black shadow" : "text-[#8b949e] hover:text-white"}`}
@@ -3885,6 +4145,194 @@ export default function App() {
                       </table>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* TAB 3: NEWS & UPDATES CMS (DAILY PULSE) */}
+              {adminTab === "updates" && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 text-[#e6edf3]">
+                  
+                  {/* Left Column: Create New Update Form */}
+                  <div className="lg:col-span-7 bg-[#0f1520] border border-[#1e293b] rounded-2xl p-6 shadow-xl">
+                    <div className="flex justify-between items-center mb-6">
+                      <div>
+                        <h3 className="font-syne text-md font-bold text-white m-0 uppercase tracking-wider">Publish New Announcement</h3>
+                        <p className="text-[10px] text-[#8b949e] mt-1">Add jobs, notes, syllabi or notices to Daily Pulse</p>
+                      </div>
+                      <button 
+                        type="button"
+                        disabled={adminIsGeneratingUpdate}
+                        onClick={handleAiGenerateUpdate}
+                        className="px-3.5 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/40 hover:border-indigo-500 text-indigo-300 text-[10px] font-black uppercase rounded-lg transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                      >
+                        {adminIsGeneratingUpdate ? "⚡ Writing..." : "✨ AI-Write High-Yield Note"}
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleSaveUpdate} className="space-y-4 font-sans text-xs">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="form-group sm:col-span-2">
+                          <label className="form-label text-[#8b949e] block mb-1">Post Title</label>
+                          <input 
+                            className="form-input bg-[#080c12] border border-[#1e293b] rounded-lg p-2.5 text-[#e6edf3] focus:border-indigo-500 w-full" 
+                            type="text" 
+                            placeholder="e.g. AIIMS NORCET-VIII Seat Allocation List Released"
+                            value={adminUpdateTitle}
+                            onChange={(e) => setAdminUpdateTitle(e.target.value)}
+                          />
+                        </div>
+                        
+                        <div className="form-group">
+                          <label className="form-label text-[#8b949e] block mb-1">Category</label>
+                          <select 
+                            className="form-input bg-[#080c12] text-white border border-[#1e293b] rounded-lg p-2.5 w-full cursor-pointer"
+                            value={adminUpdateCategory}
+                            onChange={(e) => setAdminUpdateCategory(e.target.value as any)}
+                          >
+                            <option value="jobs">💼 Recruitment Jobs</option>
+                            <option value="syllabus">📚 Exam Syllabus</option>
+                            <option value="notes">📝 High-Yield Notes</option>
+                            <option value="motivation">🔥 Motivation/Guidance</option>
+                          </select>
+                        </div>
+
+                        <div className="form-group">
+                          <label className="form-label text-[#8b949e] block mb-1">Badge Label</label>
+                          <input 
+                            className="form-input bg-[#080c12] border border-[#1e293b] rounded-lg p-2.5 text-[#e6edf3] focus:border-indigo-500 w-full" 
+                            type="text" 
+                            placeholder="e.g. NORCET alert"
+                            value={adminUpdateBadge}
+                            onChange={(e) => setAdminUpdateBadge(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label className="form-label text-[#8b949e] block mb-1">Publication Date</label>
+                          <input 
+                            className="form-input bg-[#080c12] border border-[#1e293b] rounded-lg p-2.5 text-[#e6edf3] focus:border-indigo-500 w-full" 
+                            type="text" 
+                            placeholder="e.g. June 19, 2026"
+                            value={adminUpdateDate}
+                            onChange={(e) => setAdminUpdateDate(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label className="form-label text-[#8b949e] block mb-1">Estimate Read Time</label>
+                          <input 
+                            className="form-input bg-[#080c12] border border-[#1e293b] rounded-lg p-2.5 text-[#e6edf3] focus:border-indigo-500 w-full" 
+                            type="text" 
+                            placeholder="e.g. 4 min read"
+                            value={adminUpdateReadTime}
+                            onChange={(e) => setAdminUpdateReadTime(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="form-group sm:col-span-2">
+                          <label className="form-label text-[#8b949e] block mb-1">Brief Summary (Short 1-line preview)</label>
+                          <input 
+                            className="form-input bg-[#080c12] border border-[#1e293b] rounded-lg p-2.5 text-[#e6edf3] focus:border-indigo-500 w-full" 
+                            type="text" 
+                            placeholder="The exam board has released the choice filling window..."
+                            value={adminUpdateSummary}
+                            onChange={(e) => setAdminUpdateSummary(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="form-group sm:col-span-2">
+                          <label className="form-label text-[#8b949e] block mb-1">Cover Image URL (Optional)</label>
+                          <input 
+                            className="form-input bg-[#080c12] border border-[#1e293b] rounded-lg p-2.5 text-[#e6edf3] focus:border-indigo-500 w-full" 
+                            type="text" 
+                            placeholder="https://images.unsplash.com/photo-..."
+                            value={adminUpdateImage}
+                            onChange={(e) => setAdminUpdateImage(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="form-group sm:col-span-2">
+                          <label className="form-label text-[#8b949e] block mb-1">Attach Government Notice PDF Link (Optional)</label>
+                          <input 
+                            className="form-input bg-[#080c12] border border-[#1e293b] rounded-lg p-2.5 text-rose-300 font-mono focus:border-rose-500 w-full" 
+                            type="text" 
+                            placeholder="https://aiims.edu/notices/norcet-choice.pdf"
+                            value={adminUpdatePdfUrl}
+                            onChange={(e) => setAdminUpdatePdfUrl(e.target.value)}
+                          />
+                          <p className="text-[#8b949e] text-[10px] mt-1">If specified, a prominent secure 'Download Notice PDF' button is added inside the article modal.</p>
+                        </div>
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label text-[#8b949e] block mb-1">Article Content (Markdown support)</label>
+                        <textarea 
+                          rows={12}
+                          className="form-input bg-[#080c12] text-white border border-[#1e293b] rounded-lg p-3 font-mono leading-relaxed text-[11px] w-full"
+                          placeholder="🩺 **AIIMS NORCET-VIII Official Update:**&#10;Write the detailed article content here..."
+                          value={adminUpdateContent}
+                          onChange={(e) => setAdminUpdateContent(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="flex gap-3 justify-end pt-2">
+                        <button 
+                          type="button" 
+                          onClick={clearAdminUpdateForm}
+                          className="px-4 py-2 bg-[#161b22] border border-[#21262d] text-[#8b949e] hover:text-white font-bold rounded-xl transition-all cursor-pointer"
+                        >
+                          Clear Fields
+                        </button>
+                        <button 
+                          type="submit" 
+                          className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 border border-amber-600 text-black font-extrabold rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer text-xs"
+                        >
+                          📢 Publish to Live Pulse
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Right Column: Manage Announcements */}
+                  <div className="lg:col-span-5 space-y-4">
+                    <h3 className="font-syne text-md font-bold text-white m-0 uppercase tracking-wider px-1">Active Updates ({updates.length})</h3>
+                    
+                    <div className="space-y-3 max-h-[85vh] overflow-y-auto pr-1">
+                      {updates.map((up) => {
+                        return (
+                          <div key={up.id} className="bg-[#0f1520] border border-[#1e293b] rounded-2xl p-4 flex gap-3 hover:border-indigo-500/30 transition-all group relative">
+                            <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-[#080c12]">
+                              <img src={up.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[9px] font-black uppercase text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded">
+                                  {up.category}
+                                </span>
+                                {up.pdfUrl && (
+                                  <span className="text-[9px] font-black uppercase text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded">
+                                    📎 PDF Notice
+                                  </span>
+                                )}
+                              </div>
+                              <h4 className="text-xs font-bold text-white mt-1.5 truncate group-hover:text-indigo-400 transition-colors">{up.title}</h4>
+                              <p className="text-[10px] text-[#8b949e] mt-1 line-clamp-2">{up.summary}</p>
+                              <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-[#1e293b] text-[9px] text-[#8b949e]">
+                                <span>📅 {up.date}</span>
+                                <button 
+                                  onClick={() => handleDeleteUpdate(up.id)}
+                                  className="text-red-400 hover:text-red-300 font-extrabold uppercase hover:underline cursor-pointer"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                 </div>
               )}
 
