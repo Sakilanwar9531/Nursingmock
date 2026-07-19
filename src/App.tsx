@@ -486,15 +486,88 @@ export default function App() {
     };
   }, [dropdownOpen]);
 
-  // Browser Back Button & Phone Swipe Gesture Support
+  // Browser Back Button, Phone Swipe Gesture Support & Dynamic Route Hydration on Initial Load
   useEffect(() => {
-    if (!window.history.state || !window.history.state.page) {
-      window.history.replaceState({ page: activePage, subjectId: null, testId: null }, "", "");
+    // 1. Initial Deep Link Path Parse
+    const path = window.location.pathname;
+    const cleanPath = path.toLowerCase();
+    
+    let initialPage = "landing";
+    let initialTab = "full_mock";
+    let initialSubjId: string | null = null;
+    let initialTestId: string | null = null;
+    let foundTest: Test | null = null;
+
+    if (cleanPath === "/pyq") {
+      initialPage = "hub";
+      initialTab = "pyq";
+    } else if (cleanPath === "/mock-tests") {
+      initialPage = "hub";
+      initialTab = "full_mock";
+    } else if (cleanPath === "/subject-mocks") {
+      initialPage = "hub";
+      initialTab = "subject";
+    } else if (cleanPath === "/short-sprints") {
+      initialPage = "hub";
+      initialTab = "short";
+    } else if (cleanPath === "/updates") {
+      initialPage = "updates";
+    } else if (cleanPath === "/analytics") {
+      initialPage = "analytics";
+    } else if (cleanPath === "/auth") {
+      initialPage = "auth";
+    } else if (cleanPath === "/admin") {
+      initialPage = "admin";
+    } else if (cleanPath.startsWith("/test/")) {
+      const parts = path.split("/");
+      if (parts.length >= 4) {
+        initialSubjId = parts[2];
+        initialTestId = parts[3];
+        const subject = subjects.find(s => s.id === initialSubjId);
+        if (subject) {
+          const test = subject.tests.find(t => t.id === initialTestId);
+          if (test) {
+            initialPage = "test";
+            foundTest = test;
+          }
+        }
+      }
+    } else {
+      // Keep existing default behavior depending on auth state
+      const localUser = localStorage.getItem("np_user");
+      if (localUser) {
+        initialPage = "hub";
+        initialTab = "full_mock";
+      }
     }
 
+    // Apply Hydrated state
+    setActivePage(initialPage);
+    setHubTab(initialTab as any);
+    if (initialPage === "test" && foundTest) {
+      setActiveSubjectId(initialSubjId);
+      setActiveTest(foundTest);
+      setTimeLeft(foundTest.mins * 60);
+      setSelectedOptions(new Array(foundTest.data.length).fill(null));
+      setQuestionAnswers(new Array(foundTest.data.length).fill(null));
+    }
+
+    // Standardize baseline history state
+    const stateObj = {
+      page: initialPage,
+      hubTab: initialTab,
+      subjectId: initialSubjId,
+      testId: initialTestId
+    };
+    window.history.replaceState(stateObj, "", window.location.pathname);
+
+    // 2. PopState event handler for backward/forward swipe gestures
     const handlePopState = (e: PopStateEvent) => {
       if (e.state && e.state.page) {
         setActivePage(e.state.page);
+        if (e.state.hubTab) {
+          setHubTab(e.state.hubTab);
+        }
         if (e.state.page === "test" && e.state.testId) {
           const subId = e.state.subjectId;
           const tId = e.state.testId;
@@ -512,11 +585,7 @@ export default function App() {
           }
         }
       } else {
-        if (currentUser) {
-          setActivePage("hub");
-        } else {
-          setActivePage("landing");
-        }
+        setActivePage("landing");
       }
     };
 
@@ -525,6 +594,68 @@ export default function App() {
       window.removeEventListener("popstate", handlePopState);
     };
   }, [subjects]);
+
+  // Client-Side Dynamic SEO Head & Meta tags updater
+  useEffect(() => {
+    let title = "NCBT - India's Nursing CBT Exam Preparation Platform";
+    let desc = "Ace central nursing officer exams (AIIMS NORCET, ESIC, RRB, Staff Nurse) with free simulated computer-based mock tests, detailed rationales, and past solved papers.";
+    
+    if (activePage === "landing") {
+      title = "NCBT - India's Nursing CBT Exam Prep | AIIMS NORCET, ESIC, RRB Mocks";
+      desc = "Free high-yield CBT computer-based test platform for nursing recruitment officers in India. Practice AIIMS NORCET, ESIC, RRB, and state PSC past papers with expert clinical rationales.";
+    } else if (activePage === "hub") {
+      if (hubTab === "pyq") {
+        title = "Nursing Officer Past Papers & PYQs (AIIMS NORCET, ESIC, RRB) | NCBT.in";
+        desc = "Solve official solved previous year question papers from central government recruitment campaigns. Real-time timer and performance percentile breakdown.";
+      } else if (hubTab === "full_mock") {
+        title = "Board-Level Nursing CBT Full Mock Series (NORCET Pattern) | NCBT.in";
+        desc = "Attempt free 50 MCQ computer-based test series matching Indian Staff Nurse recruitment standards with negative marking (0.25) and detailed diagnostic reports.";
+      } else if (hubTab === "subject") {
+        title = "Subject-Wise Nursing Mocks & Unit-Wise Diagnostic Tests | NCBT.in";
+        desc = "Target specific exam domains like Medical-Surgical nursing, Pharmacology, Pediatrics, Psychiatric, Anatomy & Physiology, and Community Health.";
+      } else if (hubTab === "short") {
+        title = "Rapid Speed Sprints (10 MCQ Practice Checkpoints) | NCBT.in";
+        desc = "Time crunch? Boost your active recall with rapid-fire 10-question nursing practice sprints. Dynamically shuffled clinical questions with smart feedback.";
+      }
+    } else if (activePage === "updates") {
+      title = "Nursing Recruitment Jobs, Vacancy Notifications & Syllabus Updates | NCBT.in";
+      desc = "Latest announcements for Staff Nurse vacancies in AIIMS, ESIC, RRB, JIPMER, and central government health systems. Includes high-yield PDF nursing study notes.";
+    } else if (activePage === "analytics") {
+      title = "Nursing CBT Exam Performance Analytics & Detailed Reports | NCBT.in";
+      desc = "Review your detailed diagnostic logs, subject-wise accuracy mapping, active recall streaks, and CBT percentiles to unlock NORCET success.";
+    } else if (activePage === "test" && activeTest) {
+      title = `Attend CBT Test: ${activeTest.title} | NCBT.in`;
+      desc = `Practice this high-yield computer-based test with digital countdown, real-time question marking, review flags, and negative scoring.`;
+    }
+
+    document.title = title;
+    
+    // Set meta description
+    let metaDesc = document.querySelector('meta[name="description"]');
+    if (!metaDesc) {
+      metaDesc = document.createElement('meta');
+      metaDesc.setAttribute('name', 'description');
+      document.head.appendChild(metaDesc);
+    }
+    metaDesc.setAttribute('content', desc);
+
+    // Update Open Graph tags for rich dynamic social preview
+    let ogTitle = document.querySelector('meta[property="og:title"]');
+    if (!ogTitle) {
+      ogTitle = document.createElement('meta');
+      ogTitle.setAttribute('property', 'og:title');
+      document.head.appendChild(ogTitle);
+    }
+    ogTitle.setAttribute('content', title);
+
+    let ogDesc = document.querySelector('meta[property="og:description"]');
+    if (!ogDesc) {
+      ogDesc = document.createElement('meta');
+      ogDesc.setAttribute('property', 'og:description');
+      document.head.appendChild(ogDesc);
+    }
+    ogDesc.setAttribute('content', desc);
+  }, [activePage, hubTab, activeTest]);
 
   // Timer Effect
   useEffect(() => {
@@ -1009,15 +1140,46 @@ export default function App() {
     triggerToast("User authorization settings successfully parsed!", "ok");
   };
 
+  const getPathForState = (pageId: string, hTab?: string, subjId?: string | null, testId?: string | null) => {
+    if (pageId === "landing") return "/";
+    if (pageId === "updates") return "/updates";
+    if (pageId === "analytics") return "/analytics";
+    if (pageId === "auth") return "/auth";
+    if (pageId === "admin") return "/admin";
+    if (pageId === "test" && subjId && testId) {
+      return `/test/${subjId}/${testId}`;
+    }
+    if (pageId === "hub") {
+      const tab = hTab || hubTab;
+      if (tab === "pyq") return "/pyq";
+      if (tab === "full_mock") return "/mock-tests";
+      if (tab === "subject") return "/subject-mocks";
+      if (tab === "short") return "/short-sprints";
+      return "/mock-tests";
+    }
+    return "/";
+  };
+
   // Navigation controller
   const showPage = (pageId: string, pushHistory = true, customState?: { subjectId?: string | null, testId?: string | null }) => {
     let targetPage = pageId;
+    let targetTab = hubTab;
     if (pageId === "pyq") {
       targetPage = "hub";
+      targetTab = "pyq";
       setHubTab("pyq");
     } else if (pageId === "mock_tests") {
       targetPage = "hub";
+      targetTab = "full_mock";
       setHubTab("full_mock");
+    } else if (pageId === "subject_mocks") {
+      targetPage = "hub";
+      targetTab = "subject";
+      setHubTab("subject");
+    } else if (pageId === "short_sprints") {
+      targetPage = "hub";
+      targetTab = "short";
+      setHubTab("short");
     }
     setActivePage(targetPage);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1030,10 +1192,12 @@ export default function App() {
       try {
         const stateToPush = {
           page: targetPage,
+          hubTab: targetTab,
           subjectId: customState ? customState.subjectId : activeSubjectId,
           testId: customState ? customState.testId : (activeTest?.id || null)
         };
-        window.history.pushState(stateToPush, "", "");
+        const urlPath = getPathForState(targetPage, targetTab, stateToPush.subjectId, stateToPush.testId);
+        window.history.pushState(stateToPush, "", urlPath);
       } catch (e) {
         console.error("Failed to pushState", e);
       }
@@ -1432,19 +1596,19 @@ export default function App() {
         <div className="nav-links" id="nav-links">
           <button 
             className={`nav-link flex items-center gap-1.5 ${activePage === "hub" && hubTab === "subject" ? "active" : ""}`} 
-            onClick={() => { showPage("hub"); setHubTab("subject"); }}
+            onClick={() => showPage("subject_mocks")}
           >
             <BookOpen className="w-4 h-4" /> Tests
           </button>
           <button 
             className={`nav-link flex items-center gap-1.5 ${activePage === "hub" && hubTab === "full_mock" ? "active" : ""}`} 
-            onClick={() => { showPage("hub"); setHubTab("full_mock"); }}
+            onClick={() => showPage("mock_tests")}
           >
             <Flame className="w-4 h-4 text-[#ff9e22]" /> Mock Tests
           </button>
           <button 
             className={`nav-link flex items-center gap-1.5 ${activePage === "hub" && hubTab === "pyq" ? "active" : ""}`} 
-            onClick={() => { showPage("hub"); setHubTab("pyq"); }}
+            onClick={() => showPage("pyq")}
           >
             <FileText className="w-4 h-4" /> PYQ
           </button>
@@ -1484,19 +1648,19 @@ export default function App() {
             <div className="nav-dropdown-menu absolute right-0 top-11 w-48 bg-[#0f1520] border border-[#1e293b] rounded-xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
               <button 
                 className="w-full text-left px-4 py-2 text-xs text-[#e6edf3] hover:bg-[#151f30] flex items-center gap-2 transition-colors font-medium"
-                onClick={() => { showPage("hub"); setHubTab("subject"); setDropdownOpen(false); }}
+                onClick={() => { showPage("subject_mocks"); setDropdownOpen(false); }}
               >
                 <BookOpen className="w-3.5 h-3.5 text-[#388bfd]" /> Tests
               </button>
               <button 
                 className="w-full text-left px-4 py-2 text-xs text-[#e6edf3] hover:bg-[#151f30] flex items-center gap-2 transition-colors font-medium"
-                onClick={() => { showPage("hub"); setHubTab("full_mock"); setDropdownOpen(false); }}
+                onClick={() => { showPage("mock_tests"); setDropdownOpen(false); }}
               >
                 <Flame className="w-3.5 h-3.5 text-[#ff9e22]" /> Mock Tests
               </button>
               <button 
                 className="w-full text-left px-4 py-2 text-xs text-[#e6edf3] hover:bg-[#151f30] flex items-center gap-2 transition-colors font-medium"
-                onClick={() => { showPage("hub"); setHubTab("pyq"); setDropdownOpen(false); }}
+                onClick={() => { showPage("pyq"); setDropdownOpen(false); }}
               >
                 <FileText className="w-3.5 h-3.5 text-[#56d364]" /> PYQ
               </button>
@@ -1665,7 +1829,7 @@ export default function App() {
                       ? "bg-amber-500/10 border-amber-500 text-amber-450 shadow-md ring-1 ring-amber-500" 
                       : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
                   }`}
-                  onClick={() => setHubTab("full_mock")}
+                  onClick={() => showPage("mock_tests")}
                 >
                   <Flame className="w-3.5 h-3.5 text-amber-500" /> Full Mock Series
                 </button>
@@ -1675,7 +1839,7 @@ export default function App() {
                       ? "bg-amber-500/10 border-amber-500 text-amber-450 shadow-md ring-1 ring-amber-500" 
                       : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
                   }`}
-                  onClick={() => setHubTab("pyq")}
+                  onClick={() => showPage("pyq")}
                 >
                   <FileText className="w-3.5 h-3.5 text-[#56d364]" /> PYQ Papers
                 </button>
@@ -1685,7 +1849,7 @@ export default function App() {
                       ? "bg-amber-500/10 border-amber-500 text-amber-450 shadow-md ring-1 ring-amber-500" 
                       : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
                   }`}
-                  onClick={() => setHubTab("subject")}
+                  onClick={() => showPage("subject_mocks")}
                 >
                   <BookOpen className="w-3.5 h-3.5 text-[#388bfd]" /> Subject-Wise Mocks
                 </button>
@@ -1695,7 +1859,7 @@ export default function App() {
                       ? "bg-amber-500/10 border-amber-500 text-amber-450 shadow-md ring-1 ring-amber-500" 
                       : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
                   }`}
-                  onClick={() => setHubTab("short")}
+                  onClick={() => showPage("short_sprints")}
                 >
                   <span className="text-amber-400 font-bold">⚡</span> Short Speed Sprints
                 </button>
