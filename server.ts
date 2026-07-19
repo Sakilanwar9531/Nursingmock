@@ -396,6 +396,14 @@ Disallow: /auth
 Sitemap: https://ncbt.in/sitemap.xml`);
   });
 
+  // SEO Optimization: Google Site Verification HTML Dynamic Route
+  // This automatically serves correct content for ANY google verification file (e.g., googleff29df342e48cf28.html)
+  app.get('/google:id.html', (req, res) => {
+    const id = req.params.id;
+    res.type('text/html');
+    res.send(`google-site-verification: google${id}.html`);
+  });
+
   // SEO Optimization: sitemap.xml Endpoint
   app.get('/sitemap.xml', (req, res) => {
     const updatesUrls = STATIC_NURSING_UPDATES.map(u => `  <url>
@@ -552,6 +560,10 @@ Keep the response structured with clear headers, using bolding, bullet points, a
           `<meta name="twitter:title" content="${meta.title}" />`,
           `<meta name="twitter:description" content="${meta.description}" />`
         ];
+
+        if (process.env.GOOGLE_SITE_VERIFICATION) {
+          headTags.push(`<meta name="google-site-verification" content="${process.env.GOOGLE_SITE_VERIFICATION}" />`);
+        }
         
         if (meta.jsonLd) {
           headTags.push(`<script type="application/ld+json">${meta.jsonLd}</script>`);
