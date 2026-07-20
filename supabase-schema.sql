@@ -99,7 +99,6 @@ CREATE TABLE IF NOT EXISTS public.nursing_updates (
     content TEXT NOT NULL,
     image TEXT NOT NULL,
     read_time TEXT NOT NULL,
-    pdf_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
