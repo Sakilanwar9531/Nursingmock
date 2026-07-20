@@ -599,6 +599,16 @@ export default function App() {
   const [selectedModeForPending, setSelectedModeForPending] = useState<"practice" | "exam">("exam");
   const [activeSubjectId, setActiveSubjectId] = useState<string | null>(initialRoute.subjectId);
   const [activeTest, setActiveTest] = useState<Test | null>(initialRoute.test);
+  const [markedForReview, setMarkedForReview] = useState<boolean[]>(() =>
+    initialRoute.test ? new Array(initialRoute.test.data.length).fill(false) : []
+  );
+  const [visitedQuestions, setVisitedQuestions] = useState<boolean[]>(() => {
+    const arr = initialRoute.test ? new Array(initialRoute.test.data.length).fill(false) : [];
+    if (arr.length > 0) arr[0] = true;
+    return arr;
+  });
+  const [mobilePaletteOpen, setMobilePaletteOpen] = useState<boolean>(false);
+
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [examMode, setExamMode] = useState<boolean>(false);
   const [selectedOptions, setSelectedOptions] = useState<(number | null)[]>(
@@ -611,6 +621,32 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState<number>(initialRoute.test ? initialRoute.test.mins * 60 : 0);
   const [isTestFinished, setIsTestFinished] = useState<boolean>(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState<boolean>(false);
+
+  // Auto-mark question as visited when current index changes
+  useEffect(() => {
+    if (activeTest && currentQuestionIndex >= 0 && currentQuestionIndex < activeTest.data.length) {
+      setVisitedQuestions(prev => {
+        if (!prev[currentQuestionIndex]) {
+          const updated = [...prev];
+          updated[currentQuestionIndex] = true;
+          return updated;
+        }
+        return prev;
+      });
+    }
+  }, [currentQuestionIndex, activeTest]);
+
+  // Handle instant scroll-to-top on any page changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [activePage]);
+
+  // Graceful safety redirect if on test page with no loaded test data
+  useEffect(() => {
+    if (activePage === "test" && !activeTest) {
+      setActivePage(currentUser ? "hub" : "landing");
+    }
+  }, [activePage, activeTest, currentUser]);
 
   // PYQ Filter State
   const [pyqFilter, setPyqFilter] = useState<string>("all");
@@ -1667,12 +1703,46 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     
     setSelectedOptions(new Array(test.data.length).fill(null));
     setQuestionAnswers(new Array(test.data.length).fill(null));
+    setMarkedForReview(new Array(test.data.length).fill(false));
+    const initialVisited = new Array(test.data.length).fill(false);
+    initialVisited[0] = true;
+    setVisitedQuestions(initialVisited);
+    setMobilePaletteOpen(false);
     setCorrectCount(0);
     setTimeLeft(test.mins * 60);
     setIsTestFinished(false);
     setShowFinishConfirm(false);
     showPage("test", true, { subjectId, testId });
     triggerToast(`Good luck on your mock! 📖`, "ok");
+  };
+
+  const clearResponse = (idx: number) => {
+    if (!activeTest) return;
+    const previousSelection = selectedOptions[idx];
+    if (previousSelection === null) return;
+
+    const updatedSelected = [...selectedOptions];
+    updatedSelected[idx] = null;
+    setSelectedOptions(updatedSelected);
+
+    const updatedAnswers = [...questionAnswers];
+    updatedAnswers[idx] = null;
+    setQuestionAnswers(updatedAnswers);
+
+    const isAnsCorrect = previousSelection === activeTest.data[idx].ans;
+    if (isAnsCorrect) {
+      setCorrectCount(prev => prev - 1);
+    }
+    triggerToast("Response cleared", "ok");
+  };
+
+  const toggleMarkForReview = (idx: number) => {
+    setMarkedForReview(prev => {
+      const updated = [...prev];
+      updated[idx] = !updated[idx];
+      return updated;
+    });
+    triggerToast(markedForReview[idx] ? "Removed from Review list" : "Marked for Review 📌", "ok");
   };
 
   const triggerTestInit = (subjectId: string, testId: string) => {
@@ -2659,415 +2729,725 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           </div>
         )}
 
-
-
         {/* =============== TEST / EXAM PAGE =============== */}
         {activePage === "test" && activeTest && (
-          <div className="page active" id="page-test">
+          <div className="min-h-screen bg-[#080c12] text-[#e6edf3] flex flex-col font-sans relative" id="page-test">
             
-            {/* Topbar inside test */}
-            <div className="test-topbar">
-              <button className="back-btn" onClick={goHub}>
-                ← Back
-              </button>
-              <span className="topbar-sep">|</span>
-              <span className="topbar-title">{activeTest.title}</span>
-              
-              <div className="flex-1" />
-
-              <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border mr-2 hidden sm:inline-block ${examMode ? "bg-red-950/20 text-red-400 border-red-900/40" : "bg-purple-950/20 text-purple-400 border-purple-900/40"}`}>
-                {examMode ? "⏱️ CBT Exam" : "💡 Practice"}
-              </span>
-
-              <div className={`timer-pill ${timeLeft <= 120 ? "warn" : ""}`}>
-                <span className="t-dot"></span>
-                <span>{formatTime(timeLeft)}</span>
+            {/* Elegant Sticky Header */}
+            <header className="sticky top-0 z-[100] bg-[#0d111a]/95 backdrop-blur-md border-b border-[#1e2d45] px-4 py-3 flex items-center justify-between gap-4 shadow-xl">
+              <div className="flex items-center gap-3">
+                <button 
+                  className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-amber-500/40 text-xs font-bold px-3 py-2 rounded-xl transition-all shadow-md cursor-pointer"
+                  onClick={() => {
+                    if (isTestFinished) {
+                      goHub();
+                    } else {
+                      setShowFinishConfirm(true);
+                    }
+                  }}
+                >
+                  ← Exit
+                </button>
+                <div className="hidden sm:flex flex-col">
+                  <span className="text-[10px] text-[#8b949e] font-extrabold uppercase tracking-widest leading-none">TEST PORTAL</span>
+                  <span className="text-xs font-bold text-white max-w-[240px] truncate">{activeTest.title}</span>
+                </div>
               </div>
 
+              {/* Status and Timer Bar */}
+              <div className="flex items-center gap-2">
+                <span className={`px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-wider border ${examMode ? "bg-red-500/10 text-red-400 border-red-500/20" : "bg-purple-500/10 text-purple-400 border-purple-500/20"}`}>
+                  {examMode ? "⏱️ CBT Exam Mode" : "💡 Practice Mode"}
+                </span>
+
+                {!isTestFinished && (
+                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border tabular-nums ${timeLeft <= 120 ? "bg-red-500/10 text-red-400 border-red-500/30 animate-pulse" : "bg-white/5 text-[#8b949e] border-white/10"}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${timeLeft <= 120 ? "bg-red-500" : "bg-green-400"}`} />
+                    <span>{formatTime(timeLeft)}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Finish Button */}
               {!isTestFinished && (
                 <button 
-                  className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition-all ml-2 flex items-center gap-1 shadow-sm cursor-pointer"
+                  className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-lg shadow-red-900/20 active:scale-95 cursor-pointer flex items-center gap-1.5"
                   onClick={() => setShowFinishConfirm(true)}
-                  title="Submit and finish this test"
                 >
-                  🏁 Finish
+                  🏁 Submit Test
                 </button>
               )}
-            </div>
+            </header>
 
-            {/* Statistics Bar at test progression */}
-            {!isTestFinished && (
-              <>
-                <div className="stats-bar">
-                  <div className="stat">
-                    <div className="stat-val">{activeTest.data.length}</div>
-                    <div className="stat-lbl">Questions</div>
-                  </div>
-                  <div className="stat">
-                    <div className="stat-val">
-                      {selectedOptions.filter(o => o !== null).length}
+            {/* Main Workspace Grid */}
+            <div className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
+              
+              {!isTestFinished ? (
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                  
+                  {/* LEFT PORTION: The Question Workspace Panel */}
+                  <main className="col-span-1 md:col-span-8 flex flex-col gap-4">
+                    
+                    {/* Header bar of the current question */}
+                    <div className="bg-[#0f1520] border border-[#1e2d45] rounded-2xl p-4 flex items-center justify-between gap-4 shadow-md">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-[#8b949e] font-extrabold uppercase tracking-widest">QUESTION WORKSPACE</span>
+                        <h2 className="text-sm font-extrabold text-white">
+                          Question {currentQuestionIndex + 1} <span className="text-xs text-[#8b949e] font-normal">of {activeTest.data.length}</span>
+                        </h2>
+                      </div>
+                      
+                      {/* Negative markings details - highly authentic CBT layout */}
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-[#8b949e]">
+                        <span className="bg-[#1c2333] border border-[#1e2d45] text-green-400 px-2 py-1 rounded-lg">
+                          +1.0 Correct
+                        </span>
+                        {examMode && (
+                          <span className="bg-[#1c2333] border border-[#1e2d45] text-red-400 px-2 py-1 rounded-lg">
+                            -0.25 CBT Penalty
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="stat-lbl">Answered</div>
-                  </div>
-                  <div className="stat">
-                    <div className="stat-val">
-                      {examMode ? "—" : correctCount}
-                    </div>
-                    <div className="stat-lbl">Correct</div>
-                  </div>
-                  <div className="stat">
-                    <div className="stat-val">
-                      {examMode ? "—" : (
-                        selectedOptions.filter(o => o !== null).length > 0 
-                          ? `${Math.round((correctCount / selectedOptions.filter(o => o !== null).length) * 100)}%` 
-                          : "0%"
-                      )}
-                    </div>
-                    <div className="stat-lbl">Score</div>
-                  </div>
-                </div>
 
-                {/* Progress bar state */}
-                <div className="progress-wrap">
-                  <div className="prog-info">
-                    <span>Q {currentQuestionIndex + 1}</span>
-                    <span>
-                      {Math.round((selectedOptions.filter(o => o !== null).length / activeTest.data.length) * 100)}%
-                    </span>
-                  </div>
-                  <div className="prog-bar">
-                    <div 
-                      className="prog-fill" 
-                      style={{ 
-                        width: `${Math.round((selectedOptions.filter(o => o !== null).length / activeTest.data.length) * 100)}%` 
-                      }}
-                    ></div>
-                  </div>
-                </div>
-
-                {/* Question dots visual navigation helper */}
-                <div className="dot-nav">
-                  {activeTest.data.map((_, i) => {
-                    let dClass = "dot";
-                    if (currentQuestionIndex === i) {
-                      dClass += " cur";
-                    } else if (selectedOptions[i] !== null) {
-                      if (examMode) {
-                        dClass += " done-e";
-                      } else {
-                        dClass += questionAnswers[i] === 1 ? " done-c" : " done-w";
-                      }
-                    }
-                    return (
-                      <button 
-                        key={i} 
-                        className={dClass}
-                        onClick={() => setCurrentQuestionIndex(i)}
-                      >
-                        {i + 1}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Test quiz screen */}
-                <div id="quiz-wrap" className="mt-4 overflow-hidden relative">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={currentQuestionIndex}
-                      initial={{ opacity: 0, x: 24 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -24 }}
-                      transition={{ duration: 0.2, ease: "easeInOut" }}
-                      className="q-card active"
-                    >
-                      <div className="q-meta">
-                        <span className="q-num">Q {currentQuestionIndex + 1} / {activeTest.data.length}</span>
-                        <span className="q-src">{activeTest.data[currentQuestionIndex].source}</span>
+                    {/* Question Content Display */}
+                    <div className="bg-[#0f1520] border border-[#1e2d45] rounded-3xl p-6 md:p-8 shadow-lg flex flex-col gap-6 relative overflow-hidden">
+                      {/* Ambient background glow for active card */}
+                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500/40 via-blue-500/30 to-green-500/40"></div>
+                      
+                      {/* Question Text */}
+                      <div className="text-sm md:text-base font-medium text-white leading-relaxed font-sans">
+                        {activeTest.data[currentQuestionIndex].q}
                       </div>
 
-                      <p className="q-text">
-                        {activeTest.data[currentQuestionIndex].q}
-                      </p>
-
-                      <div className="opts">
+                      {/* Options selection container */}
+                      <div className="flex flex-col gap-3">
                         {activeTest.data[currentQuestionIndex].opts.map((option, idx) => {
-                          let optClass = "opt";
+                          const letterLabels = ["A", "B", "C", "D"];
                           const isSelected = selectedOptions[currentQuestionIndex] === idx;
                           const isAnswered = questionAnswers[currentQuestionIndex] !== null;
+                          const isCorrectAns = idx === activeTest.data[currentQuestionIndex].ans;
 
+                          let optionBtnClass = "w-full text-left p-4 rounded-2xl border text-xs md:text-sm font-medium transition-all flex items-center justify-between gap-4 cursor-pointer relative overflow-hidden group ";
+                          
                           if (!examMode) {
+                            // Practice Mode Interactive State Display
                             if (isAnswered) {
-                              optClass += " locked";
-                              if (idx === activeTest.data[currentQuestionIndex].ans) {
-                                optClass += " correct";
+                              if (isCorrectAns) {
+                                optionBtnClass += "bg-green-500/10 border-green-500/40 text-green-300 shadow-md shadow-green-950/20";
                               } else if (isSelected) {
-                                optClass += " wrong";
+                                optionBtnClass += "bg-red-500/10 border-red-500/40 text-red-300 shadow-md shadow-red-950/20";
+                              } else {
+                                optionBtnClass += "bg-[#141d2e]/30 border-[#1e2d45]/40 text-[#8b949e] opacity-60";
                               }
-                            } else if (isSelected) {
-                              optClass += " sel";
+                            } else {
+                              if (isSelected) {
+                                optionBtnClass += "bg-amber-500/10 border-amber-500 text-amber-300 shadow-lg shadow-amber-500/5";
+                              } else {
+                                optionBtnClass += "bg-[#141d2e] border-[#1e2d45] text-[#c9d1d9] hover:bg-[#192236] hover:border-[#243550]";
+                              }
                             }
                           } else {
+                            // CBT Exam Mode freely toggleable state
                             if (isSelected) {
-                              optClass += " exam-sel";
+                              optionBtnClass += "bg-blue-500/10 border-blue-500 text-blue-300 shadow-lg shadow-blue-500/10 font-semibold scale-[1.01]";
+                            } else {
+                              optionBtnClass += "bg-[#141d2e] border-[#1e2d45] text-[#c9d1d9] hover:bg-[#192236] hover:border-[#243550]";
                             }
                           }
 
-                          const L = ["A", "B", "C", "D"];
-
                           return (
                             <button 
-                              key={idx} 
-                              className={optClass}
+                              key={idx}
+                              className={optionBtnClass}
                               onClick={() => handleOptionSelect(idx)}
+                              disabled={!examMode && isAnswered}
                             >
-                              <span className="opt-letter">{L[idx]}</span>
-                              <span>{option}</span>
+                              <div className="flex items-center gap-3 flex-1">
+                                {/* Option letter badge */}
+                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-all ${
+                                  !examMode && isAnswered
+                                    ? isCorrectAns
+                                      ? "bg-green-500 text-black"
+                                      : isSelected
+                                        ? "bg-red-500 text-white"
+                                        : "bg-[#1e2d45]/50 text-[#8b949e]"
+                                    : isSelected
+                                      ? examMode
+                                        ? "bg-blue-500 text-black"
+                                        : "bg-amber-500 text-black"
+                                      : "bg-[#1c2333] text-[#8b949e] group-hover:bg-[#243047] group-hover:text-white"
+                                }`}>
+                                  {letterLabels[idx]}
+                                </div>
+                                <span className="flex-1 leading-normal">{option}</span>
+                              </div>
+
+                              {/* Action icons / State badges on right */}
+                              <div className="shrink-0 flex items-center">
+                                {!examMode && isAnswered && (
+                                  isCorrectAns ? (
+                                    <span className="text-green-400 text-lg font-bold">✔</span>
+                                  ) : isSelected ? (
+                                    <span className="text-red-400 text-lg font-bold">✖</span>
+                                  ) : null
+                                )}
+                                {examMode && isSelected && (
+                                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500 ring-4 ring-blue-500/25 animate-pulse" />
+                                )}
+                              </div>
                             </button>
                           );
                         })}
                       </div>
 
-                      {/* Feedback wrapper in practice mode */}
+                      {/* Practice mode instant detailed explanation card */}
                       {!examMode && questionAnswers[currentQuestionIndex] !== null && (
-                        <div className="mt-4 animate-fade-in">
-                          <div className={`fb show ${questionAnswers[currentQuestionIndex] === 1 ? "fb-ok" : "fb-no"}`}>
-                            {questionAnswers[currentQuestionIndex] === 1 ? "✅ Correct! " : `❌ Wrong. Correct Answer: ${activeTest.data[currentQuestionIndex].opts[activeTest.data[currentQuestionIndex].ans]}. `}
-                            <span style={{ whiteSpace: "pre-line" }}>{getDetailedExplain(activeTest.data[currentQuestionIndex])}</span>
+                        <div className="mt-4 bg-[#141d2e] border-l-4 border-amber-500 rounded-r-2xl p-5 shadow-inner animate-fade-in">
+                          <div className="flex items-center gap-2 text-amber-400 font-extrabold text-xs mb-2">
+                            <span>💡 Detailed Clinical Rationale</span>
+                          </div>
+                          <div className="text-xs md:text-sm text-[#c9d1d9] leading-relaxed font-sans" style={{ whiteSpace: "pre-line" }}>
+                            {getDetailedExplain(activeTest.data[currentQuestionIndex])}
+                          </div>
+                          
+                          {/* Academic reference tag */}
+                          <div className="mt-3 pt-3 border-t border-[#1e2d45] flex items-center justify-between gap-4 text-[10px] text-[#8b949e]">
+                            <span>📌 Source Reference: <strong className="text-white">{activeTest.data[currentQuestionIndex].source || "NCBT Faculty Editorial Board"}</strong></span>
+                            <span className="text-amber-500 font-bold bg-amber-500/5 px-2 py-0.5 rounded border border-amber-500/10">NURSING INSIGHT</span>
                           </div>
                         </div>
                       )}
 
-                      {/* Navigation control footer */}
-                      <div className="nav-row">
+                    </div>
+
+                    {/* Left Panel Workspace Navigation Controls */}
+                    <div className="bg-[#0f1520] border border-[#1e2d45] rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-md">
+                      <div className="flex items-center gap-2">
                         <button 
-                          className="btn-prev" 
-                          disabled={currentQuestionIndex === 0}
+                          className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1.5"
                           onClick={handlePrevQuestion}
+                          disabled={currentQuestionIndex === 0}
                         >
                           ← Prev
                         </button>
-                        
-                        <button 
-                          className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
-                          onClick={() => setShowFinishConfirm(true)}
-                          style={{ minHeight: "40px" }}
-                        >
-                          🏁 Submit Test
-                        </button>
+
+                        {examMode && selectedOptions[currentQuestionIndex] !== null && (
+                          <button 
+                            className="px-3 py-2 bg-transparent hover:bg-red-500/10 text-red-400 hover:text-red-300 text-xs font-extrabold rounded-xl transition-all border border-red-500/15 cursor-pointer"
+                            onClick={() => clearResponse(currentQuestionIndex)}
+                          >
+                            Clear Response
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {examMode && (
+                          <button 
+                            className={`px-3 py-2 text-xs font-extrabold rounded-xl transition-all border cursor-pointer ${
+                              markedForReview[currentQuestionIndex]
+                                ? "bg-amber-500 text-black border-amber-500 font-extrabold"
+                                : "bg-transparent text-amber-400 hover:bg-amber-500/10 border-amber-500/20"
+                            }`}
+                            onClick={() => toggleMarkForReview(currentQuestionIndex)}
+                          >
+                            📌 {markedForReview[currentQuestionIndex] ? "Marked!" : "Mark for Review"}
+                          </button>
+                        )}
 
                         <button 
-                          className="btn-next"
+                          className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-xs font-extrabold rounded-xl shadow-lg shadow-green-900/20 transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
                           onClick={handleNextQuestion}
                         >
-                          {currentQuestionIndex === activeTest.data.length - 1 ? "Finish ✓" : "Next →"}
+                          {currentQuestionIndex === activeTest.data.length - 1 ? "Finish ✓" : "Save & Next →"}
                         </button>
                       </div>
-                    </motion.div>
-                  </AnimatePresence>
+                    </div>
+
+                    {/* Mobile Floating Drawer Trigger */}
+                    <div className="md:hidden flex justify-center mt-2">
+                      <button 
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs px-5 py-3 rounded-2xl transition-all shadow-xl shadow-blue-900/20 flex items-center gap-2 cursor-pointer active:scale-95"
+                        onClick={() => setMobilePaletteOpen(true)}
+                      >
+                        📊 View Question Palette & Status ({selectedOptions.filter(o => o !== null).length}/{activeTest.data.length})
+                      </button>
+                    </div>
+
+                  </main>
+
+                  {/* RIGHT PORTION: The Question Navigation Palette Sidebar (Desktop) */}
+                  <aside className="col-span-1 md:col-span-4 bg-[#0f1520] border border-[#1e2d45] rounded-3xl p-6 shadow-lg flex flex-col gap-6 sticky top-[80px] hidden md:flex">
+                    
+                    {/* Candidate Identity Profile Card */}
+                    <div className="flex items-center gap-3 pb-4 border-b border-[#1e2d45]">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-500 to-red-500 text-white font-extrabold text-sm flex items-center justify-center shadow-md">
+                        {currentUser?.guest ? "A" : (currentUser?.name ? currentUser.name[0].toUpperCase() : "A")}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-white leading-tight">
+                          {currentUser?.guest ? "Aspirant Scholar" : (currentUser?.name || "Aspirant Scholar")}
+                        </span>
+                        <span className="text-[10px] text-[#8b949e]">CBT Portal candidate ID: CBT-2026</span>
+                      </div>
+                    </div>
+
+                    {/* Dynamic legend status container */}
+                    <div className="space-y-3">
+                      <h3 className="text-[10px] text-[#8b949e] font-extrabold uppercase tracking-widest">EXAM PALETTE STATUS</h3>
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        {/* Answered */}
+                        <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2 flex items-center gap-2">
+                          <div className="w-3.5 h-3.5 rounded-md bg-green-500 shrink-0" />
+                          <div className="flex flex-col text-left">
+                            <span className="text-[10px] text-[#8b949e] leading-tight">Answered</span>
+                            <span className="text-xs font-extrabold text-white leading-none">
+                              {selectedOptions.filter((o, i) => o !== null && !markedForReview[i]).length}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Marked for review */}
+                        <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2 flex items-center gap-2">
+                          <div className="w-3.5 h-3.5 rounded-md bg-purple-500 shrink-0" />
+                          <div className="flex flex-col text-left">
+                            <span className="text-[10px] text-[#8b949e] leading-tight font-sans">Marked</span>
+                            <span className="text-xs font-extrabold text-white leading-none">
+                              {markedForReview.filter(m => m).length}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Visited / Not Answered */}
+                        <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2 flex items-center gap-2">
+                          <div className="w-3.5 h-3.5 rounded-md bg-red-500 shrink-0" />
+                          <div className="flex flex-col text-left">
+                            <span className="text-[10px] text-[#8b949e] leading-tight">Not Ans</span>
+                            <span className="text-xs font-extrabold text-white leading-none">
+                              {visitedQuestions.filter((v, i) => v && selectedOptions[i] === null && !markedForReview[i]).length}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Not Visited */}
+                        <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2 flex items-center gap-2">
+                          <div className="w-3.5 h-3.5 rounded-md bg-[#243550] shrink-0" />
+                          <div className="flex flex-col text-left">
+                            <span className="text-[10px] text-[#8b949e] leading-tight">Not Visited</span>
+                            <span className="text-xs font-extrabold text-white leading-none">
+                              {activeTest.data.length - visitedQuestions.filter(v => v).length}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Question Button Grid Palette */}
+                    <div className="flex flex-col gap-3">
+                      <h3 className="text-[10px] text-[#8b949e] font-extrabold uppercase tracking-widest">CHOOSE QUESTION DOT</h3>
+                      
+                      <div className="grid grid-cols-5 gap-2 max-h-[220px] overflow-y-auto pr-1">
+                        {activeTest.data.map((_, idx) => {
+                          const isCurrent = idx === currentQuestionIndex;
+                          const isVisited = visitedQuestions[idx];
+                          const isAnswered = selectedOptions[idx] !== null;
+                          const isMarked = markedForReview[idx];
+
+                          let dotClass = "w-full aspect-square rounded-xl font-extrabold text-xs flex items-center justify-center transition-all cursor-pointer border ";
+                          
+                          if (isCurrent) {
+                            dotClass += "ring-2 ring-amber-500 text-white font-black ";
+                          }
+
+                          if (isMarked) {
+                            if (isAnswered) {
+                              dotClass += "bg-gradient-to-tr from-purple-600 to-green-600 border-purple-400 text-white";
+                            } else {
+                              dotClass += "bg-purple-600 border-purple-400 text-white";
+                            }
+                          } else if (isAnswered) {
+                            dotClass += "bg-green-600 border-green-500 text-white";
+                          } else if (isVisited) {
+                            dotClass += "bg-red-600 border-red-500 text-white";
+                          } else {
+                            dotClass += "bg-[#141d2e] border-[#1e2d45] text-[#8b949e] hover:border-[#243550]";
+                          }
+
+                          return (
+                            <button 
+                              key={idx}
+                              className={dotClass}
+                              onClick={() => setCurrentQuestionIndex(idx)}
+                              title={`Go to Question ${idx + 1}`}
+                            >
+                              {idx + 1}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Professional instructions card inside sidebar */}
+                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-2xl p-4 text-[10px] text-[#8b949e] leading-relaxed space-y-1 mt-auto">
+                      <p className="font-extrabold text-white text-[11px] mb-1">CBT PRO-TIPS</p>
+                      <p>• Green indicates saved answers.</p>
+                      <p>• Purple indicates questions kept for future verification.</p>
+                      <p>• Review rationales immediately in Practice Mode to maximize retention.</p>
+                    </div>
+
+                  </aside>
+
                 </div>
-              </>
-            )}
+              ) : (
+                
+                /* =============== CBT DETAILED EVALUATION METRICS (RESULTS SCREEN) =============== */
+                <div className="max-w-3xl mx-auto bg-[#0f1520] border border-[#1e2d45] rounded-3xl p-6 md:p-8 shadow-2xl animate-fade-in text-center relative overflow-hidden">
+                  
+                  {/* Decorative background glow for results */}
+                  <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-            {/* Custom Modal Confirmation for finishing the test */}
-            {showFinishConfirm && (
-              <div className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-[999] animate-fade-in">
-                <div className="bg-[#0d1117] border border-[#30363d] rounded-2xl p-6 max-w-md w-full shadow-2xl relative text-center">
-                  <div className="w-14 h-14 bg-red-500/10 text-red-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
-                    <span className="text-2xl">🚨</span>
-                  </div>
-                  <h3 className="text-lg font-extrabold text-white mb-2">Finish Mock Test?</h3>
-                  <p className="text-xs text-[#8b949e] mb-6 leading-relaxed">
-                    Are you sure you want to submit your test answers now? You will get detailed evaluation, score performance analysis, and detailed rationales.
-                  </p>
-
-                  {/* Progress details */}
-                  <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-4 text-left space-y-2 mb-6">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-[#8b949e]">Total Questions:</span>
-                      <span className="font-semibold text-white">{activeTest.data.length}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-[#8b949e]">Answered Questions:</span>
-                      <span className="font-semibold text-green-400">
-                        {selectedOptions.filter(o => o !== null).length}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-[#8b949e]">Skipped / Unanswered:</span>
-                      <span className="font-semibold text-amber-500">
-                        {activeTest.data.length - selectedOptions.filter(o => o !== null).length}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button 
-                      className="flex-1 py-2.5 bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-[#c9d1d9] font-bold text-xs rounded-xl transition-all cursor-pointer"
-                      onClick={() => setShowFinishConfirm(false)}
-                    >
-                      Keep Solving
-                    </button>
-                    <button 
-                      className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-lg shadow-red-900/20"
-                      onClick={() => {
-                        setShowFinishConfirm(false);
-                        finishTest();
-                      }}
-                    >
-                      Yes, Submit Test
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* =============== RESULTS WRAPPER INTERFACE =============== */}
-            {isTestFinished && (
-              <div id="result-wrap" style={{ display: "block" }}>
-                <div className="result-card">
-                  <div className="result-emoji">
+                  <div className="w-20 h-20 bg-amber-500/10 text-amber-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-500/20 text-4xl animate-bounce">
                     {displayPercentage >= 90 ? "🏆" : 
                      displayPercentage >= 75 ? "🎉" :
                      displayPercentage >= 55 ? "👍" : "😐"}
                   </div>
 
-                  <div className="result-pct">
-                    {displayPercentage}%
-                  </div>
+                  <h2 className="text-xl md:text-2xl font-black text-white leading-tight">
+                    {displayPercentage >= 90 ? "Outstanding Performance!" :
+                     displayPercentage >= 75 ? "Great Job! Expert Level!" :
+                     displayPercentage >= 55 ? "Good Effort! Keep Pushing!" : "Needs Practice. Keep Studying!"}
+                  </h2>
+                  <p className="text-xs text-[#8b949e] mt-1 mb-6 font-sans">
+                    {activeTest.title} Completed Evaluated Score Summary
+                  </p>
 
-                  <div className="result-label" id="final-results-metrics">
-                    {examMode ? (
-                      <span>
-                        Net Score: <strong className="text-amber-400">{netMarks.toFixed(2)}</strong> out of <strong>{totalQuestions}</strong>
-                      </span>
-                    ) : (
-                      <span>
-                        {correctCount} of {totalQuestions} correct
-                      </span>
-                    )}
-                    {" · "}{examMode ? "CBT Exam Mode" : "Practice Mode"}
-                  </div>
-
-                  <div className="result-msg">
-                    {displayPercentage >= 90 ? "Outstanding!" :
-                     displayPercentage >= 75 ? "Great Job!" :
-                     displayPercentage >= 55 ? "Good Effort!" : "Keep Practising!"}
-                  </div>
-
-                  <div className="result-sub">
-                    {examMode ? (
-                      <span className="text-xs text-[#8492a6]">
-                        CBT Evaluation Formula: {correctCount} correct (+1.0) and {wrongCount} errors (-0.25 penalty). Unattempted: {skippedCount}.
-                      </span>
-                    ) : (
-                      <span>
-                        {correctCount / totalQuestions >= 0.75 ? `You have an exam-ready grasp of ${activeTest.title}.` : "Review the correct rationales below and try again."}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="score-grid">
-                    <div className="score-box">
-                      <div className="score-box-val sc">+{correctCount}</div>
-                      <div className="score-box-lbl">Correct (+1)</div>
+                  {/* Main Percentage ring-style card */}
+                  <div className="bg-[#141d2e] border border-[#1e2d45] rounded-3xl p-6 inline-block mb-6 relative">
+                    <div className="text-[10px] text-amber-500 font-extrabold uppercase tracking-widest mb-1 font-sans">ACCURACY SCORE</div>
+                    <div className="text-4xl md:text-5xl font-black text-white leading-none tracking-tight">
+                      {displayPercentage}%
                     </div>
-                    <div className="score-box">
-                      <div className="score-box-val sw">
+                    <div className="text-xs font-semibold text-[#8b949e] mt-2 font-sans">
+                      {examMode ? (
+                        <span>
+                          Net Score: <strong className="text-amber-400">{netMarks.toFixed(2)}</strong> out of <strong>{totalQuestions}</strong>
+                        </span>
+                      ) : (
+                        <span>
+                          {correctCount} correct of {totalQuestions} total MCQs
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Score breakdown metrics grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+                    
+                    {/* Correct */}
+                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-2xl p-4 flex flex-col items-center">
+                      <span className="text-lg md:text-xl font-bold text-green-400">+{correctCount}</span>
+                      <span className="text-[10px] text-[#8b949e] font-bold uppercase tracking-wider mt-1">Correct</span>
+                    </div>
+
+                    {/* Wrong */}
+                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-2xl p-4 flex flex-col items-center">
+                      <span className="text-lg md:text-xl font-bold text-red-400">
                         {examMode ? `-${negativePenalty.toFixed(2)}` : `-${wrongCount}`}
-                      </div>
-                      <div className="score-box-lbl">{examMode ? "Penalty (-0.25)" : "Wrong"}</div>
+                      </span>
+                      <span className="text-[10px] text-[#8b949e] font-bold uppercase tracking-wider mt-1">
+                        {examMode ? "Penalty (-0.25)" : "Wrong"}
+                      </span>
                     </div>
-                    <div className="score-box">
-                      <div className="score-box-val ss">{skippedCount}</div>
-                      <div className="score-box-lbl font-sans">Skipped</div>
+
+                    {/* Skipped */}
+                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-2xl p-4 flex flex-col items-center">
+                      <span className="text-lg md:text-xl font-bold text-amber-500">{skippedCount}</span>
+                      <span className="text-[10px] text-[#8b949e] font-bold uppercase tracking-wider mt-1">Skipped</span>
                     </div>
-                    <div className="score-box">
-                      <div className="score-box-val sp">
-                        {examMode ? netMarks.toFixed(2) : `${displayPercentage}%`}
-                      </div>
-                      <div className="score-box-lbl font-sans">{examMode ? "Net Marks" : "Score %"}</div>
+
+                    {/* Exam Mode badge */}
+                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-2xl p-4 flex flex-col items-center">
+                      <span className="text-xs md:text-sm font-extrabold text-blue-400 mt-1 uppercase truncate max-w-full">
+                        {examMode ? "CBT Exam" : "Practice"}
+                      </span>
+                      <span className="text-[10px] text-[#8b949e] font-bold uppercase tracking-wider mt-2.5">Mode type</span>
                     </div>
+
                   </div>
 
-                  <div className="result-actions">
+                  {/* Actions Row */}
+                  <div className="flex flex-wrap items-center justify-center gap-3 pb-6 border-b border-[#1e2d45] mb-8">
                     <button 
-                      className="btn-retry" 
+                      className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs rounded-xl shadow-lg shadow-amber-500/10 transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
                       onClick={() => triggerTestInit(activeSubjectId!, activeTest.id)}
                     >
-                      🔄 Retry Test
+                      🔄 Retake Mock Test
                     </button>
-                    <button className="btn-back-hub" onClick={goHub}>
-                      ← Back
-                    </button>
+
                     <button 
-                      className="btn-share-wp"
-                      onClick={() => shareToWhatsApp(
-                        displayPercentage, 
-                        correctCount, 
-                        totalQuestions, 
-                        activeTest.title
-                      )}
+                      className="px-5 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-[#c9d1d9] text-xs font-bold rounded-xl transition-all cursor-pointer"
+                      onClick={goHub}
                     >
-                      <Share2 className="w-4 h-4" /> Share Score to WhatsApp
+                      ← Back to Dashboard
+                    </button>
+
+                    <button 
+                      className="px-5 py-3 bg-[#25d366]/10 hover:bg-[#25d366]/25 border border-[#25d366]/20 text-[#25d366] text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                      onClick={() => shareToWhatsApp(displayPercentage, correctCount, totalQuestions, activeTest.title)}
+                    >
+                      <Share2 className="w-3.5 h-3.5" /> Share to WhatsApp
                     </button>
                   </div>
 
-                  {/* Fully fleshed-out Exam Mode full review table */}
-                  {examMode && (
-                    <div className="mt-8 text-left border-t border-[#1e2d45] pt-6">
-                      <div className="review-header">
-                        Full Exam Practice Review — All {activeTest.data.length} Questions
-                      </div>
-                      
+                  {/* DETAILED QUESTION-BY-QUESTION REVIEW PANEL */}
+                  <div className="text-left space-y-6">
+                    <div className="flex flex-col">
+                      <h3 className="text-sm font-extrabold text-white">CBT Exam Performance Audit Review</h3>
+                      <p className="text-[10px] text-[#8b949e]">Examine candidate choice, correct answers, and expert clinical rationales below</p>
+                    </div>
+
+                    <div className="space-y-4">
                       {activeTest.data.map((q, idx) => {
-                        const selIdx = selectedOptions[idx];
-                        const L = ["A", "B", "C", "D"];
+                        const candidateSelection = selectedOptions[idx];
+                        const alphabetLabels = ["A", "B", "C", "D"];
 
                         return (
-                          <div key={idx} className="review-q animate-fade-in">
-                            <div className="rq-top">
-                              <span className="rq-num">Q{idx + 1}</span>
-                              <span className="rq-text">{q.q}</span>
+                          <div key={idx} className="bg-[#141d2e] border border-[#1e2d45] rounded-2xl p-5 shadow-sm space-y-4 relative overflow-hidden animate-fade-in">
+                            {/* Accent vertical line indicating state */}
+                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${
+                              candidateSelection === null 
+                                ? "bg-amber-500" 
+                                : candidateSelection === q.ans 
+                                  ? "bg-green-500" 
+                                  : "bg-red-500"
+                            }`} />
+
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex items-start gap-2.5">
+                                <span className="bg-[#1c2333] border border-[#1e2d45] text-[10px] font-black px-2 py-0.5 rounded-lg text-[#8b949e] mt-0.5">
+                                  Q{idx + 1}
+                                </span>
+                                <h4 className="text-xs md:text-sm font-bold text-white leading-relaxed">
+                                  {q.q}
+                                </h4>
+                              </div>
+
+                              {/* State label */}
+                              <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full shrink-0 border ${
+                                candidateSelection === null
+                                  ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                                  : candidateSelection === q.ans
+                                    ? "bg-green-500/10 text-green-400 border-green-500/20"
+                                    : "bg-red-500/10 text-red-400 border-red-500/20"
+                              }`}>
+                                {candidateSelection === null
+                                  ? "Skipped"
+                                  : candidateSelection === q.ans
+                                    ? "Correct"
+                                    : "Incorrect"}
+                              </span>
                             </div>
 
-                            <div className="rq-opts">
-                              {q.opts.map((opt, oIdx) => {
-                                let rqClass = "rq-opt";
-                                if (oIdx === selIdx && oIdx === q.ans) {
-                                  rqClass += " ro-correct";
-                                } else if (oIdx === selIdx && oIdx !== q.ans) {
-                                  rqClass += " ro-wrong";
-                                } else if (oIdx === q.ans) {
-                                  rqClass += " ro-show";
+                            {/* Option list review */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-6">
+                              {q.opts.map((option, oIdx) => {
+                                const isOptionSelectedByCandidate = candidateSelection === oIdx;
+                                const isCorrectOpt = oIdx === q.ans;
+
+                                let reviewBadgeClass = "p-3 rounded-xl border text-xs flex items-center gap-2.5 ";
+                                if (isCorrectOpt) {
+                                  reviewBadgeClass += "bg-green-500/5 border-green-500/30 text-green-300 font-medium";
+                                } else if (isOptionSelectedByCandidate) {
+                                  reviewBadgeClass += "bg-red-500/5 border-red-500/30 text-red-300";
+                                } else {
+                                  reviewBadgeClass += "bg-[#1c2333]/40 border-[#1e2d45]/40 text-[#8b949e]";
                                 }
 
                                 return (
-                                  <div key={oIdx} className={rqClass}>
-                                    <span className="r-letter">{L[oIdx]}</span>
-                                    <span>{opt}</span>
+                                  <div key={oIdx} className={reviewBadgeClass}>
+                                    <span className={`w-5 h-5 rounded-md font-bold text-[10px] flex items-center justify-center ${
+                                      isCorrectOpt
+                                        ? "bg-green-500 text-black"
+                                        : isOptionSelectedByCandidate
+                                          ? "bg-red-500 text-white"
+                                          : "bg-[#1c2333] text-[#8b949e]"
+                                    }`}>
+                                      {alphabetLabels[oIdx]}
+                                    </span>
+                                    <span className="truncate">{option}</span>
                                   </div>
                                 );
                               })}
                             </div>
 
-                            <div className="rq-rationale font-sans">
-                              <div className="flex-1 text-sm leading-relaxed" style={{ whiteSpace: "pre-line" }}>
-                                💡 {getDetailedExplain(q)}
-                                <span className="rq-src block mt-2 text-xs opacity-75 font-semibold" style={{ whiteSpace: "normal" }}>📌 Source: {q.source}</span>
-                              </div>
+                            {/* Rationale box */}
+                            <div className="pl-6 pt-3 border-t border-[#1e2d45] text-xs text-[#8b949e] leading-relaxed font-sans">
+                              <p className="font-extrabold text-[#c9d1d9] text-[11px] mb-1">💡 Faculty Answer Explanation</p>
+                              <div style={{ whiteSpace: "pre-line" }}>{getDetailedExplain(q)}</div>
+                              <p className="mt-2 text-[10px] text-[#8b949e]">📌 Source Reference: <strong className="text-[#c9d1d9]">{q.source || "NCBT Clinical Education Board"}</strong></p>
                             </div>
+
                           </div>
                         );
                       })}
                     </div>
-                  )}
+
+                  </div>
+
+                </div>
+              )}
+
+            </div>
+
+            {/* Mobile Bottom Responsive Drawer for Palette Grid */}
+            {mobilePaletteOpen && activeTest && (
+              <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex flex-col justify-end animate-fade-in">
+                
+                {/* Click outside to close */}
+                <div className="flex-1" onClick={() => setMobilePaletteOpen(false)} />
+
+                {/* Sliding Drawer Body */}
+                <div className="bg-[#0f1520] border-t border-[#1e2d45] rounded-t-[2.5rem] max-h-[85vh] overflow-y-auto p-6 flex flex-col gap-5 shadow-2xl relative">
+                  
+                  {/* Pull bar indicator */}
+                  <div className="w-12 h-1 bg-[#1e2d45] rounded-full mx-auto" />
+
+                  {/* Header */}
+                  <div className="flex items-center justify-between gap-4 pb-3 border-b border-[#1e2d45]">
+                    <div className="flex flex-col text-left">
+                      <span className="text-[10px] text-[#8b949e] font-extrabold uppercase tracking-widest leading-none">CBT PORTAL</span>
+                      <h3 className="text-sm font-extrabold text-white mt-1">CBT Question Map Palette</h3>
+                    </div>
+                    <button 
+                      className="w-8 h-8 rounded-full bg-white/5 border border-white/10 hover:border-amber-500/30 text-[#8b949e] hover:text-white flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
+                      onClick={() => setMobilePaletteOpen(false)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* Stats dynamic summaries */}
+                  <div className="grid grid-cols-2 gap-2 text-left">
+                    {/* Answered */}
+                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2.5 flex items-center gap-2">
+                      <div className="w-3.5 h-3.5 rounded-md bg-green-500 shrink-0" />
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-[#8b949e] leading-none">Answered</span>
+                        <span className="text-xs font-extrabold text-white mt-1">
+                          {selectedOptions.filter((o, i) => o !== null && !markedForReview[i]).length}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Marked for review */}
+                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2.5 flex items-center gap-2">
+                      <div className="w-3.5 h-3.5 rounded-md bg-purple-500 shrink-0" />
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-[#8b949e] leading-none">Marked</span>
+                        <span className="text-xs font-extrabold text-white mt-1">
+                          {markedForReview.filter(m => m).length}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Visited / Not Answered */}
+                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2.5 flex items-center gap-2">
+                      <div className="w-3.5 h-3.5 rounded-md bg-red-500 shrink-0" />
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-[#8b949e] leading-none">Not Ans</span>
+                        <span className="text-xs font-extrabold text-white mt-1">
+                          {visitedQuestions.filter((v, i) => v && selectedOptions[i] === null && !markedForReview[i]).length}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Not Visited */}
+                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2.5 flex items-center gap-2">
+                      <div className="w-3.5 h-3.5 rounded-md bg-[#243550] shrink-0" />
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-[#8b949e] leading-none">Not Visited</span>
+                        <span className="text-xs font-extrabold text-white mt-1">
+                          {activeTest.data.length - visitedQuestions.filter(v => v).length}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Question Grid Map */}
+                  <div className="flex flex-col gap-2.5 text-left">
+                    <span className="text-[10px] text-[#8b949e] font-extrabold uppercase tracking-widest">TAP NUMBER DOT TO JUMP</span>
+                    
+                    <div className="grid grid-cols-5 gap-2.5 max-h-[250px] overflow-y-auto pr-1">
+                      {activeTest.data.map((_, idx) => {
+                        const isCurrent = idx === currentQuestionIndex;
+                        const isVisited = visitedQuestions[idx];
+                        const isAnswered = selectedOptions[idx] !== null;
+                        const isMarked = markedForReview[idx];
+
+                        let dotClass = "w-full aspect-square rounded-xl font-extrabold text-xs flex items-center justify-center transition-all cursor-pointer border ";
+                        
+                        if (isCurrent) {
+                          dotClass += "ring-2 ring-amber-500 text-white font-black ";
+                        }
+
+                        if (isMarked) {
+                          if (isAnswered) {
+                            dotClass += "bg-gradient-to-tr from-purple-600 to-green-600 border-purple-400 text-white";
+                          } else {
+                            dotClass += "bg-purple-600 border-purple-400 text-white";
+                          }
+                        } else if (isAnswered) {
+                          dotClass += "bg-green-600 border-green-500 text-white";
+                        } else if (isVisited) {
+                          dotClass += "bg-red-600 border-red-500 text-white";
+                        } else {
+                          dotClass += "bg-[#141d2e] border-[#1e2d45] text-[#8b949e]";
+                        }
+
+                        return (
+                          <button 
+                            key={idx}
+                            className={dotClass}
+                            onClick={() => {
+                              setCurrentQuestionIndex(idx);
+                              setMobilePaletteOpen(false);
+                            }}
+                          >
+                            {idx + 1}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Prompt Action buttons */}
+                  <div className="mt-2 pt-4 border-t border-[#1e2d45] flex items-center justify-between gap-4">
+                    <button 
+                      className="flex-1 py-3 bg-[#1e2d45]/50 hover:bg-[#1e2d45] text-[#8b949e] hover:text-white text-xs font-bold rounded-xl transition-all border border-[#1e2d45]"
+                      onClick={() => setMobilePaletteOpen(false)}
+                    >
+                      Close Map
+                    </button>
+                    <button 
+                      className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white text-xs font-extrabold rounded-xl transition-all shadow-lg"
+                      onClick={() => {
+                        setMobilePaletteOpen(false);
+                        setShowFinishConfirm(true);
+                      }}
+                    >
+                      🏁 Submit CBT Mock
+                    </button>
+                  </div>
 
                 </div>
               </div>
             )}
 
-            <footer>NCBT · India's Nursing CBT Exam Preparation Platform</footer>
+            <footer className="py-6 mt-12 border-t border-[#1e2d45] text-center text-xs text-[#8b949e]">
+              NCBT · India's Nursing CBT Exam Preparation Platform
+            </footer>
           </div>
         )}
 
