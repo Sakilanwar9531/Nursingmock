@@ -284,6 +284,98 @@ const generateMockTests = (): Test[] => {
     return result;
   };
 
+  // --- PURE HELPER FUNCTIONS FOR DEEP LINK RECONSTRUCTION ---
+  const getQuestionsForPyqPure = (examName: string, year: string, count: number, subjectsList: Subject[]): Question[] => {
+    const pool: Question[] = [];
+    subjectsList.forEach(subj => {
+      if (subj.tests && Array.isArray(subj.tests)) {
+        subj.tests.forEach(t => {
+          if (t.data && Array.isArray(t.data)) {
+            t.data.forEach(q => {
+              const srcLower = (q.source || "").toLowerCase();
+              const examLower = examName.toLowerCase();
+              if (srcLower.includes(examLower) || (year && srcLower.includes(year))) {
+                if (!pool.some(item => item.q === q.q)) {
+                  pool.push(q);
+                }
+              }
+            });
+          }
+        });
+      }
+    });
+
+    if (pool.length < count) {
+      subjectsList.forEach(subj => {
+        if (subj.tests && Array.isArray(subj.tests)) {
+          subj.tests.forEach(t => {
+            if (t.data && Array.isArray(t.data)) {
+              t.data.forEach(q => {
+                if (!pool.some(item => item.q === q.q)) {
+                  pool.push(q);
+                }
+              });
+            }
+          });
+        }
+      });
+    }
+
+    const shuffled = [...pool].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count);
+  };
+
+  const generateSprintTestPure = (subjectId: string, subjectsList: Subject[]): Test | null => {
+    const subject = subjectsList.find(s => s.id === subjectId);
+    if (!subject) return null;
+
+    const pool: Question[] = [];
+    subject.tests.forEach(t => {
+      if (t.data && Array.isArray(t.data)) {
+        t.data.forEach(q => {
+          if (!pool.some(item => item.q === q.q)) {
+            pool.push(q);
+          }
+        });
+      }
+    });
+
+    if (pool.length === 0) return null;
+
+    const shuffled = [...pool].sort(() => 0.5 - Math.random());
+    const sprintQs = shuffled.slice(0, 10);
+
+    return {
+      id: `sprint-${subjectId}`,
+      icon: "⚡",
+      title: `${subject.name} (10Q Rapid Sprint)`,
+      desc: `A rapid-fire 10-question high-yield training checkpoint to sharpen your diagnostic intuition.`,
+      questions: sprintQs.length,
+      mins: 10,
+      ready: true,
+      data: sprintQs
+    };
+  };
+
+  const generatePyqTestPure = (testId: string, subjectsList: Subject[]): Test | null => {
+    const foundPyq = PYQ_DATA.find(p => `pyq-${p.tag}-${p.year}`.toLowerCase() === testId.toLowerCase());
+    if (!foundPyq) return null;
+
+    const qCount = foundPyq.count || 20;
+    const pyqQs = getQuestionsForPyqPure(foundPyq.exam, foundPyq.year, qCount, subjectsList);
+    
+    return {
+      id: `pyq-${foundPyq.tag}-${foundPyq.year}`,
+      icon: "📋",
+      title: `${foundPyq.year} ${foundPyq.exam} Paper`,
+      desc: `Authentic simulated past year question paper covering high-yield syllabus domains with professor-rationales.`,
+      questions: qCount,
+      mins: qCount,
+      ready: true,
+      data: pyqQs
+    };
+  };
+
   // --- SYNCHRONOUS DEEP-LINK INITIALIZATION HELPER ---
   const getInitialRoute = () => {
     const path = typeof window !== "undefined" ? window.location.pathname : "/";
@@ -348,12 +440,29 @@ const generateMockTests = (): Test[] => {
           }
         }
 
-        const subject = subjectsList.find(s => s.id === initialSubjId);
-        if (subject) {
-          const test = subject.tests.find(t => t.id === initialTestId);
-          if (test) {
-            initialPage = "test";
-            foundTest = test;
+        if (initialSubjId === "virtual") {
+          if (initialTestId.startsWith("pyq-")) {
+            const virtualTest = generatePyqTestPure(initialTestId, subjectsList);
+            if (virtualTest) {
+              initialPage = "test";
+              foundTest = virtualTest;
+            }
+          } else if (initialTestId.startsWith("sprint-")) {
+            const sprintSubjId = initialTestId.replace("sprint-", "");
+            const virtualTest = generateSprintTestPure(sprintSubjId, subjectsList);
+            if (virtualTest) {
+              initialPage = "test";
+              foundTest = virtualTest;
+            }
+          }
+        } else {
+          const subject = subjectsList.find(s => s.id === initialSubjId);
+          if (subject) {
+            const test = subject.tests.find(t => t.id === initialTestId);
+            if (test) {
+              initialPage = "test";
+              foundTest = test;
+            }
           }
         }
       }
@@ -1480,7 +1589,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       setHubTab("short");
     }
     setActivePage(targetPage);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0 });
     if (targetPage === "analytics" && currentUser && !currentUser.guest && isSupabaseConnected()) {
       syncWithSupabase(currentUser.email).then(() => {
         setSubjects(prev => [...prev]);
@@ -1912,7 +2021,8 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       </div>
 
       {/* Main sticky navigation bar */}
-      <nav id="main-nav">
+      {activePage !== "test" && (
+        <nav id="main-nav">
         <div className="nav-logo cursor-pointer select-none group" onClick={() => showPage("landing")}>
           <div className="flex items-baseline font-sans relative">
             <span className="text-xl font-extrabold tracking-tight text-white group-hover:text-[#4f9eff] transition-colors duration-300">
@@ -2035,6 +2145,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
         {/* Navigate ▾ dropdown serves as primary active navigator on all devices */}
       </nav>
+      )}
 
       {/* Pages Container */}
       <main className="transition-all duration-300">
