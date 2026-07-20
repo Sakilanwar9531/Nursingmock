@@ -155,9 +155,7 @@ const renderFormattedAiResponse = (text: string) => {
   );
 };
 
-export default function App() {
-  // --- MOCK TESTING & QUESTION REPOSITORY BOOTSTRAPPER ---
-  const generateMockTests = (): Test[] => {
+const generateMockTests = (): Test[] => {
     const result: Test[] = [];
     const realHighYieldQs: Question[] = [
       {
@@ -286,6 +284,100 @@ export default function App() {
     return result;
   };
 
+  // --- SYNCHRONOUS DEEP-LINK INITIALIZATION HELPER ---
+  const getInitialRoute = () => {
+    const path = typeof window !== "undefined" ? window.location.pathname : "/";
+    const cleanPath = path.toLowerCase();
+    
+    let initialPage = "landing";
+    let initialTab: "full_mock" | "pyq" | "subject" | "short" = "full_mock";
+    let initialSubjId: string | null = null;
+    let initialTestId: string | null = null;
+    let foundTest: Test | null = null;
+    let foundUpdateOnLoad: any = null;
+
+    if (cleanPath === "/pyq") {
+      initialPage = "hub";
+      initialTab = "pyq";
+    } else if (cleanPath === "/mock-tests") {
+      initialPage = "hub";
+      initialTab = "full_mock";
+    } else if (cleanPath === "/subject-mocks") {
+      initialPage = "hub";
+      initialTab = "subject";
+    } else if (cleanPath === "/short-sprints") {
+      initialPage = "hub";
+      initialTab = "short";
+    } else if (cleanPath.startsWith("/updates/")) {
+      initialPage = "updates";
+      const uId = path.split("/")[2];
+      const foundU = STATIC_NURSING_UPDATES.find(u => u.id === uId);
+      if (foundU) {
+        foundUpdateOnLoad = foundU;
+      }
+    } else if (cleanPath === "/updates") {
+      initialPage = "updates";
+    } else if (cleanPath === "/analytics") {
+      initialPage = "analytics";
+    } else if (cleanPath === "/auth") {
+      initialPage = "auth";
+    } else if (cleanPath === "/admin") {
+      initialPage = "admin";
+    } else if (cleanPath.startsWith("/test/")) {
+      const parts = path.split("/");
+      if (parts.length >= 4) {
+        initialSubjId = parts[2];
+        initialTestId = parts[3];
+        
+        let subjectsList: Subject[] = [];
+        const saved = typeof window !== "undefined" ? localStorage.getItem("np_subjects_custom_v1") : null;
+        if (saved) {
+          try {
+            subjectsList = JSON.parse(saved) || [];
+          } catch (e) {}
+        }
+        if (!subjectsList || subjectsList.length === 0) {
+          subjectsList = [...SUBJECTS];
+          if (!subjectsList.some(s => s.id === "mock_tests")) {
+            subjectsList.push({
+              id: "mock_tests",
+              icon: "🔥",
+              name: "Mock Test Series",
+              tests: generateMockTests()
+            });
+          }
+        }
+
+        const subject = subjectsList.find(s => s.id === initialSubjId);
+        if (subject) {
+          const test = subject.tests.find(t => t.id === initialTestId);
+          if (test) {
+            initialPage = "test";
+            foundTest = test;
+          }
+        }
+      }
+    } else {
+      const localUser = typeof window !== "undefined" ? localStorage.getItem("np_user") : null;
+      if (localUser) {
+        initialPage = "hub";
+        initialTab = "full_mock";
+      }
+    }
+
+    return {
+      page: initialPage,
+      tab: initialTab,
+      subjectId: initialSubjId,
+      testId: initialTestId,
+      test: foundTest,
+      update: foundUpdateOnLoad
+    };
+  };
+
+export default function App() {
+  const initialRoute = getInitialRoute();
+
   const [subjects, setSubjects] = useState<Subject[]>(() => {
     const saved = localStorage.getItem("np_subjects_custom_v1");
     if (saved) {
@@ -351,11 +443,11 @@ export default function App() {
   const [adminNewTestMins, setAdminNewTestMins] = useState<number>(50);
 
   // Navigation & Page State
-  const [activePage, setActivePage] = useState<string>("landing");
+  const [activePage, setActivePage] = useState<string>(initialRoute.page);
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("all");
   const [hubSearchText, setHubSearchText] = useState<string>("");
-  const [hubTab, setHubTab] = useState<"full_mock" | "pyq" | "subject" | "short">("full_mock");
+  const [hubTab, setHubTab] = useState<"full_mock" | "pyq" | "subject" | "short">(initialRoute.tab);
 
   // Auth State
   const [currentUser, setCurrentUser] = useState<UserType | null>(() => {
@@ -396,14 +488,18 @@ export default function App() {
   const [testReferrer, setTestReferrer] = useState<string>("hub");
   const [pendingTest, setPendingTest] = useState<{ subjectId: string; testId: string; test: Test } | null>(null);
   const [selectedModeForPending, setSelectedModeForPending] = useState<"practice" | "exam">("exam");
-  const [activeSubjectId, setActiveSubjectId] = useState<string | null>(null);
-  const [activeTest, setActiveTest] = useState<Test | null>(null);
+  const [activeSubjectId, setActiveSubjectId] = useState<string | null>(initialRoute.subjectId);
+  const [activeTest, setActiveTest] = useState<Test | null>(initialRoute.test);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [examMode, setExamMode] = useState<boolean>(false);
-  const [selectedOptions, setSelectedOptions] = useState<(number | null)[]>([]);
-  const [questionAnswers, setQuestionAnswers] = useState<(number | null)[]>([]); // 1 for correct, -1 for incorrect, null for unanswered
+  const [selectedOptions, setSelectedOptions] = useState<(number | null)[]>(
+    initialRoute.test ? new Array(initialRoute.test.data.length).fill(null) : []
+  );
+  const [questionAnswers, setQuestionAnswers] = useState<(number | null)[]>(
+    initialRoute.test ? new Array(initialRoute.test.data.length).fill(null) : []
+  ); // 1 for correct, -1 for incorrect, null for unanswered
   const [correctCount, setCorrectCount] = useState<number>(0);
-  const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [timeLeft, setTimeLeft] = useState<number>(initialRoute.test ? initialRoute.test.mins * 60 : 0);
   const [isTestFinished, setIsTestFinished] = useState<boolean>(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState<boolean>(false);
 
@@ -415,7 +511,7 @@ export default function App() {
   const [loadingUpdates, setLoadingUpdates] = useState<boolean>(false);
   const [updatesError, setUpdatesError] = useState<string>("");
   const [activeUpdateFilter, setActiveUpdateFilter] = useState<"all" | "jobs" | "syllabus" | "motivation" | "notes">("all");
-  const [selectedUpdate, setSelectedUpdate] = useState<NursingUpdate | null>(null);
+  const [selectedUpdate, setSelectedUpdate] = useState<NursingUpdate | null>(initialRoute.update);
 
   // Client-side Settings States
   const [supUrlInput, setSupUrlInput] = useState<string>(() => localStorage.getItem("np_supabase_url") || "");
@@ -724,92 +820,17 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
   // Browser Back Button, Phone Swipe Gesture Support & Dynamic Route Hydration on Initial Load
   useEffect(() => {
-    // 1. Initial Deep Link Path Parse
-    const path = window.location.pathname;
-    const cleanPath = path.toLowerCase();
-    
-    let initialPage = "landing";
-    let initialTab = "full_mock";
-    let initialSubjId: string | null = null;
-    let initialTestId: string | null = null;
-    let foundTest: Test | null = null;
-    let foundUpdateOnLoad: any = null;
-
-    if (cleanPath === "/pyq") {
-      initialPage = "hub";
-      initialTab = "pyq";
-    } else if (cleanPath === "/mock-tests") {
-      initialPage = "hub";
-      initialTab = "full_mock";
-    } else if (cleanPath === "/subject-mocks") {
-      initialPage = "hub";
-      initialTab = "subject";
-    } else if (cleanPath === "/short-sprints") {
-      initialPage = "hub";
-      initialTab = "short";
-    } else if (cleanPath.startsWith("/updates/")) {
-      initialPage = "updates";
-      const uId = path.split("/")[2];
-      const foundU = STATIC_NURSING_UPDATES.find(u => u.id === uId);
-      if (foundU) {
-        foundUpdateOnLoad = foundU;
-      }
-    } else if (cleanPath === "/updates") {
-      initialPage = "updates";
-    } else if (cleanPath === "/analytics") {
-      initialPage = "analytics";
-    } else if (cleanPath === "/auth") {
-      initialPage = "auth";
-    } else if (cleanPath === "/admin") {
-      initialPage = "admin";
-    } else if (cleanPath.startsWith("/test/")) {
-      const parts = path.split("/");
-      if (parts.length >= 4) {
-        initialSubjId = parts[2];
-        initialTestId = parts[3];
-        const subject = subjects.find(s => s.id === initialSubjId);
-        if (subject) {
-          const test = subject.tests.find(t => t.id === initialTestId);
-          if (test) {
-            initialPage = "test";
-            foundTest = test;
-          }
-        }
-      }
-    } else {
-      // Keep existing default behavior depending on auth state
-      const localUser = localStorage.getItem("np_user");
-      if (localUser) {
-        initialPage = "hub";
-        initialTab = "full_mock";
-      }
-    }
-
-    // Apply Hydrated state
-    setActivePage(initialPage);
-    setHubTab(initialTab as any);
-    if (foundUpdateOnLoad) {
-      setSelectedUpdate(foundUpdateOnLoad);
-    }
-    if (initialPage === "test" && foundTest) {
-      setActiveSubjectId(initialSubjId);
-      setActiveTest(foundTest);
-      setTimeLeft(foundTest.mins * 60);
-      setSelectedOptions(new Array(foundTest.data.length).fill(null));
-      setQuestionAnswers(new Array(foundTest.data.length).fill(null));
-    }
-
     // Standardize baseline history state
     const stateObj = {
-      page: initialPage,
-      hubTab: initialTab,
-      subjectId: initialSubjId,
-      testId: initialTestId,
-      updateId: foundUpdateOnLoad ? foundUpdateOnLoad.id : null
+      page: initialRoute.page,
+      hubTab: initialRoute.tab,
+      subjectId: initialRoute.subjectId,
+      testId: initialRoute.testId,
+      updateId: initialRoute.update ? initialRoute.update.id : null
     };
     window.history.replaceState(stateObj, "", window.location.pathname);
 
-    // 2. PopState event handler for backward/forward swipe gestures
+    // PopState event handler for backward/forward swipe gestures
     const handlePopState = (e: PopStateEvent) => {
       if (e.state && e.state.page) {
         setActivePage(e.state.page);
