@@ -402,14 +402,14 @@ const generateMockTests = (): Test[] => {
         }
         if (!subjectsList || subjectsList.length === 0) {
           subjectsList = [...SUBJECTS];
-          if (!subjectsList.some(s => s.id === "mock_tests")) {
-            subjectsList.push({
-              id: "mock_tests",
-              icon: "🔥",
-              name: "Mock Test Series",
-              tests: generateMockTests()
-            });
-          }
+        }
+        if (!subjectsList.some(s => s.id === "mock_tests")) {
+          subjectsList.push({
+            id: "mock_tests",
+            icon: "🔥",
+            name: "Mock Test Series",
+            tests: generateMockTests()
+          });
         }
 
         if (initialSubjId === "virtual") {
@@ -460,27 +460,30 @@ export default function App() {
   const initialRoute = getInitialRoute();
 
   const [subjects, setSubjects] = useState<Subject[]>(() => {
+    let list: Subject[] = [];
     const saved = localStorage.getItem("np_subjects_custom_v1");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (parsed && Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          list = parsed;
         }
       } catch (e) {
         // ignore and fallback
       }
     }
-    const defaultSubjects = [...SUBJECTS];
-    if (!defaultSubjects.some(s => s.id === "mock_tests")) {
-      defaultSubjects.push({
+    if (!list || list.length === 0) {
+      list = [...SUBJECTS];
+    }
+    if (!list.some(s => s.id === "mock_tests")) {
+      list.push({
         id: "mock_tests",
         icon: "🔥",
         name: "Mock Test Series",
         tests: generateMockTests()
       });
     }
-    return defaultSubjects;
+    return list;
   });
 
   const saveSubjects = (newSubjects: Subject[]) => {
