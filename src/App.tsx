@@ -14,6 +14,8 @@ import {
   Check, 
   RotateCcw, 
   Share2, 
+  ExternalLink,
+  Link,
   Flame, 
   HelpCircle,
   Activity,
@@ -62,37 +64,7 @@ import {
 const getDetailedExplain = (q: Question): string => {
   let base = q.explain || "";
   if (!base.endsWith(".") && base.length > 0) base += ".";
-  
-  const textLower = (q.q + " " + base).toLowerCase();
-  
-  let highYield = "";
-  if (textLower.includes("mitosis") || textLower.includes("cell division")) {
-    highYield = "Remember the PMAT phase sequence: Prophase (chromatin condenses), Metaphase (chromosomes align at equatorial plate), Anaphase (sister chromatids separate), and Telophase (nuclear envelop reforms). Mitosis produces two identical diploid cells (2n).";
-  } else if (textLower.includes("meninges") || textLower.includes("meningitis")) {
-    highYield = "The meninges are the multi-layered protective coverings of the brain and spinal cord. Subarachnoid space lies between arachnoid mater and pia mater, containing Cerebrospinal Fluid (CSF). Infection represents meningitis, marked by Kernig's and Brudzinski's clinical signs.";
-  } else if (textLower.includes("csf") || textLower.includes("cerebrospinal")) {
-    highYield = "CSF normal volume is 150ml, with continuous renewal producing 500ml daily. Normal hydrostatic pressure is 5-15 mmHg (70-180 mmH2O) in recumbent position. High CSF glucose is normal (~60% of blood glucose); low glucose points to bacterial infection.";
-  } else if (textLower.includes("mitochondria") || textLower.includes("power house")) {
-    highYield = "Mitochondria contain their own circular DNA (inherited maternally) and are the main sites of the Krebs cycle and Oxidative Phosphorylation. High mitochondrial density is found in high-metabolic cells like cardiac muscle and hepatocytes.";
-  } else if (textLower.includes("cranial nerve") || textLower.includes("facial") || textLower.includes("vagus")) {
-    highYield = "There are 12 pairs of cranial nerves. CN VII (Facial) controls facial expressions and anterior 2/3 taste; CN X (Vagus) is the longest autonomic parasympathetic fiber innervating thoracic/abdominal viscera; CN III, IV, VI govern extraocular eye movements.";
-  } else if (textLower.includes("sympathetic") || textLower.includes("parasympathetic") || textLower.includes("fight or flight")) {
-    highYield = "The automatic nervous system (ANS) splits into Sympathetic (T1-L2, 'fight or flight') and Parasympathetic (Craniosacral, 'rest & digest'). Sympathetic stimulation causes pupil dilation (mydriasis), tachycardia, and bronchial relaxation, while slowing GI motility.";
-  } else if (textLower.includes("bone") || textLower.includes("skeleton") || textLower.includes("muscle") || textLower.includes("sarcomere")) {
-    highYield = "Skeletal muscle fibers are composed of sarcomeres (z-line to z-line) containing actin (thin) and myosin (thick) filaments. Calcium ions release from the sarcoplasmic reticulum, binding to troponin-C to trigger muscle contraction.";
-  } else if (textLower.includes("sle") || textLower.includes("autoimmune")) {
-    highYield = "Systemic Lupus Erythematosus (SLE) is a Type III Hypersensitivity autoimmune disorder. Key diagnostic markers include anti-dsDNA and Anti-Smith (Sm) antibodies. Butterfly (malar) rash on face and photosensitivity are key skin-related identifiers.";
-  } else if (textLower.includes("protein") || textLower.includes("peptide") || textLower.includes("dna")) {
-    highYield = "Transcription occurs in the nucleus converting DNA to mRNA, while translation occurs in the cytoplasm on ribosomes turning mRNA into polypeptide protein structures. Peptide bonds couple amino acid sequences.";
-  } else if (textLower.includes("brain") || textLower.includes("cerebellum") || textLower.includes("cortex") || textLower.includes("stem")) {
-    highYield = "The central nervous system features the cerebrum (largest part, intelligence & motor), cerebellum (balance & posture), and medulla oblongata (cardiac & respiratory center controls). Temporal lobe controls auditory and memory, parietal governs sensory processing.";
-  } else if (textLower.includes("cell") || textLower.includes("organelle") || textLower.includes("prokaryotic") || textLower.includes("eukaryotic")) {
-    highYield = "Eukaryotes excel with membrane-bound organelles (nucleus, endoplasmic reticulum, golgi network). Cell is defined as the structural and functional block of tissues. Cytoplasm houses all functional units.";
-  } else {
-    highYield = "Under pressure, recall clinical normal ranges, check respiratory/cardiac baselines, and review patient physiological feedback loops. Always prioritize nursing safety protocols and immediate patient symptoms.";
-  }
-  
-  return `${base} \n\n📍 clinical memory link: ${highYield}`;
+  return base;
 };
 
 // Safe confirm helper to handle sandboxed iframes where confirm() can throw an exception
@@ -599,16 +571,6 @@ export default function App() {
   const [selectedModeForPending, setSelectedModeForPending] = useState<"practice" | "exam">("exam");
   const [activeSubjectId, setActiveSubjectId] = useState<string | null>(initialRoute.subjectId);
   const [activeTest, setActiveTest] = useState<Test | null>(initialRoute.test);
-  const [markedForReview, setMarkedForReview] = useState<boolean[]>(() =>
-    initialRoute.test ? new Array(initialRoute.test.data.length).fill(false) : []
-  );
-  const [visitedQuestions, setVisitedQuestions] = useState<boolean[]>(() => {
-    const arr = initialRoute.test ? new Array(initialRoute.test.data.length).fill(false) : [];
-    if (arr.length > 0) arr[0] = true;
-    return arr;
-  });
-  const [mobilePaletteOpen, setMobilePaletteOpen] = useState<boolean>(false);
-
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [examMode, setExamMode] = useState<boolean>(false);
   const [selectedOptions, setSelectedOptions] = useState<(number | null)[]>(
@@ -617,36 +579,13 @@ export default function App() {
   const [questionAnswers, setQuestionAnswers] = useState<(number | null)[]>(
     initialRoute.test ? new Array(initialRoute.test.data.length).fill(null) : []
   ); // 1 for correct, -1 for incorrect, null for unanswered
+  const [reviewedQuestions, setReviewedQuestions] = useState<boolean[]>(
+    initialRoute.test ? new Array(initialRoute.test.data.length).fill(false) : []
+  );
   const [correctCount, setCorrectCount] = useState<number>(0);
   const [timeLeft, setTimeLeft] = useState<number>(initialRoute.test ? initialRoute.test.mins * 60 : 0);
   const [isTestFinished, setIsTestFinished] = useState<boolean>(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState<boolean>(false);
-
-  // Auto-mark question as visited when current index changes
-  useEffect(() => {
-    if (activeTest && currentQuestionIndex >= 0 && currentQuestionIndex < activeTest.data.length) {
-      setVisitedQuestions(prev => {
-        if (!prev[currentQuestionIndex]) {
-          const updated = [...prev];
-          updated[currentQuestionIndex] = true;
-          return updated;
-        }
-        return prev;
-      });
-    }
-  }, [currentQuestionIndex, activeTest]);
-
-  // Handle instant scroll-to-top on any page changes
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [activePage]);
-
-  // Graceful safety redirect if on test page with no loaded test data
-  useEffect(() => {
-    if (activePage === "test" && !activeTest) {
-      setActivePage(currentUser ? "hub" : "landing");
-    }
-  }, [activePage, activeTest, currentUser]);
 
   // PYQ Filter State
   const [pyqFilter, setPyqFilter] = useState<string>("all");
@@ -656,6 +595,8 @@ export default function App() {
   const [loadingUpdates, setLoadingUpdates] = useState<boolean>(false);
   const [updatesError, setUpdatesError] = useState<string>("");
   const [activeUpdateFilter, setActiveUpdateFilter] = useState<"all" | "jobs" | "syllabus" | "motivation" | "notes">("all");
+  const [blogSearchQuery, setBlogSearchQuery] = useState<string>("");
+  const [sharingPostId, setSharingPostId] = useState<string | null>(null);
   const [selectedUpdate, setSelectedUpdate] = useState<NursingUpdate | null>(initialRoute.update);
 
   // Client-side Settings States
@@ -1703,46 +1644,13 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     
     setSelectedOptions(new Array(test.data.length).fill(null));
     setQuestionAnswers(new Array(test.data.length).fill(null));
-    setMarkedForReview(new Array(test.data.length).fill(false));
-    const initialVisited = new Array(test.data.length).fill(false);
-    initialVisited[0] = true;
-    setVisitedQuestions(initialVisited);
-    setMobilePaletteOpen(false);
+    setReviewedQuestions(new Array(test.data.length).fill(false));
     setCorrectCount(0);
     setTimeLeft(test.mins * 60);
     setIsTestFinished(false);
     setShowFinishConfirm(false);
     showPage("test", true, { subjectId, testId });
     triggerToast(`Good luck on your mock! 📖`, "ok");
-  };
-
-  const clearResponse = (idx: number) => {
-    if (!activeTest) return;
-    const previousSelection = selectedOptions[idx];
-    if (previousSelection === null) return;
-
-    const updatedSelected = [...selectedOptions];
-    updatedSelected[idx] = null;
-    setSelectedOptions(updatedSelected);
-
-    const updatedAnswers = [...questionAnswers];
-    updatedAnswers[idx] = null;
-    setQuestionAnswers(updatedAnswers);
-
-    const isAnsCorrect = previousSelection === activeTest.data[idx].ans;
-    if (isAnsCorrect) {
-      setCorrectCount(prev => prev - 1);
-    }
-    triggerToast("Response cleared", "ok");
-  };
-
-  const toggleMarkForReview = (idx: number) => {
-    setMarkedForReview(prev => {
-      const updated = [...prev];
-      updated[idx] = !updated[idx];
-      return updated;
-    });
-    triggerToast(markedForReview[idx] ? "Removed from Review list" : "Marked for Review 📌", "ok");
   };
 
   const triggerTestInit = (subjectId: string, testId: string) => {
@@ -1909,10 +1817,16 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     }
   };
 
+  const toggleMarkForReview = (index: number) => {
+    const updated = [...reviewedQuestions];
+    updated[index] = !updated[index];
+    setReviewedQuestions(updated);
+  };
+
   const handleNextQuestion = () => {
     if (!activeTest) return;
     if (currentQuestionIndex === activeTest.data.length - 1) {
-      finishTest();
+      setCurrentQuestionIndex(0); // Wrap back to first question for smooth looping review
     } else {
       setCurrentQuestionIndex(prev => prev + 1);
     }
@@ -2109,7 +2023,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
             className={`nav-link flex items-center gap-1.5 ${activePage === "hub" && hubTab === "subject" ? "active" : ""}`} 
             onClick={() => showPage("subject_mocks")}
           >
-            <BookOpen className="w-4 h-4" /> Tests
+            <BookOpen className="w-4 h-4" /> Test Centre
           </button>
           <button 
             className={`nav-link flex items-center gap-1.5 ${activePage === "hub" && hubTab === "full_mock" ? "active" : ""}`} 
@@ -2127,7 +2041,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
             className={`nav-link flex items-center gap-1.5 ${activePage === "updates" ? "active" : ""}`} 
             onClick={() => showPage("updates")}
           >
-            <Newspaper className="w-4 h-4 text-emerald-400" /> Daily Pulse
+            <Newspaper className="w-4 h-4 text-emerald-400" /> Blog
           </button>
           <button 
             className={`nav-link flex items-center gap-1.5 ${activePage === "analytics" ? "active" : ""}`} 
@@ -2161,7 +2075,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 className="w-full text-left px-4 py-2 text-xs text-[#e6edf3] hover:bg-[#151f30] flex items-center gap-2 transition-colors font-medium"
                 onClick={() => { showPage("subject_mocks"); setDropdownOpen(false); }}
               >
-                <BookOpen className="w-3.5 h-3.5 text-[#388bfd]" /> Tests
+                <BookOpen className="w-3.5 h-3.5 text-[#388bfd]" /> Test Centre
               </button>
               <button 
                 className="w-full text-left px-4 py-2 text-xs text-[#e6edf3] hover:bg-[#151f30] flex items-center gap-2 transition-colors font-medium"
@@ -2179,7 +2093,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 className="w-full text-left px-4 py-2 text-xs text-[#e6edf3] hover:bg-[#151f30] flex items-center gap-2 transition-colors font-medium"
                 onClick={() => { showPage("updates"); setDropdownOpen(false); }}
               >
-                <Newspaper className="w-3.5 h-3.5 text-emerald-400" /> Daily Pulse
+                <Newspaper className="w-3.5 h-3.5 text-emerald-400" /> Blog
               </button>
               <button 
                 className="w-full text-left px-4 py-2 text-xs text-[#e6edf3] hover:bg-[#151f30] flex items-center gap-2 transition-colors font-medium"
@@ -2299,7 +2213,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
             <footer>
               NCBT · India's Nursing CBT Exam Preparation Platform ·{" "}
-              <a onClick={() => showPage("hub")}>Tests</a> ·{" "}
+              <a onClick={() => showPage("hub")}>Test Centre</a> ·{" "}
               <a onClick={() => showPage("pyq")}>PYQ</a> ·{" "}
               <a onClick={() => showPage("analytics")}>Analytics</a> · For educational use only
             </footer>
@@ -2307,1147 +2221,838 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         )}
 
         {/* =============== HUB (TESTS) PAGE =============== */}
-        {activePage === "hub" && (
-          <div className="page active" id="page-hub">
-            {/* Unified Test Center Header */}
-            <div className="hub-header bg-gradient-to-r from-blue-950/20 to-purple-950/20 border border-[#1e293b] rounded-2xl p-6 sm:p-8 mb-8 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none"></div>
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div>
-                  <h2 className="text-3xl font-black text-white font-syne tracking-tight">NCBT Test Center</h2>
-                  <p className="text-[#8492a6] font-sans text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
-                    Access high-yield nursing board mocks, previous year actual papers, and speed sprints. Choose a test mode to practice or take a timed exam with real CBT markings.
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 w-full md:w-auto shrink-0">
-                  <div className="hub-search flex-1 md:flex-initial relative w-full md:w-64">
-                    <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input 
-                      type="text" 
-                      placeholder="Search question titles..." 
-                      className="bg-[#0c1322] border border-[#1e293b] rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500 w-full transition-colors"
-                      value={hubSearchText}
-                      onChange={(e) => setHubSearchText(e.target.value)}
-                    />
-                  </div>
-                </div>
+        {activePage === "hub" && (() => {
+          const mockSubject = subjects.find(s => s.id === "mock_tests");
+          const filteredMocks = mockSubject ? mockSubject.tests.filter(t => {
+            if (hubSearchText) {
+              const query = hubSearchText.toLowerCase();
+              if (!t.title.toLowerCase().includes(query) && !t.desc.toLowerCase().includes(query)) {
+                return false;
+              }
+            }
+            if (searchQuery === "all" || searchQuery === "ready") return true;
+            if (searchQuery === "community" && t.id === "mt-1") return true;
+            if (searchQuery === "med-surg" && t.id === "mt-2") return true;
+            if (searchQuery === "maternity" && t.id === "mt-3") return true;
+            if (searchQuery === "pediatrics" && t.id === "mt-4") return true;
+            if (searchQuery === "pharmacology" && t.id === "mt-5") return true;
+            return false;
+          }) : [];
+
+          return (
+            <div className="page active" id="page-hub">
+              {/* Premium Search Bar */}
+              <div className="relative w-full max-w-xl mx-auto mb-6" id="hub-search-container">
+                <Search className="w-4 h-4 text-neutral-500 absolute left-4 top-1/2 -translate-y-1/2" />
+                <input 
+                  type="text" 
+                  placeholder="Search tests..." 
+                  className="bg-[#0c1322] border border-[#1e293b] rounded-2xl pl-11 pr-4 py-3 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-[#388bfd]/80 w-full transition-all shadow-inner font-medium"
+                  value={hubSearchText}
+                  onChange={(e) => setHubSearchText(e.target.value)}
+                />
               </div>
 
-              {/* Redesigned Tab Buttons */}
-              <div className="flex flex-wrap gap-2 mt-6 border-t border-[#1e293b] pt-5">
-                <button 
-                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+              {/* 3-Column Tab Boxes Grid */}
+              <div className="grid grid-cols-3 gap-3 mb-6" id="hub-tabs-row">
+                {/* Box 1: Mock Tests */}
+                <div 
+                  className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-300 cursor-pointer h-24 ${
                     hubTab === "full_mock" 
-                      ? "bg-amber-500/10 border-amber-500 text-amber-450 shadow-md ring-1 ring-amber-500" 
-                      : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
+                      ? "bg-[#111726] border-[#388bfd]/80 shadow-md shadow-[#388bfd]/5" 
+                      : "bg-[#0c1322] border-[#1e293b] hover:border-neutral-700"
                   }`}
-                  onClick={() => showPage("mock_tests")}
+                  onClick={() => {
+                    showPage("mock_tests");
+                    setSearchQuery("all");
+                  }}
                 >
-                  <Flame className="w-3.5 h-3.5 text-amber-500" /> Full Mock Series
-                </button>
-                <button 
-                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  <span className="absolute top-1.5 right-1.5 w-5 h-5 bg-[#172f54] text-[#58a6ff] border border-[#388bfd]/30 text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {mockSubject?.tests.length || 6}
+                  </span>
+                  <div className="text-2xl mb-1 select-none">📝</div>
+                  <span className="text-[11px] sm:text-xs font-bold text-neutral-300">Mock Tests</span>
+                  {hubTab === "full_mock" && (
+                    <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-[#388bfd] rounded-t-full"></div>
+                  )}
+                </div>
+
+                {/* Box 2: PYQ Bank */}
+                <div 
+                  className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-300 cursor-pointer h-24 ${
                     hubTab === "pyq" 
-                      ? "bg-amber-500/10 border-amber-500 text-amber-450 shadow-md ring-1 ring-amber-500" 
-                      : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
+                      ? "bg-[#111726] border-[#8b5cf6]/80 shadow-md shadow-[#8b5cf6]/5" 
+                      : "bg-[#0c1322] border-[#1e293b] hover:border-neutral-700"
                   }`}
-                  onClick={() => showPage("pyq")}
+                  onClick={() => {
+                    showPage("pyq");
+                    setPyqFilter("all");
+                  }}
                 >
-                  <FileText className="w-3.5 h-3.5 text-[#56d364]" /> PYQ Papers
-                </button>
-                <button 
-                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  <span className="absolute top-1.5 right-1.5 w-5 h-5 bg-[#251b40] text-[#a78bfa] border border-[#8b5cf6]/30 text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {PYQ_DATA.length || 12}
+                  </span>
+                  <div className="text-2xl mb-1 select-none">📋</div>
+                  <span className="text-[11px] sm:text-xs font-bold text-neutral-300">PYQ Bank</span>
+                  {hubTab === "pyq" && (
+                    <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-[#8b5cf6] rounded-t-full"></div>
+                  )}
+                </div>
+
+                {/* Box 3: Subject-wise */}
+                <div 
+                  className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-300 cursor-pointer h-24 ${
                     hubTab === "subject" 
-                      ? "bg-amber-500/10 border-amber-500 text-amber-450 shadow-md ring-1 ring-amber-500" 
-                      : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
+                      ? "bg-[#111726] border-[#388bfd]/80 shadow-md shadow-[#388bfd]/5" 
+                      : "bg-[#0c1322] border-[#1e293b] hover:border-neutral-700"
                   }`}
-                  onClick={() => showPage("subject_mocks")}
+                  onClick={() => {
+                    showPage("subject_mocks");
+                    setSearchQuery("all");
+                  }}
                 >
-                  <BookOpen className="w-3.5 h-3.5 text-[#388bfd]" /> Subject-Wise Mocks
-                </button>
-                <button 
-                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                    hubTab === "short" 
-                      ? "bg-amber-500/10 border-amber-500 text-amber-450 shadow-md ring-1 ring-amber-500" 
-                      : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
-                  }`}
-                  onClick={() => showPage("short_sprints")}
-                >
-                  <span className="text-amber-400 font-bold">⚡</span> Short Speed Sprints
-                </button>
-              </div>
-            </div>
-
-            {/* TAB CONTENTS */}
-
-            {/* 1. Full Mock Tests Tab */}
-            {hubTab === "full_mock" && (
-              <div className="space-y-6">
-                <div className="bg-[#0f1520]/50 border border-[#1e293b] p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div>
-                    <h3 className="text-sm font-bold text-white flex items-center gap-1.5">🏆 Timed Board-Level Mocks</h3>
-                    <p className="text-xs text-[#8b949e]">These 50-question mocks replicate actual staff nurse competitive exams with timed countdowns and real marking scoring.</p>
-                  </div>
-                  <button 
-                    className="bg-[#21262d] hover:bg-[#30363d] border border-amber-500/30 text-amber-450 text-xs font-bold py-2 px-4 rounded-xl transition-all shadow shrink-0"
-                    onClick={() => {
-                      const saved = localStorage.getItem("np_subjects_custom_v1");
-                      if (saved) {
-                        localStorage.removeItem("np_subjects_custom_v1");
-                        triggerToast("Mock progress reset to default! 🛠️", "ok");
-                        window.location.reload();
-                      } else {
-                        triggerToast("All templates clean! 🩺", "ok");
-                      }
-                    }}
-                  >
-                    Reset Series
-                  </button>
+                  <span className="absolute top-1.5 right-1.5 w-5 h-5 bg-[#172f54] text-[#58a6ff] border border-[#388bfd]/30 text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {subjects.filter(s => s.id !== "mock_tests").length || 8}
+                  </span>
+                  <div className="text-2xl mb-1 select-none">📚</div>
+                  <span className="text-[11px] sm:text-xs font-bold text-neutral-300">Subject-wise</span>
+                  {hubTab === "subject" && (
+                    <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-[#388bfd] rounded-t-full"></div>
+                  )}
                 </div>
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {subjects.find(s => s.id === "mock_tests")?.tests.filter(t => {
-                    if (!hubSearchText) return true;
-                    return t.title.toLowerCase().includes(hubSearchText.toLowerCase()) ||
-                           t.desc.toLowerCase().includes(hubSearchText.toLowerCase());
-                  }).map(t => (
-                    <div 
-                      key={t.id} 
-                      className="bg-[#0f1520] hover:bg-[#151f30] border border-[#1e293b] hover:border-amber-500/40 rounded-2xl p-5 transition-all duration-300 flex flex-col justify-between group relative cursor-pointer shadow-lg"
-                      onClick={() => triggerTestInit("mock_tests", t.id)}
+              {/* Horizontal Filter Row */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-4 pt-1 mb-6 scrollbar-none" id="hub-filter-scroll">
+                {hubTab === "full_mock" && [
+                  { id: "all", label: "All Mocks" },
+                  { id: "community", label: "Community Health" },
+                  { id: "med-surg", label: "Medical-Surgical" },
+                  { id: "maternity", label: "Midwifery & Gynae" },
+                  { id: "pediatrics", label: "Pediatric & Psychiatric" },
+                  { id: "pharmacology", label: "Pharmacology & Anatomy" }
+                ].map(pill => {
+                  const isActive = searchQuery === pill.id;
+                  return (
+                    <button 
+                      key={pill.id}
+                      className={`shrink-0 flex items-center px-4 py-1.5 rounded-full border text-[11px] font-bold transition-all cursor-pointer ${
+                        isActive 
+                          ? "bg-[#1d4ed8]/10 border-[#388bfd] text-[#58a6ff]" 
+                          : "bg-[#0c1322] border-[#1e293b] text-neutral-400 hover:border-neutral-700"
+                      }`}
+                      onClick={() => setSearchQuery(pill.id)}
                     >
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/2 rounded-full blur-2xl pointer-events-none group-hover:bg-amber-500/5 transition-all"></div>
-                      <div>
-                        <div className="flex justify-between items-center mb-3">
-                          <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center text-xl font-bold group-hover:scale-110 transition-transform">
-                            🏆
-                          </div>
-                          <span className="bg-amber-500/10 text-amber-300 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border border-amber-500/20">
-                            {t.questions} MCQs / {t.mins} Min
-                          </span>
-                        </div>
-                        <h3 className="text-md font-bold text-white mb-2 leading-tight group-hover:text-amber-300 transition-colors">
-                          {t.title}
-                        </h3>
-                        <p className="text-xs text-[#8492a6] font-sans leading-relaxed mb-4">
-                          Comprehensive compilation covering high-yield Medical-Surgical, ObGyn, Pediatric, Psychiatric, and Pharmacological clinical domains.
-                        </p>
-                      </div>
+                      <span className={`w-1.5 h-1.5 rounded-full mr-1.5 inline-block ${isActive ? "bg-[#388bfd]" : "bg-neutral-600"}`}></span>
+                      {pill.label}
+                    </button>
+                  );
+                })}
 
-                      <div className="border-t border-[#1e293b] pt-4 mt-2 flex justify-between items-center">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] text-[#8b949e]">STATUS</span>
-                          <span className="text-xs text-green-400 font-bold flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-ping"></span> Live & Ready
-                          </span>
-                        </div>
-                        <button 
-                          className="bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md group-hover:translate-x-1"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            triggerTestInit("mock_tests", t.id);
-                          }}
-                        >
-                          Enter Assessment →
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                {hubTab === "pyq" && [
+                  { id: "all", label: "All Exams" },
+                  { id: "aiims", label: "AIIMS" },
+                  { id: "rrb", label: "RRB" },
+                  { id: "esic", label: "ESIC" },
+                  { id: "dsssb", label: "DSSSB" },
+                  { id: "rpsc", label: "RPSC" }
+                ].map(pill => {
+                  const isActive = pyqFilter === pill.id;
+                  return (
+                    <button 
+                      key={pill.id}
+                      className={`shrink-0 flex items-center px-4 py-1.5 rounded-full border text-[11px] font-bold transition-all cursor-pointer ${
+                        isActive 
+                          ? "bg-[#1d4ed8]/10 border-[#388bfd] text-[#58a6ff]" 
+                          : "bg-[#0c1322] border-[#1e293b] text-neutral-400 hover:border-neutral-700"
+                      }`}
+                      onClick={() => setPyqFilter(pill.id)}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full mr-1.5 inline-block ${isActive ? "bg-[#388bfd]" : "bg-neutral-600"}`}></span>
+                      {pill.label}
+                    </button>
+                  );
+                })}
+
+                {hubTab === "subject" && [
+                  { id: "all", label: "All Subjects" },
+                  { id: "anatomy", label: "Anatomy & Physiology" },
+                  { id: "community", label: "Community Health" },
+                  { id: "med-surg", label: "Medical-Surgical" },
+                  { id: "maternal", label: "Midwifery & Gynae" },
+                  { id: "pediatric", label: "Pediatric Nursing" },
+                  { id: "mhn", label: "Mental Health" },
+                  { id: "pharmacology", label: "Pharmacology" }
+                ].map(pill => {
+                  const isActive = searchQuery === pill.id;
+                  return (
+                    <button 
+                      key={pill.id}
+                      className={`shrink-0 flex items-center px-4 py-1.5 rounded-full border text-[11px] font-bold transition-all cursor-pointer ${
+                        isActive 
+                          ? "bg-[#1d4ed8]/10 border-[#388bfd] text-[#58a6ff]" 
+                          : "bg-[#0c1322] border-[#1e293b] text-neutral-400 hover:border-neutral-700"
+                      }`}
+                      onClick={() => setSearchQuery(pill.id)}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full mr-1.5 inline-block ${isActive ? "bg-[#388bfd]" : "bg-neutral-600"}`}></span>
+                      {pill.label}
+                    </button>
+                  );
+                })}
               </div>
-            )}
 
-            {/* 2. Previous Year Papers (PYQ) Tab */}
-            {hubTab === "pyq" && (
-              <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#0f1520]/50 border border-[#1e293b] p-5 rounded-2xl">
-                  <div>
-                    <h3 className="text-sm font-bold text-white flex items-center gap-1.5">📋 Previous Year Question Papers</h3>
-                    <p className="text-xs text-[#8b949e]">Select any actual paper from past nurse officer recruitments. Practice as a real-time board simulator.</p>
+              {/* TAB CONTENTS */}
+
+              {/* 1. Full Mock Tests Tab */}
+              {hubTab === "full_mock" && (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center px-1 py-1 border-b border-[#1e293b] mb-4">
+                    <span className="text-[10px] font-black tracking-widest text-[#8b949e] uppercase">AVAILABLE NOW</span>
+                    <span className="text-[11px] font-bold text-[#8b949e]">{filteredMocks.length} tests</span>
                   </div>
-                  
-                  {/* PYQ Filter Buttons */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {["all", "aiims", "rrb", "esic", "dsssb", "rpsc"].map(filterVal => (
-                      <button 
-                        key={filterVal}
-                        className={`px-3 py-1.5 rounded-full border text-[10px] font-bold uppercase transition-all cursor-pointer ${
-                          pyqFilter === filterVal 
-                            ? "bg-amber-500/15 border-amber-500 text-amber-300" 
-                            : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
-                        }`}
-                        onClick={() => setPyqFilter(filterVal)}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredMocks.map(t => (
+                      <div 
+                        key={t.id} 
+                        className="bg-[#0f1520] hover:bg-[#121c2c] border border-[#1e293b] hover:border-[#388bfd]/50 rounded-2xl p-4 transition-all duration-300 flex items-start gap-4 group relative cursor-pointer shadow-lg"
+                        onClick={() => triggerTestInit("mock_tests", t.id)}
                       >
-                        {filterVal === "all" ? "All Papers" : filterVal.toUpperCase()}
-                      </button>
+                        {/* Double Ring Icon */}
+                        <div className="w-11 h-11 shrink-0 bg-[#0d1322] border border-[#1e293b] rounded-full flex items-center justify-center relative">
+                          <div className="absolute inset-1 rounded-full border border-amber-500/30 flex items-center justify-center text-lg">
+                            🔬
+                          </div>
+                        </div>
+
+                        {/* Card Contents */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-center gap-1.5 mb-1">
+                            <span className="bg-[#21262d] text-[#c9d1d9] text-[9px] font-bold px-2 py-0.5 rounded border border-[#30363d] flex items-center gap-1">
+                              ⏱️ {t.mins} min
+                            </span>
+                            <span className="bg-amber-500/10 text-amber-500 text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded border border-amber-500/20">
+                              NEW
+                            </span>
+                          </div>
+
+                          <h3 className="text-sm font-bold text-white group-hover:text-[#58a6ff] transition-colors truncate">
+                            {t.title}
+                          </h3>
+                          <p className="text-[11px] text-[#8b949e] font-sans line-clamp-2 leading-relaxed mt-1 mb-2">
+                            {t.desc}
+                          </p>
+
+                          <div className="flex items-center justify-between border-t border-[#1e293b]/50 pt-2.5 mt-2">
+                            <div className="flex items-center gap-3 text-[10px] text-neutral-400">
+                              <span>🗒️ {t.questions} Qs</span>
+                              <span className="text-amber-400/90 font-medium bg-amber-400/5 px-1.5 py-0.2 rounded">Medium</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#58a6ff] group-hover:text-blue-300 transition-colors">
+                              <span>Start Test</span>
+                              <div className="w-7 h-7 rounded-lg bg-[#111c2e] hover:bg-[#1d2d44] border border-[#1e293b] flex items-center justify-center text-[#58a6ff] text-xs font-bold shrink-0">
+                                →
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
+              )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {PYQ_DATA.filter(p => {
-                    const matchesFilter = pyqFilter === "all" || p.tag === pyqFilter;
-                    const matchesSearch = !hubSearchText || p.exam.toLowerCase().includes(hubSearchText.toLowerCase()) || p.year.includes(hubSearchText);
-                    return matchesFilter && matchesSearch;
-                  }).map((p, idx) => (
-                    <div 
-                      key={idx} 
-                      className="bg-[#0f1520] hover:bg-[#151f30] border border-[#1e293b] hover:border-amber-500/40 rounded-2xl p-5 transition-all duration-300 flex flex-col justify-between group relative cursor-pointer shadow-lg"
-                      onClick={() => startPyqTest(p)}
-                    >
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/2 rounded-full blur-2xl pointer-events-none group-hover:bg-amber-500/5 transition-all"></div>
-                      <div>
-                        <div className="flex justify-between items-center mb-3">
-                          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                            YEAR {p.year}
-                          </span>
-                          <span className="text-[10px] text-[#8b949e] font-semibold">
-                            {p.count} Past MCQs
-                          </span>
-                        </div>
-                        <h3 className="text-md font-bold text-white mb-2 leading-tight group-hover:text-amber-300 transition-colors">
-                          {p.exam}
-                        </h3>
-                        <p className="text-xs text-[#8492a6] font-sans leading-relaxed mb-4">
-                          Original question paper from the {p.year} nationwide recruitment cycle. Includes clinical rationales.
-                        </p>
-                      </div>
-
-                      <div className="border-t border-[#1e293b] pt-4 mt-2 flex justify-between items-center">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] text-[#8b949e]">EXAM CODE</span>
-                          <span className="text-xs text-[#56d364] font-bold uppercase tracking-wide">
-                            {p.tag} Series
-                          </span>
-                        </div>
-                        <button 
-                          className="bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md group-hover:translate-x-1"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            startPyqTest(p);
-                          }}
-                        >
-                          Start Simulated Paper →
-                        </button>
-                      </div>
+              {/* 2. Previous Year Papers (PYQ) Tab */}
+              {hubTab === "pyq" && (() => {
+                const filteredPyq = PYQ_DATA.filter(p => {
+                  const matchesFilter = pyqFilter === "all" || p.tag === pyqFilter;
+                  const matchesSearch = !hubSearchText || p.exam.toLowerCase().includes(hubSearchText.toLowerCase()) || p.year.includes(hubSearchText);
+                  return matchesFilter && matchesSearch;
+                });
+                return (
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center px-1 py-1 border-b border-[#1e293b] mb-4">
+                      <span className="text-[10px] font-black tracking-widest text-[#8b949e] uppercase">PREVIOUS YEAR QUESTIONS</span>
+                      <span className="text-[11px] font-bold text-[#8b949e]">{filteredPyq.length} sets</span>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
-            {/* 3. Subject-Wise Mocks Tab */}
-            {hubTab === "subject" && (
-              <div className="space-y-6">
-                <div className="bg-[#0f1520]/50 border border-[#1e293b] p-5 rounded-2xl flex flex-wrap gap-2 items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-bold text-white flex items-center gap-1.5">🎯 Unit-Wise Diagnostic Mocks</h3>
-                    <p className="text-xs text-[#8b949e]">Target specific nursing subjects to master individual clinical modules and unit checkpoints.</p>
-                  </div>
-                  {/* Subject filters */}
-                  <div className="flex flex-wrap gap-1">
-                    <button 
-                      className={`px-3 py-1.5 rounded-full border text-[10px] font-extrabold transition-all cursor-pointer ${
-                        searchQuery === "all" ? "bg-amber-500/10 border-amber-500 text-amber-300" : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
-                      }`}
-                      onClick={() => setSearchQuery("all")}
-                    >
-                      All Subjects
-                    </button>
-                    <button 
-                      className={`px-3 py-1.5 rounded-full border text-[10px] font-extrabold transition-all cursor-pointer ${
-                        searchQuery === "anatomy" ? "bg-amber-500/10 border-amber-500 text-amber-300" : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
-                      }`}
-                      onClick={() => setSearchQuery("anatomy")}
-                    >
-                      Anatomy
-                    </button>
-                    <button 
-                      className={`px-3 py-1.5 rounded-full border text-[10px] font-extrabold transition-all cursor-pointer ${
-                        searchQuery === "med-surg" ? "bg-amber-500/10 border-amber-500 text-amber-300" : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
-                      }`}
-                      onClick={() => setSearchQuery("med-surg")}
-                    >
-                      Med-Surg
-                    </button>
-                    <button 
-                      className={`px-3 py-1.5 rounded-full border text-[10px] font-extrabold transition-all cursor-pointer ${
-                        searchQuery === "ready" ? "bg-amber-500/10 border-amber-500 text-amber-300" : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
-                      }`}
-                      onClick={() => setSearchQuery("ready")}
-                    >
-                      ✅ Ready Now
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-8">
-                  {subjects.filter(subj => {
-                    if (subj.id === "mock_tests") return false;
-                    if (searchQuery === "all" || searchQuery === "ready") return true;
-                    return subj.id === searchQuery;
-                  }).map(subj => {
-                    const readyTests = subj.tests.filter(t => t.ready);
-                    if (searchQuery === "ready" && readyTests.length === 0) return null;
-
-                    const filteredTests = subj.tests.filter(t => {
-                      if (!hubSearchText) return true;
-                      return t.title.toLowerCase().includes(hubSearchText.toLowerCase()) || 
-                             t.desc.toLowerCase().includes(hubSearchText.toLowerCase());
-                    });
-
-                    if (hubSearchText && filteredTests.length === 0) return null;
-
-                    return (
-                      <div key={subj.id} className="bg-[#0b0f17] border border-[#1e293b] rounded-2xl p-6 space-y-4">
-                        <div className="flex items-center justify-between border-b border-[#1e293b] pb-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-amber-500/5 border border-amber-500/25 rounded-xl flex items-center justify-center text-xl">
-                              {subj.icon}
-                            </div>
-                            <div>
-                              <h3 className="text-md font-bold text-white">{subj.name}</h3>
-                              <p className="text-xs text-neutral-400">
-                                {readyTests.length > 0 ? `${readyTests.length} Ready CBT Modules` : "Unit tests launching soon"}
-                              </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filteredPyq.map((p, idx) => (
+                        <div 
+                          key={idx} 
+                          className="bg-[#0f1520] hover:bg-[#121c2c] border border-[#1e293b] hover:border-[#8b5cf6]/50 rounded-2xl p-4 transition-all duration-300 flex items-start gap-4 group relative cursor-pointer shadow-lg"
+                          onClick={() => startPyqTest(p)}
+                        >
+                          {/* Double Ring Icon */}
+                          <div className="w-11 h-11 shrink-0 bg-[#0d1322] border border-[#1e293b] rounded-full flex items-center justify-center relative">
+                            <div className="absolute inset-1 rounded-full border border-purple-500/30 flex items-center justify-center text-lg">
+                              📋
                             </div>
                           </div>
-                          {readyTests.length > 0 && (
-                            <button 
-                              className="bg-[#21262d] hover:bg-amber-500 hover:text-black text-white border border-[#30363d] hover:border-amber-500 text-[10px] font-extrabold px-3 py-1.5 rounded-xl transition-all flex items-center gap-1"
-                              onClick={() => startShortSprint(subj.id)}
-                            >
-                              ⚡ Sprint Mode
-                            </button>
-                          )}
-                        </div>
 
-                        {filteredTests.length === 0 ? (
-                          <div className="text-xs text-neutral-500 py-2">No matching tests found under this category.</div>
-                        ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {filteredTests.map(t => (
-                              <div 
-                                key={t.id}
-                                className={`bg-[#0f1520] hover:bg-[#151f30] border ${t.ready ? "border-[#1e293b] hover:border-amber-500/35" : "border-dashed border-neutral-800 opacity-60"} rounded-xl p-4 transition-all flex flex-col justify-between cursor-pointer`}
-                                onClick={() => t.ready && triggerTestInit(subj.id, t.id)}
-                              >
-                                <div>
-                                  <div className="flex justify-between items-start gap-2 mb-2">
-                                    <h4 className="text-xs font-bold text-white line-clamp-1 group-hover:text-amber-300 transition-colors">{t.title}</h4>
-                                    <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${t.ready ? "bg-green-500/10 text-green-400 border border-green-500/20" : "bg-neutral-800 text-neutral-400"}`}>
-                                      {t.ready ? "READY" : "SOON"}
-                                    </span>
-                                  </div>
-                                  <p className="text-[11px] text-neutral-400 font-sans line-clamp-2 leading-relaxed mb-3">{t.desc}</p>
-                                </div>
+                          {/* Card Contents */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-center gap-1.5 mb-1">
+                              <span className="bg-[#8b5cf6]/10 text-[#a78bfa] text-[9px] font-bold px-2 py-0.5 rounded border border-[#8b5cf6]/20 flex items-center gap-1">
+                                📅 {p.year}
+                              </span>
+                              <span className="bg-[#8b5cf6]/10 text-[#a78bfa] text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded border border-[#8b5cf6]/20">
+                                PYQ
+                              </span>
+                            </div>
 
-                                <div className="flex items-center justify-between border-t border-[#1e293b] pt-3 mt-1 text-[10px] text-neutral-500">
-                                  <span>{t.ready ? `${t.questions} Qs / ${t.mins} Min` : "In preparation"}</span>
-                                  {t.ready && (
-                                    <button 
-                                      className="text-amber-500 hover:text-amber-400 font-bold transition-all text-[11px]"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        triggerTestInit(subj.id, t.id);
-                                      }}
-                                    >
-                                      Launch →
-                                    </button>
-                                  )}
+                            <h3 className="text-sm font-bold text-white group-hover:text-[#a78bfa] transition-colors truncate">
+                              {p.exam}
+                            </h3>
+                            <p className="text-[11px] text-[#8b949e] font-sans line-clamp-2 leading-relaxed mt-1 mb-2">
+                              Original question paper from the {p.year} nationwide recruitment cycle. Includes clinical rationales.
+                            </p>
+
+                            <div className="flex items-center justify-between border-t border-[#1e293b]/50 pt-2.5 mt-2">
+                              <div className="flex items-center gap-3 text-[10px] text-neutral-400">
+                                <span>📋 {p.count} Past MCQs</span>
+                                <span className="text-purple-400/90 font-medium bg-[#8b5cf6]/5 px-1.5 py-0.2 rounded uppercase text-[9px] tracking-wide">{p.tag} Series</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#a78bfa] group-hover:text-purple-300 transition-colors">
+                                <span>Start Test</span>
+                                <div className="w-7 h-7 rounded-lg bg-[#141224] hover:bg-[#201d3a] border border-[#1e293b] flex items-center justify-center text-[#a78bfa] text-xs font-bold shrink-0">
+                                  →
                                 </div>
                               </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* 4. Short Sprints Tab */}
-            {hubTab === "short" && (
-              <div className="space-y-6">
-                <div className="bg-[#0f1520]/50 border border-[#1e293b] p-5 rounded-2xl">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-1.5">⚡ Rapid Practice Speed Sprints (Short Mocks)</h3>
-                  <p className="text-xs text-[#8b949e]">Don't have time for a full exam? Trigger a dynamic 10-question sprint. Shuffled fresh questions from our bank every time!</p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {subjects.filter(subj => subj.id !== "mock_tests").map(subj => {
-                    return (
-                      <div 
-                        key={subj.id}
-                        className="bg-[#0f1520] hover:bg-[#151f30] border border-[#1e293b] hover:border-amber-500/40 rounded-2xl p-5 transition-all duration-300 flex flex-col justify-between group relative cursor-pointer shadow-lg"
-                        onClick={() => startShortSprint(subj.id)}
-                      >
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/2 rounded-full blur-2xl pointer-events-none group-hover:bg-amber-500/5 transition-all"></div>
-                        <div>
-                          <div className="flex justify-between items-center mb-3">
-                            <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center text-xl font-bold group-hover:scale-110 transition-transform">
-                              ⚡
                             </div>
-                            <span className="bg-amber-500/10 text-amber-300 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border border-amber-500/20">
-                              10 Qs / 10 Mins
-                            </span>
                           </div>
-                          <h3 className="text-md font-bold text-white mb-2 leading-tight group-hover:text-amber-300 transition-colors">
-                            {subj.name} Sprint
-                          </h3>
-                          <p className="text-xs text-[#8492a6] font-sans leading-relaxed mb-4">
-                            Rapid-fire randomized mock covering core topics from {subj.name}. Ideal for daily active recall.
-                          </p>
                         </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
-                        <div className="border-t border-[#1e293b] pt-4 mt-2 flex justify-between items-center">
-                          <div className="flex flex-col">
-                            <span className="text-[10px] text-[#8b949e]">SPRINT TYPE</span>
-                            <span className="text-xs text-amber-400 font-bold flex items-center gap-1">
-                              Dynamic Practice
-                            </span>
+              {/* 3. Subject-Wise Mocks Tab */}
+              {hubTab === "subject" && (() => {
+                const activeSubjects = subjects.filter(subj => {
+                  if (subj.id === "mock_tests") return false;
+                  if (searchQuery === "all") return true;
+                  return subj.id === searchQuery;
+                });
+
+                const allSubjectTests: { subj: Subject; test: Test }[] = [];
+                activeSubjects.forEach(subj => {
+                  subj.tests.forEach(t => {
+                    if (hubSearchText) {
+                      const query = hubSearchText.toLowerCase();
+                      if (!t.title.toLowerCase().includes(query) && !t.desc.toLowerCase().includes(query)) {
+                        return;
+                      }
+                    }
+                    allSubjectTests.push({ subj, test: t });
+                  });
+                });
+
+                return (
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center px-1 py-1 border-b border-[#1e293b] mb-4">
+                      <span className="text-[10px] font-black tracking-widest text-[#8b949e] uppercase">AVAILABLE NOW</span>
+                      <span className="text-[11px] font-bold text-[#8b949e]">{allSubjectTests.length} modules</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {allSubjectTests.map(({ subj, test: t }) => (
+                        <div 
+                          key={t.id} 
+                          className={`bg-[#0f1520] hover:bg-[#121c2c] border rounded-2xl p-4 transition-all duration-300 flex items-start gap-4 group relative cursor-pointer shadow-lg ${
+                            t.ready 
+                              ? "border-[#1e293b] hover:border-[#388bfd]/50" 
+                              : "border-dashed border-neutral-800 opacity-60 hover:border-neutral-700"
+                          }`}
+                          onClick={() => t.ready && triggerTestInit(subj.id, t.id)}
+                        >
+                          {/* Double Ring Icon */}
+                          <div className="w-11 h-11 shrink-0 bg-[#0d1322] border border-[#1e293b] rounded-full flex items-center justify-center relative">
+                            <div className={`absolute inset-1 rounded-full border ${t.ready ? "border-blue-500/30" : "border-neutral-700/30"} flex items-center justify-center text-lg`}>
+                              {t.icon || subj.icon}
+                            </div>
                           </div>
-                          <button 
-                            className="bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md group-hover:translate-x-1"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              startShortSprint(subj.id);
-                            }}
-                          >
-                            Launch Sprint →
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
 
-            <footer className="mt-12 text-center text-xs text-[#8b949e] pb-6">NCBT · India's Nursing CBT Exam Preparation Platform</footer>
-          </div>
-        )}
+                          {/* Card Contents */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-center gap-1.5 mb-1">
+                              <span className="bg-[#21262d] text-[#c9d1d9] text-[9px] font-bold px-2 py-0.5 rounded border border-[#30363d] flex items-center gap-1">
+                                ⏱️ {t.ready ? `${t.mins} min` : "Soon"}
+                              </span>
+                              <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded border ${
+                                t.ready 
+                                  ? "bg-blue-500/10 text-blue-400 border-blue-500/20" 
+                                  : "bg-neutral-800 text-neutral-400 border-neutral-700/50"
+                              }`}>
+                                {t.ready ? "NEW" : "SOON"}
+                              </span>
+                            </div>
+
+                            <h3 className="text-sm font-bold text-white group-hover:text-[#58a6ff] transition-colors truncate">
+                              {t.title}
+                            </h3>
+                            <p className="text-[11px] text-[#8b949e] font-sans line-clamp-2 leading-relaxed mt-1 mb-2">
+                              {t.ready ? t.desc : `High-yield diagnostic module covering ${t.title} topics. Releasing soon!`}
+                            </p>
+
+                            <div className="flex items-center justify-between border-t border-[#1e293b]/50 pt-2.5 mt-2">
+                              <div className="flex items-center gap-3 text-[10px] text-neutral-400">
+                                <span>🗒️ {t.ready ? `${t.questions} Qs` : "In preparation"}</span>
+                                {t.ready && (
+                                  <span className="text-blue-400/90 font-medium bg-blue-400/5 px-1.5 py-0.2 rounded">Medium</span>
+                                )}
+                              </div>
+                              {t.ready ? (
+                                <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#58a6ff] group-hover:text-blue-300 transition-colors">
+                                  <span>Start Test</span>
+                                  <div className="w-7 h-7 rounded-lg bg-[#111c2e] hover:bg-[#1d2d44] border border-[#1e293b] flex items-center justify-center text-[#58a6ff] text-xs font-bold shrink-0">
+                                    →
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5 text-[11px] font-bold text-neutral-500">
+                                  <span>Soon</span>
+                                  <div className="w-7 h-7 rounded-lg bg-neutral-800 text-neutral-600 border border-neutral-700/50 flex items-center justify-center text-xs font-bold shrink-0">
+                                    →
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <footer className="mt-12 text-center text-xs text-[#8b949e] pb-6">NCBT · India's Nursing CBT Exam Preparation Platform</footer>
+            </div>
+          );
+        })()}
+
+
 
         {/* =============== TEST / EXAM PAGE =============== */}
         {activePage === "test" && activeTest && (
-          <div className="min-h-screen bg-[#080c12] text-[#e6edf3] flex flex-col font-sans relative" id="page-test">
+          <div className="page active" id="page-test">
             
-            {/* Elegant Sticky Header */}
-            <header className="sticky top-0 z-[100] bg-[#0d111a]/95 backdrop-blur-md border-b border-[#1e2d45] px-4 py-3 flex items-center justify-between gap-4 shadow-xl">
+            {/* Topbar inside test */}
+            <div className="test-topbar flex items-center justify-between gap-4 px-4 py-3 bg-[#0c1322] border-b border-[#1e293b] sticky top-0 z-[110]" id="test-screen-topbar">
               <div className="flex items-center gap-3">
-                <button 
-                  className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-amber-500/40 text-xs font-bold px-3 py-2 rounded-xl transition-all shadow-md cursor-pointer"
-                  onClick={() => {
-                    if (isTestFinished) {
-                      goHub();
-                    } else {
-                      setShowFinishConfirm(true);
-                    }
-                  }}
-                >
-                  ← Exit
+                <button className="back-btn shrink-0 cursor-pointer z-50" onClick={goHub}>
+                  ← Back
                 </button>
-                <div className="hidden sm:flex flex-col">
-                  <span className="text-[10px] text-[#8b949e] font-extrabold uppercase tracking-widest leading-none">TEST PORTAL</span>
-                  <span className="text-xs font-bold text-white max-w-[240px] truncate">{activeTest.title}</span>
+                <div className="hidden md:flex items-center gap-2">
+                  <span className="topbar-sep text-neutral-600">|</span>
+                  <span className="topbar-title text-sm font-bold text-white line-clamp-1">{activeTest.title}</span>
                 </div>
               </div>
 
-              {/* Status and Timer Bar */}
-              <div className="flex items-center gap-2">
-                <span className={`px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-wider border ${examMode ? "bg-red-500/10 text-red-400 border-red-500/20" : "bg-purple-500/10 text-purple-400 border-purple-500/20"}`}>
-                  {examMode ? "⏱️ CBT Exam Mode" : "💡 Practice Mode"}
+              <div className="flex items-center gap-3 ml-auto">
+                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border hidden sm:inline-block ${examMode ? "bg-red-950/20 text-red-400 border-red-900/40" : "bg-purple-950/20 text-purple-400 border-purple-900/40"}`}>
+                  {examMode ? "⏱️ CBT Exam" : "💡 Practice"}
                 </span>
 
                 {!isTestFinished && (
-                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border tabular-nums ${timeLeft <= 120 ? "bg-red-500/10 text-red-400 border-red-500/30 animate-pulse" : "bg-white/5 text-[#8b949e] border-white/10"}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${timeLeft <= 120 ? "bg-red-500" : "bg-green-400"}`} />
+                  <div className={`timer-pill flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-xs font-bold text-neutral-300 ${timeLeft <= 120 ? "text-red-500 border-red-500/30" : ""}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full bg-green-500 ${timeLeft <= 120 ? "bg-red-500" : ""} animate-pulse`} />
                     <span>{formatTime(timeLeft)}</span>
                   </div>
                 )}
+
+                {!isTestFinished && (
+                  <button 
+                    className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-md hover:scale-[1.03] active:scale-95 cursor-pointer z-50 relative pointer-events-auto"
+                    onClick={() => {
+                      console.log("Upper Submit Test clicked");
+                      setShowFinishConfirm(true);
+                    }}
+                    title="Submit and finish this test"
+                  >
+                    🏁 Submit Test
+                  </button>
+                )}
               </div>
+            </div>
 
-              {/* Action Finish Button */}
-              {!isTestFinished && (
-                <button 
-                  className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-lg shadow-red-900/20 active:scale-95 cursor-pointer flex items-center gap-1.5"
-                  onClick={() => setShowFinishConfirm(true)}
-                >
-                  🏁 Submit Test
-                </button>
-              )}
-            </header>
-
-            {/* Main Workspace Grid */}
-            <div className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
-              
-              {!isTestFinished ? (
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-                  
-                  {/* LEFT PORTION: The Question Workspace Panel */}
-                  <main className="col-span-1 md:col-span-8 flex flex-col gap-4">
-                    
-                    {/* Header bar of the current question */}
-                    <div className="bg-[#0f1520] border border-[#1e2d45] rounded-2xl p-4 flex items-center justify-between gap-4 shadow-md">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-[#8b949e] font-extrabold uppercase tracking-widest">QUESTION WORKSPACE</span>
-                        <h2 className="text-sm font-extrabold text-white">
-                          Question {currentQuestionIndex + 1} <span className="text-xs text-[#8b949e] font-normal">of {activeTest.data.length}</span>
-                        </h2>
-                      </div>
-                      
-                      {/* Negative markings details - highly authentic CBT layout */}
-                      <div className="flex items-center gap-2 text-[10px] font-bold text-[#8b949e]">
-                        <span className="bg-[#1c2333] border border-[#1e2d45] text-green-400 px-2 py-1 rounded-lg">
-                          +1.0 Correct
-                        </span>
-                        {examMode && (
-                          <span className="bg-[#1c2333] border border-[#1e2d45] text-red-400 px-2 py-1 rounded-lg">
-                            -0.25 CBT Penalty
-                          </span>
-                        )}
-                      </div>
+            {/* Statistics Bar at test progression */}
+            {!isTestFinished && (
+              <>
+                <div className="stats-bar">
+                  <div className="stat">
+                    <div className="stat-val">{activeTest.data.length}</div>
+                    <div className="stat-lbl">Questions</div>
+                  </div>
+                  <div className="stat">
+                    <div className="stat-val">
+                      {selectedOptions.filter(o => o !== null).length}
                     </div>
+                    <div className="stat-lbl">Answered</div>
+                  </div>
+                  <div className="stat">
+                    <div className="stat-val">
+                      {reviewedQuestions.filter(Boolean).length}
+                    </div>
+                    <div className="stat-lbl">Review</div>
+                  </div>
+                  <div className="stat">
+                    <div className="stat-val">
+                      {activeTest.data.length - selectedOptions.filter(o => o !== null).length}
+                    </div>
+                    <div className="stat-lbl">Left</div>
+                  </div>
+                </div>
 
-                    {/* Question Content Display */}
-                    <div className="bg-[#0f1520] border border-[#1e2d45] rounded-3xl p-6 md:p-8 shadow-lg flex flex-col gap-6 relative overflow-hidden">
-                      {/* Ambient background glow for active card */}
-                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500/40 via-blue-500/30 to-green-500/40"></div>
-                      
-                      {/* Question Text */}
-                      <div className="text-sm md:text-base font-medium text-white leading-relaxed font-sans">
-                        {activeTest.data[currentQuestionIndex].q}
+                {/* Progress bar state */}
+                <div className="progress-wrap">
+                  <div className="prog-info">
+                    <span>Q {currentQuestionIndex + 1}</span>
+                    <span>
+                      {Math.round((selectedOptions.filter(o => o !== null).length / activeTest.data.length) * 100)}%
+                    </span>
+                  </div>
+                  <div className="prog-bar">
+                    <div 
+                      className="prog-fill" 
+                      style={{ 
+                        width: `${Math.round((selectedOptions.filter(o => o !== null).length / activeTest.data.length) * 100)}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Question dots visual navigation helper */}
+                <div className="dot-nav">
+                  {activeTest.data.map((_, i) => {
+                    let dClass = "dot";
+                    if (currentQuestionIndex === i) {
+                      dClass += " cur";
+                    } else if (reviewedQuestions[i]) {
+                      dClass += " review";
+                    } else if (selectedOptions[i] !== null) {
+                      if (examMode) {
+                        dClass += " done-e";
+                      } else {
+                        dClass += questionAnswers[i] === 1 ? " done-c" : " done-w";
+                      }
+                    }
+                    return (
+                      <button 
+                        key={i} 
+                        className={dClass}
+                        onClick={() => setCurrentQuestionIndex(i)}
+                      >
+                        {i + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Test quiz screen */}
+                <div id="quiz-wrap" className="mt-4 overflow-hidden relative">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={currentQuestionIndex}
+                      initial={{ opacity: 0, x: 24 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -24 }}
+                      transition={{ duration: 0.2, ease: "easeInOut" }}
+                      className="q-card active"
+                    >
+                      <div className="q-meta">
+                        <span className="q-num">Q {currentQuestionIndex + 1} / {activeTest.data.length}</span>
+                        <span className="q-src">{activeTest.data[currentQuestionIndex].source}</span>
                       </div>
 
-                      {/* Options selection container */}
-                      <div className="flex flex-col gap-3">
+                      <p className="q-text">
+                        {activeTest.data[currentQuestionIndex].q}
+                      </p>
+
+                      <div className="opts">
                         {activeTest.data[currentQuestionIndex].opts.map((option, idx) => {
-                          const letterLabels = ["A", "B", "C", "D"];
+                          let optClass = "opt";
                           const isSelected = selectedOptions[currentQuestionIndex] === idx;
                           const isAnswered = questionAnswers[currentQuestionIndex] !== null;
-                          const isCorrectAns = idx === activeTest.data[currentQuestionIndex].ans;
 
-                          let optionBtnClass = "w-full text-left p-4 rounded-2xl border text-xs md:text-sm font-medium transition-all flex items-center justify-between gap-4 cursor-pointer relative overflow-hidden group ";
-                          
                           if (!examMode) {
-                            // Practice Mode Interactive State Display
                             if (isAnswered) {
-                              if (isCorrectAns) {
-                                optionBtnClass += "bg-green-500/10 border-green-500/40 text-green-300 shadow-md shadow-green-950/20";
+                              optClass += " locked";
+                              if (idx === activeTest.data[currentQuestionIndex].ans) {
+                                optClass += " correct";
                               } else if (isSelected) {
-                                optionBtnClass += "bg-red-500/10 border-red-500/40 text-red-300 shadow-md shadow-red-950/20";
-                              } else {
-                                optionBtnClass += "bg-[#141d2e]/30 border-[#1e2d45]/40 text-[#8b949e] opacity-60";
+                                optClass += " wrong";
                               }
-                            } else {
-                              if (isSelected) {
-                                optionBtnClass += "bg-amber-500/10 border-amber-500 text-amber-300 shadow-lg shadow-amber-500/5";
-                              } else {
-                                optionBtnClass += "bg-[#141d2e] border-[#1e2d45] text-[#c9d1d9] hover:bg-[#192236] hover:border-[#243550]";
-                              }
+                            } else if (isSelected) {
+                              optClass += " sel";
                             }
                           } else {
-                            // CBT Exam Mode freely toggleable state
                             if (isSelected) {
-                              optionBtnClass += "bg-blue-500/10 border-blue-500 text-blue-300 shadow-lg shadow-blue-500/10 font-semibold scale-[1.01]";
-                            } else {
-                              optionBtnClass += "bg-[#141d2e] border-[#1e2d45] text-[#c9d1d9] hover:bg-[#192236] hover:border-[#243550]";
+                              optClass += " exam-sel";
                             }
                           }
 
+                          const L = ["A", "B", "C", "D"];
+
                           return (
                             <button 
-                              key={idx}
-                              className={optionBtnClass}
+                              key={idx} 
+                              className={optClass}
                               onClick={() => handleOptionSelect(idx)}
-                              disabled={!examMode && isAnswered}
                             >
-                              <div className="flex items-center gap-3 flex-1">
-                                {/* Option letter badge */}
-                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-all ${
-                                  !examMode && isAnswered
-                                    ? isCorrectAns
-                                      ? "bg-green-500 text-black"
-                                      : isSelected
-                                        ? "bg-red-500 text-white"
-                                        : "bg-[#1e2d45]/50 text-[#8b949e]"
-                                    : isSelected
-                                      ? examMode
-                                        ? "bg-blue-500 text-black"
-                                        : "bg-amber-500 text-black"
-                                      : "bg-[#1c2333] text-[#8b949e] group-hover:bg-[#243047] group-hover:text-white"
-                                }`}>
-                                  {letterLabels[idx]}
-                                </div>
-                                <span className="flex-1 leading-normal">{option}</span>
-                              </div>
-
-                              {/* Action icons / State badges on right */}
-                              <div className="shrink-0 flex items-center">
-                                {!examMode && isAnswered && (
-                                  isCorrectAns ? (
-                                    <span className="text-green-400 text-lg font-bold">✔</span>
-                                  ) : isSelected ? (
-                                    <span className="text-red-400 text-lg font-bold">✖</span>
-                                  ) : null
-                                )}
-                                {examMode && isSelected && (
-                                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500 ring-4 ring-blue-500/25 animate-pulse" />
-                                )}
-                              </div>
+                              <span className="opt-letter">{L[idx]}</span>
+                              <span>{option}</span>
                             </button>
                           );
                         })}
                       </div>
 
-                      {/* Practice mode instant detailed explanation card */}
+                      {/* Feedback wrapper in practice mode */}
                       {!examMode && questionAnswers[currentQuestionIndex] !== null && (
-                        <div className="mt-4 bg-[#141d2e] border-l-4 border-amber-500 rounded-r-2xl p-5 shadow-inner animate-fade-in">
-                          <div className="flex items-center gap-2 text-amber-400 font-extrabold text-xs mb-2">
-                            <span>💡 Detailed Clinical Rationale</span>
-                          </div>
-                          <div className="text-xs md:text-sm text-[#c9d1d9] leading-relaxed font-sans" style={{ whiteSpace: "pre-line" }}>
-                            {getDetailedExplain(activeTest.data[currentQuestionIndex])}
-                          </div>
-                          
-                          {/* Academic reference tag */}
-                          <div className="mt-3 pt-3 border-t border-[#1e2d45] flex items-center justify-between gap-4 text-[10px] text-[#8b949e]">
-                            <span>📌 Source Reference: <strong className="text-white">{activeTest.data[currentQuestionIndex].source || "NCBT Faculty Editorial Board"}</strong></span>
-                            <span className="text-amber-500 font-bold bg-amber-500/5 px-2 py-0.5 rounded border border-amber-500/10">NURSING INSIGHT</span>
+                        <div className="mt-4 animate-fade-in">
+                          <div className={`fb show ${questionAnswers[currentQuestionIndex] === 1 ? "fb-ok" : "fb-no"}`}>
+                            {questionAnswers[currentQuestionIndex] === 1 ? "✅ Correct! " : `❌ Wrong. Correct Answer: ${activeTest.data[currentQuestionIndex].opts[activeTest.data[currentQuestionIndex].ans]}. `}
+                            <span style={{ whiteSpace: "pre-line" }}>{getDetailedExplain(activeTest.data[currentQuestionIndex])}</span>
                           </div>
                         </div>
                       )}
 
-                    </div>
-
-                    {/* Left Panel Workspace Navigation Controls */}
-                    <div className="bg-[#0f1520] border border-[#1e2d45] rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-md">
-                      <div className="flex items-center gap-2">
+                      {/* Navigation control footer */}
+                      <div className="nav-row">
                         <button 
-                          className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1.5"
-                          onClick={handlePrevQuestion}
+                          className="btn-prev" 
                           disabled={currentQuestionIndex === 0}
+                          onClick={handlePrevQuestion}
                         >
                           ← Prev
                         </button>
-
-                        {examMode && selectedOptions[currentQuestionIndex] !== null && (
-                          <button 
-                            className="px-3 py-2 bg-transparent hover:bg-red-500/10 text-red-400 hover:text-red-300 text-xs font-extrabold rounded-xl transition-all border border-red-500/15 cursor-pointer"
-                            onClick={() => clearResponse(currentQuestionIndex)}
-                          >
-                            Clear Response
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {examMode && (
-                          <button 
-                            className={`px-3 py-2 text-xs font-extrabold rounded-xl transition-all border cursor-pointer ${
-                              markedForReview[currentQuestionIndex]
-                                ? "bg-amber-500 text-black border-amber-500 font-extrabold"
-                                : "bg-transparent text-amber-400 hover:bg-amber-500/10 border-amber-500/20"
-                            }`}
-                            onClick={() => toggleMarkForReview(currentQuestionIndex)}
-                          >
-                            📌 {markedForReview[currentQuestionIndex] ? "Marked!" : "Mark for Review"}
-                          </button>
-                        )}
+                        
+                        <button 
+                          className={`font-bold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5 ${
+                            reviewedQuestions[currentQuestionIndex] 
+                              ? "bg-purple-600 hover:bg-purple-700 text-white border border-purple-500" 
+                              : "bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-[#c9d1d9]"
+                          }`}
+                          onClick={() => toggleMarkForReview(currentQuestionIndex)}
+                          style={{ minHeight: "40px" }}
+                        >
+                          {reviewedQuestions[currentQuestionIndex] ? "🔖 Marked for Review" : "🔖 Mark for Review"}
+                        </button>
 
                         <button 
-                          className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-xs font-extrabold rounded-xl shadow-lg shadow-green-900/20 transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                          className="btn-next"
                           onClick={handleNextQuestion}
                         >
-                          {currentQuestionIndex === activeTest.data.length - 1 ? "Finish ✓" : "Save & Next →"}
+                          {currentQuestionIndex === activeTest.data.length - 1 ? "Next → (Q1)" : "Next →"}
                         </button>
                       </div>
-                    </div>
-
-                    {/* Mobile Floating Drawer Trigger */}
-                    <div className="md:hidden flex justify-center mt-2">
-                      <button 
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs px-5 py-3 rounded-2xl transition-all shadow-xl shadow-blue-900/20 flex items-center gap-2 cursor-pointer active:scale-95"
-                        onClick={() => setMobilePaletteOpen(true)}
-                      >
-                        📊 View Question Palette & Status ({selectedOptions.filter(o => o !== null).length}/{activeTest.data.length})
-                      </button>
-                    </div>
-
-                  </main>
-
-                  {/* RIGHT PORTION: The Question Navigation Palette Sidebar (Desktop) */}
-                  <aside className="col-span-1 md:col-span-4 bg-[#0f1520] border border-[#1e2d45] rounded-3xl p-6 shadow-lg flex flex-col gap-6 sticky top-[80px] hidden md:flex">
-                    
-                    {/* Candidate Identity Profile Card */}
-                    <div className="flex items-center gap-3 pb-4 border-b border-[#1e2d45]">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-500 to-red-500 text-white font-extrabold text-sm flex items-center justify-center shadow-md">
-                        {currentUser?.guest ? "A" : (currentUser?.name ? currentUser.name[0].toUpperCase() : "A")}
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold text-white leading-tight">
-                          {currentUser?.guest ? "Aspirant Scholar" : (currentUser?.name || "Aspirant Scholar")}
-                        </span>
-                        <span className="text-[10px] text-[#8b949e]">CBT Portal candidate ID: CBT-2026</span>
-                      </div>
-                    </div>
-
-                    {/* Dynamic legend status container */}
-                    <div className="space-y-3">
-                      <h3 className="text-[10px] text-[#8b949e] font-extrabold uppercase tracking-widest">EXAM PALETTE STATUS</h3>
-                      
-                      <div className="grid grid-cols-2 gap-2">
-                        {/* Answered */}
-                        <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2 flex items-center gap-2">
-                          <div className="w-3.5 h-3.5 rounded-md bg-green-500 shrink-0" />
-                          <div className="flex flex-col text-left">
-                            <span className="text-[10px] text-[#8b949e] leading-tight">Answered</span>
-                            <span className="text-xs font-extrabold text-white leading-none">
-                              {selectedOptions.filter((o, i) => o !== null && !markedForReview[i]).length}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Marked for review */}
-                        <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2 flex items-center gap-2">
-                          <div className="w-3.5 h-3.5 rounded-md bg-purple-500 shrink-0" />
-                          <div className="flex flex-col text-left">
-                            <span className="text-[10px] text-[#8b949e] leading-tight font-sans">Marked</span>
-                            <span className="text-xs font-extrabold text-white leading-none">
-                              {markedForReview.filter(m => m).length}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Visited / Not Answered */}
-                        <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2 flex items-center gap-2">
-                          <div className="w-3.5 h-3.5 rounded-md bg-red-500 shrink-0" />
-                          <div className="flex flex-col text-left">
-                            <span className="text-[10px] text-[#8b949e] leading-tight">Not Ans</span>
-                            <span className="text-xs font-extrabold text-white leading-none">
-                              {visitedQuestions.filter((v, i) => v && selectedOptions[i] === null && !markedForReview[i]).length}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Not Visited */}
-                        <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2 flex items-center gap-2">
-                          <div className="w-3.5 h-3.5 rounded-md bg-[#243550] shrink-0" />
-                          <div className="flex flex-col text-left">
-                            <span className="text-[10px] text-[#8b949e] leading-tight">Not Visited</span>
-                            <span className="text-xs font-extrabold text-white leading-none">
-                              {activeTest.data.length - visitedQuestions.filter(v => v).length}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Question Button Grid Palette */}
-                    <div className="flex flex-col gap-3">
-                      <h3 className="text-[10px] text-[#8b949e] font-extrabold uppercase tracking-widest">CHOOSE QUESTION DOT</h3>
-                      
-                      <div className="grid grid-cols-5 gap-2 max-h-[220px] overflow-y-auto pr-1">
-                        {activeTest.data.map((_, idx) => {
-                          const isCurrent = idx === currentQuestionIndex;
-                          const isVisited = visitedQuestions[idx];
-                          const isAnswered = selectedOptions[idx] !== null;
-                          const isMarked = markedForReview[idx];
-
-                          let dotClass = "w-full aspect-square rounded-xl font-extrabold text-xs flex items-center justify-center transition-all cursor-pointer border ";
-                          
-                          if (isCurrent) {
-                            dotClass += "ring-2 ring-amber-500 text-white font-black ";
-                          }
-
-                          if (isMarked) {
-                            if (isAnswered) {
-                              dotClass += "bg-gradient-to-tr from-purple-600 to-green-600 border-purple-400 text-white";
-                            } else {
-                              dotClass += "bg-purple-600 border-purple-400 text-white";
-                            }
-                          } else if (isAnswered) {
-                            dotClass += "bg-green-600 border-green-500 text-white";
-                          } else if (isVisited) {
-                            dotClass += "bg-red-600 border-red-500 text-white";
-                          } else {
-                            dotClass += "bg-[#141d2e] border-[#1e2d45] text-[#8b949e] hover:border-[#243550]";
-                          }
-
-                          return (
-                            <button 
-                              key={idx}
-                              className={dotClass}
-                              onClick={() => setCurrentQuestionIndex(idx)}
-                              title={`Go to Question ${idx + 1}`}
-                            >
-                              {idx + 1}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Professional instructions card inside sidebar */}
-                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-2xl p-4 text-[10px] text-[#8b949e] leading-relaxed space-y-1 mt-auto">
-                      <p className="font-extrabold text-white text-[11px] mb-1">CBT PRO-TIPS</p>
-                      <p>• Green indicates saved answers.</p>
-                      <p>• Purple indicates questions kept for future verification.</p>
-                      <p>• Review rationales immediately in Practice Mode to maximize retention.</p>
-                    </div>
-
-                  </aside>
-
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
-              ) : (
-                
-                /* =============== CBT DETAILED EVALUATION METRICS (RESULTS SCREEN) =============== */
-                <div className="max-w-3xl mx-auto bg-[#0f1520] border border-[#1e2d45] rounded-3xl p-6 md:p-8 shadow-2xl animate-fade-in text-center relative overflow-hidden">
-                  
-                  {/* Decorative background glow for results */}
-                  <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+              </>
+            )}
 
-                  <div className="w-20 h-20 bg-amber-500/10 text-amber-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-500/20 text-4xl animate-bounce">
+            {/* Custom Modal Confirmation for finishing the test */}
+            {showFinishConfirm && (
+              <div className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-[999] animate-fade-in">
+                <div className="bg-[#0d1117] border border-[#30363d] rounded-2xl p-6 max-w-md w-full shadow-2xl relative text-center">
+                  <div className="w-14 h-14 bg-red-500/10 text-red-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
+                    <span className="text-2xl">🚨</span>
+                  </div>
+                  <h3 className="text-lg font-extrabold text-white mb-2">Finish Mock Test?</h3>
+                  <p className="text-xs text-[#8b949e] mb-6 leading-relaxed">
+                    Are you sure you want to submit your test answers now? You will get detailed evaluation, score performance analysis, and detailed rationales.
+                  </p>
+
+                  {/* Progress details */}
+                  <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-4 text-left space-y-2 mb-6">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-[#8b949e]">Total Questions:</span>
+                      <span className="font-semibold text-white">{activeTest.data.length}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-[#8b949e]">Answered Questions:</span>
+                      <span className="font-semibold text-green-400">
+                        {selectedOptions.filter(o => o !== null).length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-[#8b949e]">Skipped / Unanswered:</span>
+                      <span className="font-semibold text-amber-500">
+                        {activeTest.data.length - selectedOptions.filter(o => o !== null).length}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button 
+                      className="flex-1 py-2.5 bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-[#c9d1d9] font-bold text-xs rounded-xl transition-all cursor-pointer"
+                      onClick={() => setShowFinishConfirm(false)}
+                    >
+                      Keep Solving
+                    </button>
+                    <button 
+                      className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-lg shadow-red-900/20"
+                      onClick={() => {
+                        setShowFinishConfirm(false);
+                        finishTest();
+                      }}
+                    >
+                      Yes, Submit Test
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* =============== RESULTS WRAPPER INTERFACE =============== */}
+            {isTestFinished && (
+              <div id="result-wrap" style={{ display: "block" }}>
+                <div className="result-card">
+                  <div className="result-emoji">
                     {displayPercentage >= 90 ? "🏆" : 
                      displayPercentage >= 75 ? "🎉" :
                      displayPercentage >= 55 ? "👍" : "😐"}
                   </div>
 
-                  <h2 className="text-xl md:text-2xl font-black text-white leading-tight">
-                    {displayPercentage >= 90 ? "Outstanding Performance!" :
-                     displayPercentage >= 75 ? "Great Job! Expert Level!" :
-                     displayPercentage >= 55 ? "Good Effort! Keep Pushing!" : "Needs Practice. Keep Studying!"}
-                  </h2>
-                  <p className="text-xs text-[#8b949e] mt-1 mb-6 font-sans">
-                    {activeTest.title} Completed Evaluated Score Summary
-                  </p>
-
-                  {/* Main Percentage ring-style card */}
-                  <div className="bg-[#141d2e] border border-[#1e2d45] rounded-3xl p-6 inline-block mb-6 relative">
-                    <div className="text-[10px] text-amber-500 font-extrabold uppercase tracking-widest mb-1 font-sans">ACCURACY SCORE</div>
-                    <div className="text-4xl md:text-5xl font-black text-white leading-none tracking-tight">
-                      {displayPercentage}%
-                    </div>
-                    <div className="text-xs font-semibold text-[#8b949e] mt-2 font-sans">
-                      {examMode ? (
-                        <span>
-                          Net Score: <strong className="text-amber-400">{netMarks.toFixed(2)}</strong> out of <strong>{totalQuestions}</strong>
-                        </span>
-                      ) : (
-                        <span>
-                          {correctCount} correct of {totalQuestions} total MCQs
-                        </span>
-                      )}
-                    </div>
+                  <div className="result-pct">
+                    {displayPercentage}%
                   </div>
 
-                  {/* Score breakdown metrics grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-                    
-                    {/* Correct */}
-                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-2xl p-4 flex flex-col items-center">
-                      <span className="text-lg md:text-xl font-bold text-green-400">+{correctCount}</span>
-                      <span className="text-[10px] text-[#8b949e] font-bold uppercase tracking-wider mt-1">Correct</span>
-                    </div>
+                  <div className="result-label" id="final-results-metrics">
+                    {examMode ? (
+                      <span>
+                        Net Score: <strong className="text-amber-400">{netMarks.toFixed(2)}</strong> out of <strong>{totalQuestions}</strong>
+                      </span>
+                    ) : (
+                      <span>
+                        {correctCount} of {totalQuestions} correct
+                      </span>
+                    )}
+                    {" · "}{examMode ? "CBT Exam Mode" : "Practice Mode"}
+                  </div>
 
-                    {/* Wrong */}
-                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-2xl p-4 flex flex-col items-center">
-                      <span className="text-lg md:text-xl font-bold text-red-400">
+                  <div className="result-msg">
+                    {displayPercentage >= 90 ? "Outstanding!" :
+                     displayPercentage >= 75 ? "Great Job!" :
+                     displayPercentage >= 55 ? "Good Effort!" : "Keep Practising!"}
+                  </div>
+
+                  <div className="result-sub">
+                    {examMode ? (
+                      <span className="text-xs text-[#8492a6]">
+                        CBT Evaluation Formula: {correctCount} correct (+1.0) and {wrongCount} errors (-0.25 penalty). Unattempted: {skippedCount}.
+                      </span>
+                    ) : (
+                      <span>
+                        {correctCount / totalQuestions >= 0.75 ? `You have an exam-ready grasp of ${activeTest.title}.` : "Review the correct rationales below and try again."}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="score-grid">
+                    <div className="score-box">
+                      <div className="score-box-val sc">+{correctCount}</div>
+                      <div className="score-box-lbl">Correct (+1)</div>
+                    </div>
+                    <div className="score-box">
+                      <div className="score-box-val sw">
                         {examMode ? `-${negativePenalty.toFixed(2)}` : `-${wrongCount}`}
-                      </span>
-                      <span className="text-[10px] text-[#8b949e] font-bold uppercase tracking-wider mt-1">
-                        {examMode ? "Penalty (-0.25)" : "Wrong"}
-                      </span>
+                      </div>
+                      <div className="score-box-lbl">{examMode ? "Penalty (-0.25)" : "Wrong"}</div>
                     </div>
-
-                    {/* Skipped */}
-                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-2xl p-4 flex flex-col items-center">
-                      <span className="text-lg md:text-xl font-bold text-amber-500">{skippedCount}</span>
-                      <span className="text-[10px] text-[#8b949e] font-bold uppercase tracking-wider mt-1">Skipped</span>
+                    <div className="score-box">
+                      <div className="score-box-val ss">{skippedCount}</div>
+                      <div className="score-box-lbl font-sans">Skipped</div>
                     </div>
-
-                    {/* Exam Mode badge */}
-                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-2xl p-4 flex flex-col items-center">
-                      <span className="text-xs md:text-sm font-extrabold text-blue-400 mt-1 uppercase truncate max-w-full">
-                        {examMode ? "CBT Exam" : "Practice"}
-                      </span>
-                      <span className="text-[10px] text-[#8b949e] font-bold uppercase tracking-wider mt-2.5">Mode type</span>
+                    <div className="score-box">
+                      <div className="score-box-val sp">
+                        {examMode ? netMarks.toFixed(2) : `${displayPercentage}%`}
+                      </div>
+                      <div className="score-box-lbl font-sans">{examMode ? "Net Marks" : "Score %"}</div>
                     </div>
-
                   </div>
 
-                  {/* Actions Row */}
-                  <div className="flex flex-wrap items-center justify-center gap-3 pb-6 border-b border-[#1e2d45] mb-8">
+                  <div className="result-actions">
                     <button 
-                      className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs rounded-xl shadow-lg shadow-amber-500/10 transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
+                      className="btn-retry" 
                       onClick={() => triggerTestInit(activeSubjectId!, activeTest.id)}
                     >
-                      🔄 Retake Mock Test
+                      🔄 Retry Test
                     </button>
-
-                    <button 
-                      className="px-5 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-[#c9d1d9] text-xs font-bold rounded-xl transition-all cursor-pointer"
-                      onClick={goHub}
-                    >
-                      ← Back to Dashboard
+                    <button className="btn-back-hub" onClick={goHub}>
+                      ← Back
                     </button>
-
                     <button 
-                      className="px-5 py-3 bg-[#25d366]/10 hover:bg-[#25d366]/25 border border-[#25d366]/20 text-[#25d366] text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
-                      onClick={() => shareToWhatsApp(displayPercentage, correctCount, totalQuestions, activeTest.title)}
+                      className="btn-share-wp"
+                      onClick={() => shareToWhatsApp(
+                        displayPercentage, 
+                        correctCount, 
+                        totalQuestions, 
+                        activeTest.title
+                      )}
                     >
-                      <Share2 className="w-3.5 h-3.5" /> Share to WhatsApp
+                      <Share2 className="w-4 h-4" /> Share Score to WhatsApp
                     </button>
                   </div>
 
-                  {/* DETAILED QUESTION-BY-QUESTION REVIEW PANEL */}
-                  <div className="text-left space-y-6">
-                    <div className="flex flex-col">
-                      <h3 className="text-sm font-extrabold text-white">CBT Exam Performance Audit Review</h3>
-                      <p className="text-[10px] text-[#8b949e]">Examine candidate choice, correct answers, and expert clinical rationales below</p>
-                    </div>
-
-                    <div className="space-y-4">
+                  {/* Fully fleshed-out Exam Mode full review table */}
+                  {examMode && (
+                    <div className="mt-8 text-left border-t border-[#1e2d45] pt-6">
+                      <div className="review-header">
+                        Full Exam Practice Review — All {activeTest.data.length} Questions
+                      </div>
+                      
                       {activeTest.data.map((q, idx) => {
-                        const candidateSelection = selectedOptions[idx];
-                        const alphabetLabels = ["A", "B", "C", "D"];
+                        const selIdx = selectedOptions[idx];
+                        const L = ["A", "B", "C", "D"];
 
                         return (
-                          <div key={idx} className="bg-[#141d2e] border border-[#1e2d45] rounded-2xl p-5 shadow-sm space-y-4 relative overflow-hidden animate-fade-in">
-                            {/* Accent vertical line indicating state */}
-                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${
-                              candidateSelection === null 
-                                ? "bg-amber-500" 
-                                : candidateSelection === q.ans 
-                                  ? "bg-green-500" 
-                                  : "bg-red-500"
-                            }`} />
-
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex items-start gap-2.5">
-                                <span className="bg-[#1c2333] border border-[#1e2d45] text-[10px] font-black px-2 py-0.5 rounded-lg text-[#8b949e] mt-0.5">
-                                  Q{idx + 1}
-                                </span>
-                                <h4 className="text-xs md:text-sm font-bold text-white leading-relaxed">
-                                  {q.q}
-                                </h4>
-                              </div>
-
-                              {/* State label */}
-                              <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full shrink-0 border ${
-                                candidateSelection === null
-                                  ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                                  : candidateSelection === q.ans
-                                    ? "bg-green-500/10 text-green-400 border-green-500/20"
-                                    : "bg-red-500/10 text-red-400 border-red-500/20"
-                              }`}>
-                                {candidateSelection === null
-                                  ? "Skipped"
-                                  : candidateSelection === q.ans
-                                    ? "Correct"
-                                    : "Incorrect"}
-                              </span>
+                          <div key={idx} className="review-q animate-fade-in">
+                            <div className="rq-top">
+                              <span className="rq-num">Q{idx + 1}</span>
+                              <span className="rq-text">{q.q}</span>
                             </div>
 
-                            {/* Option list review */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-6">
-                              {q.opts.map((option, oIdx) => {
-                                const isOptionSelectedByCandidate = candidateSelection === oIdx;
-                                const isCorrectOpt = oIdx === q.ans;
-
-                                let reviewBadgeClass = "p-3 rounded-xl border text-xs flex items-center gap-2.5 ";
-                                if (isCorrectOpt) {
-                                  reviewBadgeClass += "bg-green-500/5 border-green-500/30 text-green-300 font-medium";
-                                } else if (isOptionSelectedByCandidate) {
-                                  reviewBadgeClass += "bg-red-500/5 border-red-500/30 text-red-300";
-                                } else {
-                                  reviewBadgeClass += "bg-[#1c2333]/40 border-[#1e2d45]/40 text-[#8b949e]";
+                            <div className="rq-opts">
+                              {q.opts.map((opt, oIdx) => {
+                                let rqClass = "rq-opt";
+                                if (oIdx === selIdx && oIdx === q.ans) {
+                                  rqClass += " ro-correct";
+                                } else if (oIdx === selIdx && oIdx !== q.ans) {
+                                  rqClass += " ro-wrong";
+                                } else if (oIdx === q.ans) {
+                                  rqClass += " ro-show";
                                 }
 
                                 return (
-                                  <div key={oIdx} className={reviewBadgeClass}>
-                                    <span className={`w-5 h-5 rounded-md font-bold text-[10px] flex items-center justify-center ${
-                                      isCorrectOpt
-                                        ? "bg-green-500 text-black"
-                                        : isOptionSelectedByCandidate
-                                          ? "bg-red-500 text-white"
-                                          : "bg-[#1c2333] text-[#8b949e]"
-                                    }`}>
-                                      {alphabetLabels[oIdx]}
-                                    </span>
-                                    <span className="truncate">{option}</span>
+                                  <div key={oIdx} className={rqClass}>
+                                    <span className="r-letter">{L[oIdx]}</span>
+                                    <span>{opt}</span>
                                   </div>
                                 );
                               })}
                             </div>
 
-                            {/* Rationale box */}
-                            <div className="pl-6 pt-3 border-t border-[#1e2d45] text-xs text-[#8b949e] leading-relaxed font-sans">
-                              <p className="font-extrabold text-[#c9d1d9] text-[11px] mb-1">💡 Faculty Answer Explanation</p>
-                              <div style={{ whiteSpace: "pre-line" }}>{getDetailedExplain(q)}</div>
-                              <p className="mt-2 text-[10px] text-[#8b949e]">📌 Source Reference: <strong className="text-[#c9d1d9]">{q.source || "NCBT Clinical Education Board"}</strong></p>
+                            <div className="rq-rationale font-sans">
+                              <div className="flex-1 text-sm leading-relaxed" style={{ whiteSpace: "pre-line" }}>
+                                💡 {getDetailedExplain(q)}
+                                <span className="rq-src block mt-2 text-xs opacity-75 font-semibold" style={{ whiteSpace: "normal" }}>📌 Source: {q.source}</span>
+                              </div>
                             </div>
-
                           </div>
                         );
                       })}
                     </div>
-
-                  </div>
-
-                </div>
-              )}
-
-            </div>
-
-            {/* Mobile Bottom Responsive Drawer for Palette Grid */}
-            {mobilePaletteOpen && activeTest && (
-              <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex flex-col justify-end animate-fade-in">
-                
-                {/* Click outside to close */}
-                <div className="flex-1" onClick={() => setMobilePaletteOpen(false)} />
-
-                {/* Sliding Drawer Body */}
-                <div className="bg-[#0f1520] border-t border-[#1e2d45] rounded-t-[2.5rem] max-h-[85vh] overflow-y-auto p-6 flex flex-col gap-5 shadow-2xl relative">
-                  
-                  {/* Pull bar indicator */}
-                  <div className="w-12 h-1 bg-[#1e2d45] rounded-full mx-auto" />
-
-                  {/* Header */}
-                  <div className="flex items-center justify-between gap-4 pb-3 border-b border-[#1e2d45]">
-                    <div className="flex flex-col text-left">
-                      <span className="text-[10px] text-[#8b949e] font-extrabold uppercase tracking-widest leading-none">CBT PORTAL</span>
-                      <h3 className="text-sm font-extrabold text-white mt-1">CBT Question Map Palette</h3>
-                    </div>
-                    <button 
-                      className="w-8 h-8 rounded-full bg-white/5 border border-white/10 hover:border-amber-500/30 text-[#8b949e] hover:text-white flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
-                      onClick={() => setMobilePaletteOpen(false)}
-                    >
-                      ✕
-                    </button>
-                  </div>
-
-                  {/* Stats dynamic summaries */}
-                  <div className="grid grid-cols-2 gap-2 text-left">
-                    {/* Answered */}
-                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2.5 flex items-center gap-2">
-                      <div className="w-3.5 h-3.5 rounded-md bg-green-500 shrink-0" />
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-[#8b949e] leading-none">Answered</span>
-                        <span className="text-xs font-extrabold text-white mt-1">
-                          {selectedOptions.filter((o, i) => o !== null && !markedForReview[i]).length}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Marked for review */}
-                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2.5 flex items-center gap-2">
-                      <div className="w-3.5 h-3.5 rounded-md bg-purple-500 shrink-0" />
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-[#8b949e] leading-none">Marked</span>
-                        <span className="text-xs font-extrabold text-white mt-1">
-                          {markedForReview.filter(m => m).length}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Visited / Not Answered */}
-                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2.5 flex items-center gap-2">
-                      <div className="w-3.5 h-3.5 rounded-md bg-red-500 shrink-0" />
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-[#8b949e] leading-none">Not Ans</span>
-                        <span className="text-xs font-extrabold text-white mt-1">
-                          {visitedQuestions.filter((v, i) => v && selectedOptions[i] === null && !markedForReview[i]).length}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Not Visited */}
-                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2.5 flex items-center gap-2">
-                      <div className="w-3.5 h-3.5 rounded-md bg-[#243550] shrink-0" />
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-[#8b949e] leading-none">Not Visited</span>
-                        <span className="text-xs font-extrabold text-white mt-1">
-                          {activeTest.data.length - visitedQuestions.filter(v => v).length}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Question Grid Map */}
-                  <div className="flex flex-col gap-2.5 text-left">
-                    <span className="text-[10px] text-[#8b949e] font-extrabold uppercase tracking-widest">TAP NUMBER DOT TO JUMP</span>
-                    
-                    <div className="grid grid-cols-5 gap-2.5 max-h-[250px] overflow-y-auto pr-1">
-                      {activeTest.data.map((_, idx) => {
-                        const isCurrent = idx === currentQuestionIndex;
-                        const isVisited = visitedQuestions[idx];
-                        const isAnswered = selectedOptions[idx] !== null;
-                        const isMarked = markedForReview[idx];
-
-                        let dotClass = "w-full aspect-square rounded-xl font-extrabold text-xs flex items-center justify-center transition-all cursor-pointer border ";
-                        
-                        if (isCurrent) {
-                          dotClass += "ring-2 ring-amber-500 text-white font-black ";
-                        }
-
-                        if (isMarked) {
-                          if (isAnswered) {
-                            dotClass += "bg-gradient-to-tr from-purple-600 to-green-600 border-purple-400 text-white";
-                          } else {
-                            dotClass += "bg-purple-600 border-purple-400 text-white";
-                          }
-                        } else if (isAnswered) {
-                          dotClass += "bg-green-600 border-green-500 text-white";
-                        } else if (isVisited) {
-                          dotClass += "bg-red-600 border-red-500 text-white";
-                        } else {
-                          dotClass += "bg-[#141d2e] border-[#1e2d45] text-[#8b949e]";
-                        }
-
-                        return (
-                          <button 
-                            key={idx}
-                            className={dotClass}
-                            onClick={() => {
-                              setCurrentQuestionIndex(idx);
-                              setMobilePaletteOpen(false);
-                            }}
-                          >
-                            {idx + 1}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Prompt Action buttons */}
-                  <div className="mt-2 pt-4 border-t border-[#1e2d45] flex items-center justify-between gap-4">
-                    <button 
-                      className="flex-1 py-3 bg-[#1e2d45]/50 hover:bg-[#1e2d45] text-[#8b949e] hover:text-white text-xs font-bold rounded-xl transition-all border border-[#1e2d45]"
-                      onClick={() => setMobilePaletteOpen(false)}
-                    >
-                      Close Map
-                    </button>
-                    <button 
-                      className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white text-xs font-extrabold rounded-xl transition-all shadow-lg"
-                      onClick={() => {
-                        setMobilePaletteOpen(false);
-                        setShowFinishConfirm(true);
-                      }}
-                    >
-                      🏁 Submit CBT Mock
-                    </button>
-                  </div>
+                  )}
 
                 </div>
               </div>
             )}
 
-            <footer className="py-6 mt-12 border-t border-[#1e2d45] text-center text-xs text-[#8b949e]">
-              NCBT · India's Nursing CBT Exam Preparation Platform
-            </footer>
+            <footer>NCBT · India's Nursing CBT Exam Preparation Platform</footer>
           </div>
         )}
 
@@ -3498,159 +3103,284 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           <div className="page active" id="page-updates">
             <div className="max-w-6xl mx-auto px-4 py-8 font-sans">
               
-              {/* Header block with sync button */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-[var(--border)] pb-6 mb-8">
-                <div>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="flex h-2.5 w-2.5 relative">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                    </span>
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-400">CONNECTING TO LATEST RECRUITMENT FEEDS</span>
-                  </div>
-                  <h1 className="text-2xl md:text-3xl font-black tracking-tight text-[var(--text)] flex items-center gap-2">
-                    ⚡ Daily Pulse
-                  </h1>
-                  <p className="text-[#8b949e] text-xs md:text-sm mt-1 leading-relaxed">
-                    Academic textbook notes, exam changes, dynamic career vacancies, and strategic nursing wisdom.
-                  </p>
-                </div>
+              {/* Premium Header Hero Card */}
+              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c1322] via-[#0f172a] to-[#070b13] border border-[#1e2d45] p-6 md:p-8 mb-8 shadow-2xl">
+                {/* Decorative gradients */}
+                <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute bottom-0 left-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
-                <button 
-                  onClick={fetchUpdates}
-                  disabled={loadingUpdates}
-                  className="flex items-center justify-center gap-2 px-4.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 disabled:opacity-50 text-white text-xs font-black transition-all shadow-lg shadow-indigo-600/10 cursor-pointer self-start md:self-auto"
-                >
-                  {loadingUpdates ? (
-                    <span className="animate-spin border-2 border-white border-t-transparent rounded-full h-3.5 w-3.5" />
-                  ) : (
-                    <span className="text-sm">🔄</span>
-                  )}
-                  <span>Refresh News Feed</span>
-                </button>
+                <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="flex h-2 w-2 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">CONNECTING TO LIVE RECRUITMENT FEEDS</span>
+                    </div>
+                    <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white mb-2">
+                      🩺 Professional Blog & News Feed
+                    </h1>
+                    <p className="text-[#8b949e] text-xs md:text-sm max-w-2xl leading-relaxed">
+                      Official notifications, syllabus breakdowns, advanced high-yield academic notes, and expert strategy for AIIMS NORCET, ESIC, RRB, and state nursing board examinations.
+                    </p>
+                  </div>
+
+                  <button 
+                    onClick={fetchUpdates}
+                    disabled={loadingUpdates}
+                    className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 active:scale-95 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 cursor-pointer self-start md:self-auto"
+                  >
+                    {loadingUpdates ? (
+                      <span className="animate-spin border-2 border-white border-t-transparent rounded-full h-3.5 w-3.5" />
+                    ) : (
+                      <span className="text-sm">🔄</span>
+                    )}
+                    <span>Sync Latest Feeds</span>
+                  </button>
+                </div>
               </div>
 
               {/* Updates dynamic status warnings */}
               {updatesError && (
-                <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-2.5 mb-6 text-xs text-amber-300 flex items-center gap-2">
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 mb-6 text-xs text-amber-300 flex items-center gap-2">
                   <span>💡</span>
                   <span>{updatesError}</span>
                 </div>
               )}
 
-              {/* Category Filter Tabs */}
-              <div className="flex flex-wrap items-center gap-2 mb-8 bg-[var(--surface)] p-1.5 rounded-2xl border border-[var(--border)] max-w-lg shadow-sm">
-                <button 
-                  onClick={() => setActiveUpdateFilter("all")}
-                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${activeUpdateFilter === "all" ? "bg-indigo-600 text-white shadow-md" : "text-[#8b949e] hover:text-[var(--text)] hover:bg-white/5"}`}
-                >
-                  📰 All Pulse
-                </button>
-                <button 
-                  onClick={() => setActiveUpdateFilter("jobs")}
-                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${activeUpdateFilter === "jobs" ? "bg-indigo-600 text-white shadow-md" : "text-[#8b949e] hover:text-[var(--text)] hover:bg-white/5"}`}
-                >
-                  📋 Jobs
-                </button>
-                <button 
-                  onClick={() => setActiveUpdateFilter("syllabus")}
-                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${activeUpdateFilter === "syllabus" ? "bg-indigo-600 text-white shadow-md" : "text-[#8b949e] hover:text-[var(--text)] hover:bg-white/5"}`}
-                >
-                  📚 Syllabus
-                </button>
-                <button 
-                  onClick={() => setActiveUpdateFilter("motivation")}
-                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${activeUpdateFilter === "motivation" ? "bg-indigo-600 text-white shadow-md" : "text-[#8b949e] hover:text-[var(--text)] hover:bg-white/5"}`}
-                >
-                  ✨ Growth
-                </button>
-                <button 
-                  onClick={() => setActiveUpdateFilter("notes")}
-                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${activeUpdateFilter === "notes" ? "bg-indigo-600 text-white shadow-md" : "text-[#8b949e] hover:text-[var(--text)] hover:bg-white/5"}`}
-                >
-                  📖 Notes
-                </button>
+              {/* Control Station: Search and Category Filters */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
+                {/* Category Filter Tabs */}
+                <div className="flex flex-wrap items-center gap-1.5 bg-[#0b1220] p-1.5 rounded-2xl border border-[#1e2d45] max-w-full overflow-x-auto shadow-inner">
+                  <button 
+                    onClick={() => setActiveUpdateFilter("all")}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeUpdateFilter === "all" ? "bg-indigo-600 text-white shadow-md" : "text-[#8b949e] hover:text-white hover:bg-white/5"}`}
+                  >
+                    📰 All Feed
+                  </button>
+                  <button 
+                    onClick={() => setActiveUpdateFilter("jobs")}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeUpdateFilter === "jobs" ? "bg-indigo-600 text-white shadow-md" : "text-[#8b949e] hover:text-white hover:bg-white/5"}`}
+                  >
+                    📋 Jobs & Alerts
+                  </button>
+                  <button 
+                    onClick={() => setActiveUpdateFilter("syllabus")}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeUpdateFilter === "syllabus" ? "bg-indigo-600 text-white shadow-md" : "text-[#8b949e] hover:text-white hover:bg-white/5"}`}
+                  >
+                    📚 Exam Syllabus
+                  </button>
+                  <button 
+                    onClick={() => setActiveUpdateFilter("motivation")}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeUpdateFilter === "motivation" ? "bg-indigo-600 text-white shadow-md" : "text-[#8b949e] hover:text-white hover:bg-white/5"}`}
+                  >
+                    ✨ Growth & Strategy
+                  </button>
+                  <button 
+                    onClick={() => setActiveUpdateFilter("notes")}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeUpdateFilter === "notes" ? "bg-indigo-600 text-white shadow-md" : "text-[#8b949e] hover:text-white hover:bg-white/5"}`}
+                  >
+                    📖 Study Notes
+                  </button>
+                </div>
+
+                {/* Premium Search Bar */}
+                <div className="flex items-center gap-2 bg-[#0b1220] border border-[#1e2d45] hover:border-indigo-500/40 focus-within:border-indigo-500 rounded-2xl px-4 py-2.5 w-full lg:max-w-xs transition-all shadow-sm">
+                  <Search className="w-4 h-4 text-[#8b949e] shrink-0" />
+                  <input 
+                    type="text"
+                    value={blogSearchQuery}
+                    onChange={(e) => setBlogSearchQuery(e.target.value)}
+                    placeholder="Search posts or topics..."
+                    className="bg-transparent border-none outline-none text-white text-xs w-full focus:ring-0"
+                  />
+                  {blogSearchQuery && (
+                    <button 
+                      onClick={() => setBlogSearchQuery("")}
+                      className="text-[#8b949e] hover:text-white text-xs font-bold cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Grid content / Loading screen */}
               {loadingUpdates && updates.length === 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="animate-pulse bg-[var(--surface)] border border-[var(--border)] rounded-2xl h-80 flex flex-col justify-end p-6">
-                      <div className="h-4 bg-white/10 rounded w-1/4 mb-3"></div>
-                      <div className="h-6 bg-white/10 rounded w-3/4 mb-2"></div>
-                      <div className="h-4 bg-white/10 rounded w-full mb-4"></div>
-                      <div className="h-8 bg-white/10 rounded w-1/3"></div>
+                    <div key={i} className="animate-pulse bg-[#0f1520] border border-[#1e2d45] rounded-3xl h-80 flex flex-col justify-end p-6">
+                      <div className="h-4 bg-white/10 rounded w-1/4 mb-3" />
+                      <div className="h-6 bg-white/10 rounded w-3/4 mb-2" />
+                      <div className="h-4 bg-white/10 rounded w-full mb-4" />
+                      <div className="h-8 bg-white/10 rounded w-1/3" />
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {updates
-                    .filter(u => activeUpdateFilter === "all" || u.category === activeUpdateFilter)
-                    .map((item, index) => (
-                      <motion.div 
-                        key={item.id}
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.05 }}
-                        className="group flex flex-col bg-[var(--card)] hover:bg-[var(--card2)] border border-[var(--border)] rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300"
-                      >
-                        {/* Image banner */}
-                        <div className="h-44 overflow-hidden relative shrink-0">
-                          <img 
-                            src={item.image} 
-                            alt={item.title} 
-                            referrerPolicy="no-referrer"
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-90 group-hover:brightness-100 placeholder-img" 
-                          />
-                          <div className="absolute top-3 left-3 bg-black/75 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/15 text-[9px] font-black uppercase text-white tracking-wider shadow-sm">
-                            🏷️ {item.badge}
-                          </div>
-                          
-                          {/* Categorized Visual Accent Bar */}
-                          <div className={`absolute bottom-0 left-0 right-0 h-1 ${
-                            item.category === "jobs" ? "bg-cyan-500" :
-                            item.category === "syllabus" ? "bg-amber-500" : "bg-purple-500"
-                          }`} />
-                        </div>
-
-                        {/* Text description */}
-                        <div className="p-5 flex-1 flex flex-col justify-between gap-4">
-                          <div>
-                            <div className="flex items-center gap-1.5 text-[10px] text-[#8b949e] font-black uppercase mb-1.5">
-                              <span>📅 {item.date}</span>
-                              <span>•</span>
-                              <span>{item.readTime}</span>
+                    .filter(u => {
+                      const matchesCategory = activeUpdateFilter === "all" || u.category === activeUpdateFilter;
+                      const matchesSearch = blogSearchQuery.trim() === "" || 
+                        u.title.toLowerCase().includes(blogSearchQuery.toLowerCase()) ||
+                        u.summary.toLowerCase().includes(blogSearchQuery.toLowerCase()) ||
+                        u.content.toLowerCase().includes(blogSearchQuery.toLowerCase());
+                      return matchesCategory && matchesSearch;
+                    })
+                    .map((item, index) => {
+                      const isSharedOpen = sharingPostId === item.id;
+                      return (
+                        <motion.div 
+                          key={item.id}
+                          initial={{ opacity: 0, y: 16 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: index * 0.05 }}
+                          className="group flex flex-col bg-[#0f1520] hover:bg-[#131b2a] border border-[#1e2d45] hover:border-indigo-500/40 rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 relative"
+                        >
+                          {/* Image banner */}
+                          <div className="h-48 overflow-hidden relative shrink-0">
+                            <img 
+                              src={item.image} 
+                              alt={item.title} 
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-90 group-hover:brightness-100 placeholder-img" 
+                            />
+                            <div className="absolute top-3 left-3 bg-black/80 backdrop-blur-md px-3 py-1 rounded-xl border border-white/10 text-[9px] font-bold uppercase text-white tracking-wider shadow-sm">
+                              🏷️ {item.badge}
                             </div>
-                            <h3 
-                              onClick={() => viewUpdate(item)}
-                              className="text-sm md:text-base font-extrabold text-[var(--text)] hover:text-indigo-400 cursor-pointer line-clamp-2 transition-colors inline-block leading-snug"
-                            >
-                              {item.title}
-                            </h3>
-                            <p className="text-xs text-[#8b949e] line-clamp-2 mt-2 leading-relaxed">
-                              {item.summary}
-                            </p>
+                            
+                            {/* Categorized Visual Accent Bar */}
+                            <div className={`absolute bottom-0 left-0 right-0 h-1 ${
+                              item.category === "jobs" ? "bg-cyan-500" :
+                              item.category === "syllabus" ? "bg-amber-500" :
+                              item.category === "notes" ? "bg-indigo-500" : "bg-purple-500"
+                            }`} />
                           </div>
 
-                          <button 
-                            onClick={() => viewUpdate(item)}
-                            className="flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-indigo-400 hover:text-indigo-300 transition-colors bg-transparent border-none p-0 cursor-pointer self-start"
-                          >
-                            Read Full Details →
-                          </button>
-                        </div>
-                      </motion.div>
-                    ))}
+                          {/* Text description */}
+                          <div className="p-6 flex-1 flex flex-col justify-between gap-4">
+                            <div>
+                              <div className="flex items-center justify-between text-[10px] text-[#8b949e] font-bold uppercase mb-2">
+                                <span className="flex items-center gap-1">📅 {item.date}</span>
+                                <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {item.readTime}</span>
+                              </div>
+                              <h3 
+                                onClick={() => viewUpdate(item)}
+                                className="text-base font-extrabold text-white hover:text-indigo-400 cursor-pointer line-clamp-2 transition-colors leading-snug mb-2"
+                              >
+                                {item.title}
+                              </h3>
+                              <p className="text-xs text-[#8b949e] line-clamp-3 leading-relaxed mb-3">
+                                {item.summary}
+                              </p>
+
+                              {/* Attached official notice indicators */}
+                              {(item.pdfUrl || item.officialLink) && (
+                                <div className="flex flex-wrap gap-1.5 mb-2 select-none">
+                                  {item.pdfUrl && (
+                                    <span className="inline-flex items-center gap-1 text-[9px] bg-rose-500/10 text-rose-300 border border-rose-500/15 px-2 py-0.5 rounded-lg font-bold">
+                                      📄 Official Notice PDF
+                                    </span>
+                                  )}
+                                  {item.officialLink && (
+                                    <span className="inline-flex items-center gap-1 text-[9px] bg-cyan-500/10 text-cyan-300 border border-cyan-500/15 px-2 py-0.5 rounded-lg font-bold">
+                                      🔗 Official Link Included
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex flex-col gap-3 pt-2 border-t border-[#1e2d45]/40 mt-auto">
+                              {/* Action Row */}
+                              <div className="flex items-center justify-between gap-2">
+                                <button 
+                                  onClick={() => viewUpdate(item)}
+                                  className="flex items-center gap-1 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors bg-transparent border-none p-0 cursor-pointer"
+                                >
+                                  Read Full Details →
+                                </button>
+
+                                {/* Interactive Share Button triggers popup */}
+                                <div className="relative">
+                                  <button 
+                                    onClick={() => setSharingPostId(isSharedOpen ? null : item.id)}
+                                    className="p-2 bg-[#1e2d45]/40 hover:bg-indigo-600/20 rounded-xl text-[#8b949e] hover:text-indigo-400 transition-all cursor-pointer"
+                                    title="Share Article"
+                                  >
+                                    <Share2 className="w-3.5 h-3.5" />
+                                  </button>
+                                  
+                                  {/* Absolute dropdown share helper */}
+                                  {isSharedOpen && (
+                                    <div className="absolute right-0 bottom-10 bg-[#0c1220] border border-[#1e2d45] rounded-xl p-2 shadow-2xl z-20 flex flex-col gap-1.5 min-w-[160px] animate-fade-in">
+                                      <div className="text-[9px] font-black uppercase text-[#8b949e] px-2 py-1 border-b border-[#1e2d45]/60 mb-1">
+                                        📤 Quick Share
+                                      </div>
+                                      
+                                      {/* Whatsapp button */}
+                                      <button
+                                        onClick={() => {
+                                          const shareText = `*🔥 NCBT Nursing Exam Update: ${item.title}*\n\n${item.summary}\n\n👉 Official notification portal: ${item.officialLink || "https://ncbt-exams.in"}\n\n📖 Read full article & practice CBT here: ${window.location.origin}/updates?id=${item.id}`;
+                                          const wpUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+                                          window.open(wpUrl, "_blank");
+                                          setSharingPostId(null);
+                                        }}
+                                        className="flex items-center gap-2 text-left text-[11px] font-semibold text-emerald-400 hover:bg-emerald-500/10 px-2 py-1.5 rounded-lg transition-colors cursor-pointer"
+                                      >
+                                        💚 Share to WhatsApp
+                                      </button>
+
+                                      {/* Telegram button */}
+                                      <button
+                                        onClick={() => {
+                                          const shareText = `NCBT Nursing Board Update: ${item.title}\n\n${item.summary}`;
+                                          const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(window.location.origin + "/updates?id=" + item.id)}&text=${encodeURIComponent(shareText)}`;
+                                          window.open(tgUrl, "_blank");
+                                          setSharingPostId(null);
+                                        }}
+                                        className="flex items-center gap-2 text-left text-[11px] font-semibold text-cyan-400 hover:bg-cyan-500/10 px-2 py-1.5 rounded-lg transition-colors cursor-pointer"
+                                      >
+                                        💙 Share to Telegram
+                                      </button>
+
+                                      {/* Copy study link */}
+                                      <button
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(`${item.title} - ${item.summary}\n\nRead more details & attempt mock tests at: ${window.location.origin}/updates?id=${item.id}`);
+                                          triggerToast("Study link copied to clipboard! 📋", "ok");
+                                          setSharingPostId(null);
+                                        }}
+                                        className="flex items-center gap-2 text-left text-[11px] font-semibold text-white hover:bg-white/5 px-2 py-1.5 rounded-lg transition-colors cursor-pointer"
+                                      >
+                                        🔗 Copy Shareable Link
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
                 </div>
               )}
 
               {/* No items fallback */}
-              {!loadingUpdates && updates.filter(u => activeUpdateFilter === "all" || u.category === activeUpdateFilter).length === 0 && (
-                <div className="text-center py-16 bg-[var(--surface)] border border-[var(--border)] rounded-2xl">
+              {!loadingUpdates && updates.filter(u => {
+                const matchesCategory = activeUpdateFilter === "all" || u.category === activeUpdateFilter;
+                const matchesSearch = blogSearchQuery.trim() === "" || 
+                  u.title.toLowerCase().includes(blogSearchQuery.toLowerCase()) ||
+                  u.summary.toLowerCase().includes(blogSearchQuery.toLowerCase()) ||
+                  u.content.toLowerCase().includes(blogSearchQuery.toLowerCase());
+                return matchesCategory && matchesSearch;
+              }).length === 0 && (
+                <div className="text-center py-16 bg-[#0f1520] border border-[#1e2d45] rounded-3xl">
                   <div className="text-4xl mb-3">📰</div>
-                  <h3 className="font-extrabold text-sm text-[var(--text)]">No updates found in this category</h3>
+                  <h3 className="font-extrabold text-sm text-white">No updates found in this category</h3>
                   <p className="text-xs text-[#8b949e] mt-1">Please try refreshing the feed or selecting another filter tab.</p>
                 </div>
               )}
@@ -3666,11 +3396,9 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
                   const renderTextWithInlineStyles = (raw: string) => {
                     if (!raw) return "";
-                    // Support bold segments split by ** or __
                     const parts = raw.split(/\*\*|__/);
                     return parts.map((part, i) => {
                       const isBold = i % 2 !== 0;
-                      // Support italic segments split by * or _
                       const subParts = part.split(/\*|_/);
                       const formattedSubparts = subParts.map((sub, j) => {
                         const isItalic = j % 2 !== 0;
@@ -3692,7 +3420,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   };
 
                   return (
-                    <div className="flex flex-col gap-3 font-sans text-xs md:text-sm text-[#ccd6f6] leading-relaxed">
+                    <div className="flex flex-col gap-4 font-sans text-xs md:text-sm text-[#ccd6f6] leading-relaxed">
                       {lines.map((line, idx) => {
                         const trimmed = line.trim();
                         if (!trimmed) {
@@ -3720,7 +3448,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                           return (
                             <h4 
                               key={idx} 
-                              className="text-xs md:text-[13px] font-extrabold text-indigo-300 mt-5 mb-1.5 border-l-2 border-indigo-500 pl-3 leading-tight uppercase tracking-wide flex items-center gap-2"
+                              className="text-xs md:text-[14px] font-extrabold text-indigo-300 mt-5 mb-1.5 border-l-2 border-indigo-500 pl-3 leading-tight uppercase tracking-wide flex items-center gap-2"
                             >
                               <span className="text-sm">{emoji}</span>
                               <span>{renderTextWithInlineStyles(text)}</span>
@@ -3766,7 +3494,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 };
 
                 return (
-                  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                  <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <motion.div 
                       initial={{ opacity: 0, scale: 0.95, y: 16 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -3806,7 +3534,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
                       {/* Modal Content Scroll viewport */}
                       <div className="p-6 md:p-8 overflow-y-auto flex-1 font-sans">
-                        <h2 className="text-lg md:text-xl font-black text-white mb-4 leading-tight">
+                        <h2 className="text-xl md:text-2xl font-extrabold text-white mb-4 leading-tight">
                           {selectedUpdate.title}
                         </h2>
                         
@@ -3815,24 +3543,38 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                           {renderFormattedUpdateContent(selectedUpdate.content)}
                         </div>
 
-                        {/* Government Notice PDF link banner if provided */}
-                        {selectedUpdate.pdfUrl && (
-                          <div className="mt-6 p-4 bg-rose-950/20 border border-rose-900/30 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                              <span className="text-2xl text-rose-500">📄</span>
-                              <div className="text-center sm:text-left">
-                                <h4 className="text-xs font-bold text-rose-300">Official Government Notification / Notice</h4>
-                                <p className="text-[#8b949e] text-[10px] mt-0.5">Original announcement attachment</p>
-                              </div>
+                        {/* Government Notice Links if provided */}
+                        {(selectedUpdate.pdfUrl || selectedUpdate.officialLink) && (
+                          <div className="mt-6 p-4 bg-indigo-950/20 border border-indigo-500/20 rounded-2xl flex flex-col gap-3">
+                            <h4 className="text-xs font-extrabold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                              <ExternalLink className="w-3.5 h-3.5 text-indigo-400" /> Reference Official Resources
+                            </h4>
+                            <p className="text-xs text-[#8b949e] leading-relaxed">
+                              This post is verified against authoritative board circulars. You can reference the original notices below:
+                            </p>
+                            
+                            <div className="flex flex-col sm:flex-row gap-2 mt-1">
+                              {selectedUpdate.pdfUrl && (
+                                <a 
+                                  href={selectedUpdate.pdfUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="flex-1 px-4 py-2.5 bg-rose-600/10 hover:bg-rose-600 border border-rose-500/20 text-rose-300 hover:text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer text-center"
+                                >
+                                  📄 Download Notice PDF
+                                </a>
+                              )}
+                              {selectedUpdate.officialLink && (
+                                <a 
+                                  href={selectedUpdate.officialLink} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer text-center"
+                                >
+                                  🔗 Go to Official Portal
+                                </a>
+                              )}
                             </div>
-                            <a 
-                              href={selectedUpdate.pdfUrl} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="w-full sm:w-auto px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 shrink-0"
-                            >
-                              Download Notice PDF
-                            </a>
                           </div>
                         )}
 
@@ -3868,21 +3610,36 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       </div>
 
                       {/* Modal Actions Footer */}
-                      <div className="p-4 bg-[#080d17] border-t border-[#1e2d45] flex items-center justify-between gap-4 shrink-0">
-                        <button 
-                          onClick={() => {
-                            navigator.clipboard.writeText(`Check out this High-Yield B.Sc Nursing Note: ${selectedUpdate.title} - ${selectedUpdate.summary}`);
-                            triggerToast("Study link copied to clipboard! 📋", "ok");
-                          }}
-                          className="px-4 py-2 border border-[#1e2d45] hover:bg-white/5 rounded-xl text-xs font-bold text-[#8492a6] hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
-                        >
-                          <span>🔗</span> Copy study link
-                        </button>
+                      <div className="p-4 bg-[#080d17] border-t border-[#1e2d45] flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+                        {/* WhatsApp Share option directly in footer */}
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                          <button 
+                            onClick={() => {
+                              const shareText = `*🔥 NCBT Nursing Exam Alert: ${selectedUpdate.title}*\n\n${selectedUpdate.summary}\n\n👉 Official portal: ${selectedUpdate.officialLink || "https://ncbt-exams.in"}\n\n📖 Read full article & start CBT tests: ${window.location.origin}/updates?id=${selectedUpdate.id}`;
+                              const wpUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+                              window.open(wpUrl, "_blank");
+                            }}
+                            className="flex-1 sm:flex-initial px-3.5 py-2 bg-emerald-500/10 hover:bg-emerald-600 border border-emerald-500/20 text-emerald-400 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                          >
+                            <span>💚</span> WhatsApp Share
+                          </button>
+
+                          <button 
+                            onClick={() => {
+                              navigator.clipboard.writeText(`${selectedUpdate.title} - ${selectedUpdate.summary}\n\nRead more details & attempt mock tests at: ${window.location.origin}/updates?id=${selectedUpdate.id}`);
+                              triggerToast("Study link copied to clipboard! 📋", "ok");
+                            }}
+                            className="flex-1 sm:flex-initial px-3.5 py-2 border border-[#1e2d45] hover:bg-white/5 rounded-xl text-xs font-bold text-[#8492a6] hover:text-white transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                          >
+                            <Link className="w-3.5 h-3.5" /> Copy link
+                          </button>
+                        </div>
+
                         <button 
                           onClick={() => closeUpdate()}
-                          className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-black text-white shadow-md active:scale-95 transition-all cursor-pointer"
+                          className="w-full sm:w-auto px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-black text-white shadow-md active:scale-95 transition-all cursor-pointer"
                         >
-                          Acknowledge & Close
+                          Close Article
                         </button>
                       </div>
 

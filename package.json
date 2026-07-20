@@ -1,7 +1,8 @@
 {
-  "name": "react-example",
+  "name": "ncbt",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "NCBT – India's Nursing CBT Exam Preparation Platform with full-featured high-yield blog and mock series",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
