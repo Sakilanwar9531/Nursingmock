@@ -18,9 +18,7 @@ The All India Institute of Medical Sciences (AIIMS, New Delhi) has formally rele
 
 ⚠️ *Pro Tip: Ensure your nursing council certificate is active and not pending renewal to avoid instant document rejection under verification stage!*`,
     image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?q=80&w=800",
-    readTime: "4 min read",
-    pdfUrl: "https://www.aiimsexams.ac.in/pdf/NORCET_8_Seat_Allocation_Tentative.pdf",
-    officialLink: "https://www.aiimsexams.ac.in"
+    readTime: "4 min read"
   },
   {
     id: "update-notes-abg",
@@ -68,9 +66,7 @@ A fresh notification circular clarifies the distribution of CBT screening marks.
 
 🔥 *Prep Recommendation: Take our daily subject-wise tests on Medical-Surgical and Critical Care. Practice the ABG calculator and pharmacology tests to secure maximum CBT accuracy!*`,
     image: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=800",
-    readTime: "3 min read",
-    pdfUrl: "https://www.esic.gov.in/attachments/recruitmentfile/esic_staff_nurse_syllabus_2026.pdf",
-    officialLink: "https://www.esic.gov.in/recruitment"
+    readTime: "3 min read"
   },
   {
     id: "update-notes-preload",
@@ -136,8 +132,6 @@ Zonal railway divisions have announced essential preparations for central staff 
 
 👉 *Action Plan: Begin resolving Previous Year Questions (PYQs) in our dedicated past papers catalog. Ensure special focus on demographic equations and maternal guidelines.*`,
     image: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?q=80&w=800",
-    readTime: "3 min read",
-    pdfUrl: "https://www.rrcb.gov.in/pdf/RRB_CEN_04_2026_Paramedical_Nursing.pdf",
-    officialLink: "https://www.rrcb.gov.in"
+    readTime: "3 min read"
   }
 ];

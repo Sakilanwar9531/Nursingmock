@@ -67,5 +67,4 @@ export interface NursingUpdate {
   image: string;
   readTime: string;
   pdfUrl?: string;
-  officialLink?: string;
 }

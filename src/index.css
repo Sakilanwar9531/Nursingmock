@@ -1207,12 +1207,6 @@ nav {
   background: var(--accent-dim);
 }
 
-.dot.review {
-  border-color: var(--purple);
-  color: var(--purple);
-  background: var(--purple-dim);
-}
-
 .dot.cur {
   border-color: var(--accent);
   color: var(--accent);
