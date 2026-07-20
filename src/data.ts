@@ -210,7 +210,158 @@ export const SUBJECTS: Subject[] = [
  { id: 'fundamentals', icon: '📚', name: 'Fundamentals of Nursing', tests: [
   { id: 'fun-vitals', icon: '🌡️', title: 'Vital Signs & Assessment', desc: 'Temperature, pulse, respiration, BP — measurement, normal values.', questions: 0, mins: 0, ready: false, data: [] },
   { id: 'fun-infection', icon: '🦠', title: 'Infection Control', desc: 'Asepsis, sterilization, disinfection, PPE, standard precautions.', questions: 0, mins: 0, ready: false, data: [] },
-  { id: 'fun-procedures', icon: '🩺', title: 'Nursing Procedures', desc: 'IV therapy, wound care, catheterization, NG tube, oxygen therapy.', questions: 0, mins: 0, ready: false, data: [] }
+  { id: 'fun-procedures', icon: '🩺', title: 'Nursing Procedures', desc: 'IV therapy, wound care, catheterization, NG tube, oxygen therapy.', questions: 0, mins: 0, ready: false, data: [] },
+   {
+     id: 'norcet-7-2024',
+     icon: '📋',
+     title: 'AIIMS NORCET 7 Prelims 2024',
+     desc: 'Official memory-based high-yield question paper from the AIIMS NORCET 7 Prelims exam held in 2024.',
+     questions: 20,
+     mins: 20,
+     ready: true,
+     data: [
+       {
+         q: "A patient with kidney failure has been found to have 4+ protein in their urine. The nurse recognizes this finding as indicating:",
+         opts: ["Mild proteinuria", "Severe proteinuria", "Nephrotic syndrome", "Chronic kidney disease"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Nephrotic syndrome is characterized by heavy proteinuria (typically 3+ or 4+ on a dipstick, or >3.5 g/day), hypoalbuminemia, hyperlipidemia, and generalized edema."
+       },
+       {
+         q: "Which of the following is a true statement regarding breast milk?",
+         opts: ["It is not nutritionally adequate for the first 6 months.", "It can be replaced by formula at any time.", "It increases the risk of gastrointestinal infections.", "It contains all the essential nutrients for the infant's first 6 months."],
+         ans: 3,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Breast milk is the gold standard for infant nutrition. It contains all essential nutrients, vitamins, and maternal antibodies (like IgA) required for healthy growth during the first 6 months of life."
+       },
+       {
+         q: "Based on the anatomical landmarks for ECG electrode placement, where should the V1 lead be positioned?",
+         opts: ["4th intercostal space, right sternal edge", "5th intercostal space, mid-clavicular line", "Mid-axillary line in a straight line with V4 and V5", "4th intercostal space, left sternal edge"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "The V1 chest lead is placed in the fourth intercostal space at the right sternal border (sternal edge). V2 is placed at the 4th intercostal space left sternal border."
+       },
+       {
+         q: "Which of the following hematological conditions is most likely associated with macrocytic/macroblastic red blood cells (RBCs)?",
+         opts: ["Iron deficiency anemia", "Pernicious anemia", "Megaloblastic anemia", "Sickle cell anemia"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Megaloblastic anemia is characterized by abnormally large, immature red blood cells (macroblastic/macrocytic RBCs) in the bone marrow, primarily caused by Vitamin B12 (cobalamin) or Folate (Vitamin B9) deficiency."
+       },
+       {
+         q: "A nurse is caring for a patient with Chronic Obstructive Pulmonary Disease (COPD) who is utilizing a CPAP machine. The nurse understands that the primary function of CPAP in this clinical scenario is to:",
+         opts: ["Deliver positive pressure to keep the airways open", "Treat acute hypovolemic shock", "Provide pure supplemental oxygen during sleep", "Prevent pneumonia in stable COPD patients"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Continuous Positive Airway Pressure (CPAP) delivers a constant level of positive airway pressure throughout the respiratory cycle, keeping alveoli and upper airways open and reducing the work of breathing."
+       },
+       {
+         q: "If a patient's tracheostomy tube becomes accidentally dislodged in the immediate post-operative period, what is the nurse's priority action?",
+         opts: ["Immediately suction the stoma line", "Reinsert the dislodged tube and secure it tightly", "Call for emergency assistance and prepare for reintubation", "Apply a sterile dressing directly over the wound"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Accidental dislodgement of a fresh tracheostomy tube is an airway emergency. The nurse must immediately call for help (and anesthesia/ENT) and prepare for reintubation or bag-valve-mask ventilation."
+       },
+       {
+         q: "During rapid sequence endotracheal intubation, a nurse is instructed to apply downward pressure on the cricoid cartilage. This clinical technique is known as:",
+         opts: ["Sellick maneuver", "Valsalva maneuver", "Trendelenburg position", "Heimlich maneuver"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "The Sellick maneuver (cricoid pressure) involves applying downward pressure on the cricoid cartilage to temporarily occlude the esophagus, thereby preventing the regurgitation and aspiration of gastric contents."
+       },
+       {
+         q: "Which of the following vaccines is typically administered to an infant during the standard 6-week immunization visit?",
+         opts: ["Hepatitis B booster alone", "Rotavirus vaccine alone", "MMR vaccine", "DTaP (Diphtheria, Tetanus, Pertussis) combination"],
+         ans: 3,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "At 6 weeks of age, infants receive their first dose of DTaP or Pentavalent (DPT + HepB + Hib) vaccine, oral polio vaccine (OPV/IPV), rotavirus vaccine, and pneumococcal conjugate vaccine (PCV)."
+       },
+       {
+         q: "A nurse is administering high-flow oxygen via a non-rebreather mask, but notices that the reservoir bag is not inflating. What is the most appropriate next action?",
+         opts: ["Check for physical kinks along the oxygen tubing", "Increase the oxygen flow rate on the flowmeter", "Switch the oxygen delivery device to a nasal cannula", "Remove the mask and assess the patient's respiratory rate"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "The flow rate for a non-rebreather mask must be kept at a minimum of 10 to 15 liters per minute to keep the reservoir bag at least one-third to one-half full. If it is deflated, increasing the oxygen flow rate is the immediate action."
+       },
+       {
+         q: "A patient taking monoamine oxidase inhibitors (MAOIs) is advised to strictly avoid consuming aged cheese. This restriction is necessary to prevent a life-threatening reaction caused by:",
+         opts: ["Caffeine toxicity", "Tyramine-induced hypertensive crisis", "Serotonin syndrome", "Acetylcholine accumulation"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Aged cheeses contain high amounts of Tyramine. MAOIs block the breakdown of tyramine, leading to severe vasoconstriction and a life-threatening hypertensive crisis."
+       },
+       {
+         q: "A postpartum client in the OPD requests an effective contraceptive method that would also help manage her symptoms of hirsutism. Which option is most appropriate?",
+         opts: ["Depo-Provera injection", "Combined Oral Contraceptive Pill (COCP)", "Male condom barrier", "Intrauterine Device (IUD)"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Combined Oral Contraceptive Pills (COCPs) containing estrogen and progestin suppress ovarian androgen production and increase sex hormone-binding globulin (SHBG), thereby reducing free circulating testosterone."
+       },
+       {
+         q: "Under the POSHAN Abhiyaan initiative in India, which month is celebrated annually as Rashtriya Poshan Maah (National Nutrition Month)?",
+         opts: ["November", "January", "February", "September"],
+         ans: 3,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Rashtriya Poshan Maah is celebrated every year in September across India to raise awareness about prenatal, maternal, and infant nutrition."
+       },
+       {
+         q: "Which of the following is a widely used non-hormonal, non-steroidal once-a-week oral contraceptive pill available in India's public health program?",
+         opts: ["Combined Oral Contraceptive (COC)", "Progestin-Only Pill (POP)", "Chhaya & Saheli (Ormeloxifene)", "Levonorgestrel Emergency Contraceptive Pill"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Chhaya (Saheli) contains Ormeloxifene, a selective estrogen receptor modulator (SERM). It is highly effective, completely non-hormonal, and non-steroidal once-a-week oral contraceptive pill."
+       },
+       {
+         q: "When a central venous catheter (CVC) is not actively being used for infusions, how frequently should the catheter line be flushed to maintain patency and prevent thrombus formation?",
+         opts: ["Every 12 hours", "Every 24 hours", "Every 36 hours", "Every 48 hours"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "To ensure patency and prevent fibrin or blood clot formation inside an unused CVC line, standard nursing protocols recommend flushing the line with normal saline or heparinized saline every 24 hours."
+       },
+       {
+         q: "Which of the following surgical techniques for tubal ligation involves tying a loop of the fallopian tube, cutting the loop, and allowing the ends to separate (depicted as the Pomeroy method in family planning)?",
+         opts: ["Vasectomy", "Pomeroy method of sterilization", "Laparoscopic banding", "Tubal ligation using Filshie clips"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "The Pomeroy method is a popular female sterilization technique. It involves looping a segment of the fallopian tube, ligating the base of the loop with absorbable suture, and resecting the loop."
+       },
+       {
+         q: "A nurse is monitoring a patient diagnosed with severe hyperkalemia. The nurse should closely assess for which life-threatening complication?",
+         opts: ["Cardiac dysrhythmias and tall, tented T waves", "Severe systemic hypertension", "Marked decrease in daily urine output", "Acute kidney injury with severe flank pain"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Hyperkalemia affects cardiac electrical conduction. The classic early ECG changes are tall, peaked/tented T waves, which can progress to lethal ventricular fibrillation or asystole."
+       },
+       {
+         q: "The nurse reviews a patient's arterial blood gas (ABG) panel: pH is 7.30, PaCO2 is 50 mmHg, and HCO3 is 24 mEq/L. The nurse interprets this as:",
+         opts: ["Uncompensated Metabolic Acidosis", "Uncompensated Respiratory Acidosis", "Fully Compensated Respiratory Alkalosis", "Partial Metabolic Alkalosis"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "A pH of 7.30 is acidotic (<7.35). The PaCO2 is elevated (>45 mmHg), matching the respiratory acidosis, while HCO3 is normal, meaning it is uncompensated respiratory acidosis."
+       },
+       {
+         q: "Which of the following vaccines is recommended to be administered to a newborn immediately after birth as a birth dose?",
+         opts: ["Hepatitis B vaccine", "MMR vaccine", "Varicella vaccine", "Inactivated Influenza vaccine"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Immediately after birth, newborns should receive the Hepatitis B birth dose, Oral Polio Vaccine (OPV-0), and BCG vaccine to provide early immunity."
+       },
+       {
+         q: "Match the following maneuvers with their respective clinical indications:\n(A) McRoberts Maneuver — (III) Shoulder Dystocia\n(B) Heimlich Maneuver — (V) Relief of Choking\n(C) Leopold's Maneuver — (II) Assess Fetal Presentation\n(D) Jaw-Thrust Maneuver — (I) Maintain Airway in Spinal Injury\n(E) Valsalva Maneuver — (IV) Increase Intrathoracic Pressure",
+         opts: ["A-III, B-V, C-IV, D-I, E-II", "A-II, B-IV, C-III, D-V, E-I", "A-III, B-V, C-II, D-I, E-IV", "A-III, B-V, C-I, D-II, E-IV"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Matches: McRoberts -> Shoulder Dystocia; Heimlich -> Choking relief; Leopold's -> Fetal presentation; Jaw-thrust -> Airway in spinal injury; Valsalva -> Intrathoracic pressure increase."
+       },
+       {
+         q: "A nurse is preparing to administer a unit of platelets to a thrombocytopenic patient. Over what period should this blood product be infused?",
+         opts: ["15 to 30 minutes", "1 to 2 hours", "30 minutes to 1 hour", "3 to 4 hours"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Platelets should be administered rapidly to prevent aggregation and maintain platelet viability. Standard guidelines state that each unit of platelets should be infused over 15 to 30 minutes."
+       }
+     ]
+   }
  ]},
  { id: 'pharmacology', icon: '💊', name: 'Pharmacology', tests: [
   { id: 'pharma-basics', icon: '🧪', title: 'Drug Basics & Pharmacokinetics', desc: 'ADME, routes of administration, dose-response, drug interactions.', questions: 0, mins: 0, ready: false, data: [] },
@@ -220,6 +371,7 @@ export const SUBJECTS: Subject[] = [
 ];
 
 export const PYQ_DATA: PyqCard[] = [
+ { exam: 'AIIMS NORCET 7', tag: 'aiims', year: '2024', count: 20, color: 'var(--accent)' },
  { exam: 'AIIMS Nursing Officer', tag: 'aiims', year: '2019', count: 18, color: 'var(--accent)' },
  { exam: 'AIIMS Nursing Officer', tag: 'aiims', year: '2018', count: 24, color: 'var(--accent)' },
  { exam: 'RRB Staff Nurse', tag: 'rrb', year: '2019', count: 22, color: 'var(--green)' },

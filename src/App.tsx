@@ -14,6 +14,8 @@ import {
   Check, 
   RotateCcw, 
   Share2, 
+  ExternalLink,
+  Link,
   Flame, 
   HelpCircle,
   Activity,
@@ -35,6 +37,7 @@ import {
 } from "lucide-react";
 import { SUBJECTS, PYQ_DATA } from "./data";
 import { STATIC_NURSING_UPDATES } from "./updatesData";
+import { BLOG_TRANSLATIONS } from "./blogTranslations";
 import { Subject, Test, Question, PyqCard, User as UserType, Attempt, StreakData, NursingUpdate } from "./types";
 import { 
   getSupabaseClient, 
@@ -62,37 +65,7 @@ import {
 const getDetailedExplain = (q: Question): string => {
   let base = q.explain || "";
   if (!base.endsWith(".") && base.length > 0) base += ".";
-  
-  const textLower = (q.q + " " + base).toLowerCase();
-  
-  let highYield = "";
-  if (textLower.includes("mitosis") || textLower.includes("cell division")) {
-    highYield = "Remember the PMAT phase sequence: Prophase (chromatin condenses), Metaphase (chromosomes align at equatorial plate), Anaphase (sister chromatids separate), and Telophase (nuclear envelop reforms). Mitosis produces two identical diploid cells (2n).";
-  } else if (textLower.includes("meninges") || textLower.includes("meningitis")) {
-    highYield = "The meninges are the multi-layered protective coverings of the brain and spinal cord. Subarachnoid space lies between arachnoid mater and pia mater, containing Cerebrospinal Fluid (CSF). Infection represents meningitis, marked by Kernig's and Brudzinski's clinical signs.";
-  } else if (textLower.includes("csf") || textLower.includes("cerebrospinal")) {
-    highYield = "CSF normal volume is 150ml, with continuous renewal producing 500ml daily. Normal hydrostatic pressure is 5-15 mmHg (70-180 mmH2O) in recumbent position. High CSF glucose is normal (~60% of blood glucose); low glucose points to bacterial infection.";
-  } else if (textLower.includes("mitochondria") || textLower.includes("power house")) {
-    highYield = "Mitochondria contain their own circular DNA (inherited maternally) and are the main sites of the Krebs cycle and Oxidative Phosphorylation. High mitochondrial density is found in high-metabolic cells like cardiac muscle and hepatocytes.";
-  } else if (textLower.includes("cranial nerve") || textLower.includes("facial") || textLower.includes("vagus")) {
-    highYield = "There are 12 pairs of cranial nerves. CN VII (Facial) controls facial expressions and anterior 2/3 taste; CN X (Vagus) is the longest autonomic parasympathetic fiber innervating thoracic/abdominal viscera; CN III, IV, VI govern extraocular eye movements.";
-  } else if (textLower.includes("sympathetic") || textLower.includes("parasympathetic") || textLower.includes("fight or flight")) {
-    highYield = "The automatic nervous system (ANS) splits into Sympathetic (T1-L2, 'fight or flight') and Parasympathetic (Craniosacral, 'rest & digest'). Sympathetic stimulation causes pupil dilation (mydriasis), tachycardia, and bronchial relaxation, while slowing GI motility.";
-  } else if (textLower.includes("bone") || textLower.includes("skeleton") || textLower.includes("muscle") || textLower.includes("sarcomere")) {
-    highYield = "Skeletal muscle fibers are composed of sarcomeres (z-line to z-line) containing actin (thin) and myosin (thick) filaments. Calcium ions release from the sarcoplasmic reticulum, binding to troponin-C to trigger muscle contraction.";
-  } else if (textLower.includes("sle") || textLower.includes("autoimmune")) {
-    highYield = "Systemic Lupus Erythematosus (SLE) is a Type III Hypersensitivity autoimmune disorder. Key diagnostic markers include anti-dsDNA and Anti-Smith (Sm) antibodies. Butterfly (malar) rash on face and photosensitivity are key skin-related identifiers.";
-  } else if (textLower.includes("protein") || textLower.includes("peptide") || textLower.includes("dna")) {
-    highYield = "Transcription occurs in the nucleus converting DNA to mRNA, while translation occurs in the cytoplasm on ribosomes turning mRNA into polypeptide protein structures. Peptide bonds couple amino acid sequences.";
-  } else if (textLower.includes("brain") || textLower.includes("cerebellum") || textLower.includes("cortex") || textLower.includes("stem")) {
-    highYield = "The central nervous system features the cerebrum (largest part, intelligence & motor), cerebellum (balance & posture), and medulla oblongata (cardiac & respiratory center controls). Temporal lobe controls auditory and memory, parietal governs sensory processing.";
-  } else if (textLower.includes("cell") || textLower.includes("organelle") || textLower.includes("prokaryotic") || textLower.includes("eukaryotic")) {
-    highYield = "Eukaryotes excel with membrane-bound organelles (nucleus, endoplasmic reticulum, golgi network). Cell is defined as the structural and functional block of tissues. Cytoplasm houses all functional units.";
-  } else {
-    highYield = "Under pressure, recall clinical normal ranges, check respiratory/cardiac baselines, and review patient physiological feedback loops. Always prioritize nursing safety protocols and immediate patient symptoms.";
-  }
-  
-  return `${base} \n\n📍 clinical memory link: ${highYield}`;
+  return base;
 };
 
 // Safe confirm helper to handle sandboxed iframes where confirm() can throw an exception
@@ -421,45 +394,23 @@ const generateMockTests = (): Test[] => {
         initialSubjId = parts[2];
         initialTestId = parts[3];
         
-        const defaultSubjects = [...SUBJECTS];
-        if (!defaultSubjects.some(s => s.id === "mock_tests")) {
-          defaultSubjects.push({
+        let subjectsList: Subject[] = [];
+        const saved = typeof window !== "undefined" ? localStorage.getItem("np_subjects_custom_v1") : null;
+        if (saved) {
+          try {
+            subjectsList = JSON.parse(saved) || [];
+          } catch (e) {}
+        }
+        if (!subjectsList || subjectsList.length === 0) {
+          subjectsList = [...SUBJECTS];
+        }
+        if (!subjectsList.some(s => s.id === "mock_tests")) {
+          subjectsList.push({
             id: "mock_tests",
             icon: "🔥",
             name: "Mock Test Series",
             tests: generateMockTests()
           });
-        }
-
-        let subjectsList = defaultSubjects;
-        const saved = typeof window !== "undefined" ? localStorage.getItem("np_subjects_custom_v1") : null;
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            if (parsed && Array.isArray(parsed) && parsed.length > 0) {
-              subjectsList = defaultSubjects.map(defSubj => {
-                const foundParsed = parsed.find(p => p.id === defSubj.id);
-                if (foundParsed) {
-                  return {
-                    ...defSubj,
-                    ...foundParsed,
-                    tests: defSubj.tests.map(defTest => {
-                      const foundParsedTest = foundParsed.tests?.find((pt: any) => pt.id === defTest.id);
-                      if (foundParsedTest) {
-                        return {
-                          ...defTest,
-                          ...foundParsedTest,
-                          data: foundParsedTest.data && foundParsedTest.data.length > 0 ? foundParsedTest.data : defTest.data
-                        };
-                      }
-                      return defTest;
-                    })
-                  };
-                }
-                return defSubj;
-              });
-            }
-          } catch (e) {}
         }
 
         if (initialSubjId === "virtual") {
@@ -506,77 +457,532 @@ const generateMockTests = (): Test[] => {
     };
   };
 
-const getQuestionCategory = (qText: string, subjectId: string): string => {
-  const qLower = (qText || "").toLowerCase();
-  const sLower = (subjectId || "").toLowerCase();
-  
-  if (sLower === "anatomy" || qLower.includes("cell") || qLower.includes("tissue") || qLower.includes("bone") || qLower.includes("anatomy") || qLower.includes("physiology") || qLower.includes("organ") || qLower.includes("system")) {
-    return "Anatomy & Physiology";
+const CURATED_SPRINTS: Test[] = [
+  {
+    id: "sprint-curated-1",
+    icon: "⚡",
+    title: "Daily Speed Sprint 1: Medical-Surgical & Pharmacology",
+    desc: "A rapid high-yield sprint focusing on cardiac monitoring, critical infusions, and clinical drug calculations.",
+    questions: 10,
+    mins: 10,
+    ready: true,
+    data: [
+      {
+        q: "A patient with suspected acute myocardial infarction is admitted. Which of the following cardiac markers is most specific for myocardial injury and rises within 3-4 hours?",
+        opts: ["Myoglobin", "Troponin I", "Creatine Kinase (CK-MB)", "Lactate Dehydrogenase (LDH)"],
+        ans: 1,
+        source: "AIIMS NORCET 2021",
+        explain: "Troponin I is highly specific to cardiac muscle tissue. It rises within 3 to 4 hours after myocardial injury, and remains elevated for 10-14 days."
+      },
+      {
+        q: "When caring for a client with a continuous intravenous infusion of Heparin, which of the following laboratory values must be monitored closely to adjust the dosage?",
+        opts: ["Prothrombin Time (PT)", "International Normalized Ratio (INR)", "Activated Partial Thromboplastin Time (aPTT)", "Platelet Count only"],
+        ans: 2,
+        source: "RRB Staff Nurse 2019",
+        explain: "Activated Partial Thromboplastin Time (aPTT) is used to monitor the therapeutic effect of intravenous unfractionated Heparin. PT/INR is monitored for oral Warfarin."
+      },
+      {
+        q: "A nurse is administering Digoxin (Lanoxin) 0.25 mg orally to a patient with heart failure. Which of the following clinical observations requires the nurse to withhold the medication?",
+        opts: ["Blood pressure of 110/70 mmHg", "Respiratory rate of 16 breaths/min", "Apical pulse rate of 54 beats/min", "Serum potassium level of 4.5 mEq/L"],
+        ans: 2,
+        source: "ESIC Staff Nurse 2016",
+        explain: "Before administering Digoxin, the nurse must assess the apical pulse for 1 full minute. Digoxin is a negative chronotrope and must be withheld if the apical heart rate is below 60 beats/min in adults."
+      },
+      {
+        q: "Which of the following is the drug of choice for a pregnant client who is diagnosed with gestational hypertension and develops eclamptic seizures?",
+        opts: ["Sodium Nitroprusside", "Diazepam", "Magnesium Sulfate", "Phenytoin"],
+        ans: 2,
+        source: "AIIMS Raipur 2019",
+        explain: "Magnesium Sulfate is the Gold Standard drug of choice for the prevention and control of seizures in pre-eclampsia and eclampsia. The nurse must monitor deep tendon reflexes, respirations, and urine output."
+      },
+      {
+        q: "A client is scheduled for a lumbar puncture. In which of the following positions should the nurse place the patient during the procedure to ensure optimal widening of intervertebral spaces?",
+        opts: ["Prone with head turned to side", "Lateral recumbent with knees and neck flexed (C-shaped)", "Supine with hips elevated", "High Fowler's with legs extended"],
+        ans: 1,
+        source: "DSSSB PHN 2015",
+        explain: "A lateral recumbent position with knees drawn up to the abdomen and neck flexed towards chest (C-shaped/fetal position) opens up the dural sac and widens the spaces between the lumbar vertebrae."
+      },
+      {
+        q: "A patient is scheduled for major abdominal surgery. The nurse is checking the pre-operative checklist. Which is the highest priority nursing activity before administering pre-anesthetic medication?",
+        opts: [
+          "Ensure the client signed the surgical informed consent voluntarily",
+          "Shave the operative site thoroughly with a razor",
+          "Place the client in a high-fowler's position",
+          "Ensure the client's family is in the waiting room"
+        ],
+        ans: 0,
+        source: "AIIMS NORCET 2022",
+        explain: "Verifying that the client has signed the voluntary surgical informed consent is always a top priority before giving sedating pre-medicative drugs, ensuring legal validity and cognitive capacity."
+      },
+      {
+        q: "Which of the following is a key clinical manifestation indicating the patient has entered the acute compensation phase of Hypovolemic Shock?",
+        opts: [
+          "Bradycardia with increased stroke volume",
+          "Tachycardia, tachypnea, and skin pallor/coolness",
+          "Severe hypertension with bounding pulse",
+          "Polyuria and warm flushed extremities"
+        ],
+        ans: 1,
+        source: "AIIMS Patna 2020",
+        explain: "In hypovolemic shock, sympathetic stimulation leads to compensatory tachycardia, tachypnea, and peripheral vasoconstriction (cool, pale skin) to maintain organ perfusion."
+      },
+      {
+        q: "A patient is receiving blood transfusion and complains of severe chills, low back pain, and chest tightness. Which action should the nurse take FIRST?",
+        opts: [
+          "Slow down the rate of blood transfusion and notify the provider",
+          "Administer an antihistamine as prescribed immediately",
+          "Stop the transfusion immediately, disconnect tubing, and run normal saline at a KVO rate",
+          "Take vital signs and document the reaction in progress sheets"
+        ],
+        ans: 2,
+        source: "NORCET 2023",
+        explain: "At the first sign of a hemolytic transfusion reaction, the nurse MUST immediately stop the transfusion, disconnect the blood line, and run a fresh line of normal saline to maintain vein patency."
+      },
+      {
+        q: "While assessing a post-partum patient 4 hours following normal vaginal delivery, the nurse notes the uterine fundus is soft, boggy, and displaced to the right of the midline. What is the immediate nursing action?",
+        opts: [
+          "Notify the obstetrician of urgent uterine inversion",
+          "Assist the patient to empty their bladder or catheterize if necessary",
+          "Administer a rapid bolus of intravenous Oxytocin",
+          "Place the client immediately in Trendelenburg position"
+        ],
+        ans: 1,
+        source: "ESIC 2019",
+        explain: "A soft, boggy fundus displaced to the right of the midline indicates a distended bladder, which prevents uterine contraction. Assisting the patient to void will allow the uterus to contract properly."
+      },
+      {
+        q: "An unconscious patient is admitted to the emergency department with a Glasgow Coma Scale (GCS) score of 6. What is the priority nursing diagnosis / assessment?",
+        opts: [
+          "Impaired physical mobility related to head injury",
+          "Inability to maintain patent airway / require intubation support",
+          "Disturbed sleep pattern related to sensory deprivation",
+          "Risk for fluid volume excess related to IV fluid administration"
+        ],
+        ans: 1,
+        source: "AIIMS NORCET 2020",
+        explain: "A GCS score of 8 or less is a standard clinical indicator that the patient's protective airway reflexes are compromised, making maintaining a patent airway and intubation the absolute emergency priority ('GCS of 8, intubate')."
+      }
+    ]
+  },
+  {
+    id: "sprint-curated-2",
+    icon: "⚡",
+    title: "Daily Speed Sprint 2: Emergency Nursing & Fundamentals",
+    desc: "High-pressure sprint assessing triage protocols, wound management, CPR guidelines, and fluid resuscitation formulas.",
+    questions: 10,
+    mins: 10,
+    ready: true,
+    data: [
+      {
+        q: "According to the latest AHA guidelines for Adult CPR, what is the correct compression-to-ventilation ratio for a single rescuer?",
+        opts: ["15:2", "30:2", "15:1", "30:1"],
+        ans: 1,
+        source: "ESIC Staff Nurse 2021",
+        explain: "For adult CPR, the compression-to-ventilation ratio is 30:2 for one or two rescuers until an advanced airway is placed."
+      },
+      {
+        q: "A nurse is caring for a client with severe burns. Using the Parkland formula, the fluid requirement for the first 24 hours is calculated. How should this fluid be administered?",
+        opts: ["Equally over 24 hours", "1/2 in the first 8 hours, and 1/2 over the remaining 16 hours", "3/4 in the first 8 hours, and 1/4 in the remaining 16 hours", "1/3 in the first 8 hours, 1/3 in the second, and 1/3 in the third"],
+        ans: 1,
+        source: "AIIMS NORCET 2022",
+        explain: "Under the Parkland Formula, half of the total calculated 24-hour fluid volume (Lactated Ringer's) is given in the first 8 hours from the time of the burn injury, and the second half is given over the remaining 16 hours."
+      },
+      {
+        q: "What is the drug of choice to manage anaphylactic shock in an emergency setting?",
+        opts: ["Diphenhydramine IV", "Hydrocortisone IV", "Epinephrine (1:1000) IM", "Albuterol Nebulization"],
+        ans: 2,
+        source: "RRB Staff Nurse 2019",
+        explain: "Intramuscular Epinephrine (1:1000) administered in the vastus lateralis is the first-line treatment for anaphylaxis to counteract bronchospasm and systemic vasodilation."
+      },
+      {
+        q: "A client who has suffered a head injury has a widening pulse pressure, bradycardia, and irregular respirations. What do these clinical findings indicate?",
+        opts: ["Cushing's triad indicating increased intracranial pressure", "Beck's triad indicating cardiac tamponade", "Virchow's triad indicating deep vein thrombosis", "Horner's syndrome indicating sympathetic nerve damage"],
+        ans: 0,
+        source: "AIIMS Rishikesh 2018",
+        explain: "Cushing's Triad (widening pulse pressure/systolic hypertension, bradycardia, and irregular/Cheyne-Stokes respirations) is a late sign of increased intracranial pressure (ICP) indicating impending brain herniation."
+      },
+      {
+        q: "The nurse is preparing to suction a patient's tracheostomy tube. What is the maximum duration for each suction pass to prevent severe hypoxia?",
+        opts: ["5 seconds", "10 seconds", "20 seconds", "30 seconds"],
+        ans: 1,
+        source: "ESIC Staff Nurse 2016",
+        explain: "To prevent hypoxia and vagal nerve stimulation (which causes bradycardia), each suction pass should be limited to a maximum of 10 seconds, preceded by hyperoxygenation with 100% O2."
+      },
+      {
+        q: "Which of the following electrolyte imbalances is a client receiving massive blood transfusions at risk for due to the presence of Citrate preservative?",
+        opts: ["Hypercalcemia", "Hypocalcemia", "Hyperkalemia", "Hypokalemia"],
+        ans: 1,
+        source: "AIIMS NORCET 2023",
+        explain: "Citrate used as an anticoagulant in stored blood binds with ionized calcium in the recipient's body, which can lead to transient hypocalcemia (manifested by positive Trousseau's or Chvostek's signs)."
+      },
+      {
+        q: "An adult client is admitted with deep vein thrombosis (DVT) in the left calf. Which nursing intervention is CONTRAINDICATED?",
+        opts: ["Elevation of the affected leg", "Application of warm compress", "Massaging the calf to relieve spasm", "Monitoring of coagulation profiles"],
+        ans: 2,
+        source: "RRB 2015",
+        explain: "Massaging or rubbing the affected calf is strictly contraindicated in deep vein thrombosis because it can dislodge the clot, leading to a life-threatening pulmonary embolism."
+      },
+      {
+        q: "What is the primary action of Nitroglycerin when administered to a patient with acute angina pectoris?",
+        opts: ["Dilates coronary arteries and decreases systemic venous return (preload)", "Increases heart rate to boost cardiac output", "Suppresses automaticity of cardiac cells", "Promotes renal excretion of excess fluids"],
+        ans: 0,
+        source: "DSSSB 2019",
+        explain: "Nitroglycerin is a potent vasodilator. It acts primarily by dilating peripheral veins (reducing preload) and coronary arteries, thereby reducing myocardial oxygen demand and improving myocardial perfusion."
+      },
+      {
+        q: "Which type of shock is characterized by a high cardiac output with a very low systemic vascular resistance (warm shock)?",
+        opts: ["Hypovolemic shock", "Anaphylactic shock", "Neurogenic shock", "Early Septic shock"],
+        ans: 3,
+        source: "AIIMS NORCET 2021",
+        explain: "Early or hyperdynamic phase of septic shock is characterized by vasodilation, warm flushed skin, high cardiac output, and low systemic vascular resistance due to inflammatory mediators."
+      },
+      {
+        q: "During assessment of a client with tension pneumothorax, what hallmark clinical finding should the nurse expect?",
+        opts: ["Tracheal deviation toward the affected side", "Tracheal deviation toward the unaffected side", "Dull percussion note on the affected side", "Bilateral vesicular breath sounds"],
+        ans: 1,
+        source: "AIIMS NORCET 2020",
+        explain: "Tension pneumothorax causes high pressure in the pleural space, collapsing the affected lung and shifting the mediastinum, resulting in tracheal deviation toward the unaffected (opposite) side."
+      }
+    ]
+  },
+  {
+    id: "sprint-curated-3",
+    icon: "⚡",
+    title: "Daily Speed Sprint 3: Pediatric & Psychiatric Care",
+    desc: "Test your skills on developmental milestones, ADHD management, therapeutic communication, and major psychiatric crises.",
+    questions: 10,
+    mins: 10,
+    ready: true,
+    data: [
+      {
+        q: "A toddler is admitted to the pediatric ward with croup (laryngotracheobronchitis). Which clinical manifestation indicates the most immediate respiratory distress?",
+        opts: ["Barking cough", "Inspiratory stridor at rest", "Mild intercostal retractions during crying", "Lethargy and cyanosis"],
+        ans: 3,
+        source: "AIIMS NORCET 2022",
+        explain: "Lethargy and cyanosis are late, critical indicators of severe hypoxia and respiratory failure in children with croup, requiring emergency airway management."
+      },
+      {
+        q: "At what age does a normal infant usually begin to sit steadily without any physical support?",
+        opts: ["4 months", "6 months", "8 months", "10 months"],
+        ans: 2,
+        source: "ESIC 2019",
+        explain: "An infant typically sits with support at 6 months, and sits steadily without any support (independent sitting) by 8 months of age."
+      },
+      {
+        q: "What is the classic clinical triad of symptoms associated with congenital pyloric stenosis in infants?",
+        opts: [
+          "Currant-jelly stools, abdominal mass, colic",
+          "Projectile non-bilious vomiting, olive-shaped abdominal mass, visible peristalsis",
+          "Bilious vomiting, failure to pass meconium, abdominal distention",
+          "Diarrhea, fever, severe dehydration"
+        ],
+        ans: 1,
+        source: "AIIMS NORCET 2021",
+        explain: "Congenital hypertrophic pyloric stenosis is characterized by projectile, non-bilious vomiting after feeding, a palpable olive-shaped mass in the epigastrium, and visible left-to-right gastric peristaltic waves."
+      },
+      {
+        q: "A patient diagnosed with severe depression has been prescribed a Monoamine Oxidase Inhibitor (MAOI). Which food should the nurse instruct the patient to strictly avoid?",
+        opts: ["Fresh green leafy vegetables", "Aged cheese and red wine", "Whole grain breads", "Citrus fruits"],
+        ans: 1,
+        source: "RRB Staff Nurse 2019",
+        explain: "Aged foods (cheese, wine, cured meats) contain high amounts of Tyramine. Taking MAOIs blocks tyramine metabolism, which can precipitate a life-threatening hypertensive crisis."
+      },
+      {
+        q: "A client who is starting Lithium carbonate therapy for Bipolar Disorder should be advised to maintain adequate intake of which of the following?",
+        opts: ["Potassium", "Sodium and water", "Calcium and vitamin D", "Iron and vitamin C"],
+        ans: 1,
+        source: "DSSSB PHN 2015",
+        explain: "Lithium is a salt. Sodium depletion causes the kidneys to retain Lithium, leading to toxic levels. Patients must maintain standard dietary sodium and fluid intake (2-3 L/day)."
+      },
+      {
+        q: "What is the therapeutic serum Lithium level range for a client in the acute manic phase of Bipolar Disorder?",
+        opts: ["0.2 - 0.6 mEq/L", "0.8 - 1.2 mEq/L", "1.5 - 2.0 mEq/L", "2.5 - 3.0 mEq/L"],
+        ans: 1,
+        source: "AIIMS NORCET 2020",
+        explain: "The therapeutic range for Lithium is 0.8 to 1.2 mEq/L for acute mania and 0.6 to 1.2 mEq/L for maintenance. Levels above 1.5 mEq/L indicate lithium toxicity."
+      },
+      {
+        q: "A child with Tetralogy of Fallot (TOF) suddenly develops a hypercyanotic spell ('tet spell'). What is the immediate first-line nursing action?",
+        opts: [
+          "Administer a rapid dose of intravenous Morphine",
+          "Place the child in the knee-chest position",
+          "Start high-flow oxygen via simple face mask",
+          "Prepare for emergency endotracheal intubation"
+        ],
+        ans: 1,
+        source: "AIIMS NORCET 2023",
+        explain: "The knee-chest position increases systemic vascular resistance, reducing right-to-left shunting of blood in the heart and improving pulmonary blood flow immediately during a Tet spell."
+      },
+      {
+        q: "Which defense mechanism is a patient with alcohol addiction using when they state: 'I only drink because my job is highly stressful'?",
+        opts: ["Projection", "Rationalization", "Denial", "Displacement"],
+        ans: 1,
+        source: "ESIC 2016",
+        explain: "Rationalization involves justifying logical but unacceptable behavior or feelings by formulating highly logical, socially acceptable explanations."
+      },
+      {
+        q: "An adolescent with anorexia nervosa is admitted. What is the highest priority nursing goal during the initial phase of hospitalization?",
+        opts: [
+          "Explore the patient's family dynamics and peer relationships",
+          "Restore fluid, electrolyte balance and nutritional status",
+          "Encourage the patient to express feelings of low self-esteem",
+          "Establish a high-intensity physical exercise program"
+        ],
+        ans: 1,
+        source: "NORCET 2021",
+        explain: "The priority in severe anorexia nervosa is physiological stabilization (restoring fluid, electrolyte, and nutritional balance) to prevent life-threatening cardiovascular failure or refeeding syndrome."
+      },
+      {
+        q: "The nurse is preparing a discharge plan for a child with Attention Deficit Hyperactivity Disorder (ADHD) prescribed Methylphenidate (Ritalin). When should this drug be administered?",
+        opts: [
+          "At bedtime to prevent daytime drowsiness",
+          "With dinner or late evening to maximize academic retention",
+          "In the morning, before breakfast or lunch",
+          "Only on weekends or school breaks"
+        ],
+        ans: 2,
+        source: "AIIMS Rishikesh 2019",
+        explain: "Ritalin is a central nervous system stimulant. It should be given in the morning before school/activities to boost focus, and never late in the evening to prevent severe insomnia."
+      }
+    ]
+  },
+  {
+    id: "sprint-curated-4",
+    icon: "⚡",
+    title: "Daily Speed Sprint 4: Obstetrics & Gynaecology",
+    desc: "A focused assessment on prenatal screens, high-risk pregnancies, labor progressions, and postpartum complications.",
+    questions: 10,
+    mins: 10,
+    ready: true,
+    data: [
+      {
+        q: "According to Naegele's rule, what is the estimated date of confinement (EDD) for a woman whose last menstrual period (LMP) began on October 15, 2025?",
+        opts: ["July 22, 2026", "July 15, 2026", "July 8, 2026", "August 22, 2026"],
+        ans: 0,
+        source: "AIIMS NORCET 2021",
+        explain: "Naegele's rule is calculated by adding 7 days to the first day of the last menstrual period, subtracting 3 months, and adding 1 year. (Oct 15 + 7 days = Oct 22; subtract 3 months = July 22; add 1 year = 2026)."
+      },
+      {
+        q: "During assessment of a pregnant client in her third trimester, the nurse observes the patient feels faint, dizzy, and clammy when lying supine. What is the direct cause?",
+        opts: [
+          "Compression of the inferior vena cava by the gravid uterus",
+          "Hormonal vasodilation of peripheral arteries by progesterone",
+          "Sudden drop in maternal blood glucose levels",
+          "Underlying pre-eclampsia causing cerebral edema"
+        ],
+        ans: 0,
+        source: "ESIC 2019",
+        explain: "Supine hypotensive syndrome is caused by compression of the inferior vena cava by the heavy pregnant uterus when the patient lies flat, reducing venous return and cardiac output. Placing her on her left side immediately resolves it."
+      },
+      {
+        q: "Which of the following clinical findings is the hallmark of Placenta Praevia in a client at 34 weeks of gestation?",
+        opts: [
+          "Severe abdominal pain with dark vaginal bleeding",
+          "Painless, bright red vaginal bleeding",
+          "Rigid, board-like abdomen on palpation",
+          "Sudden rupture of membranes with gush of clear fluid"
+        ],
+        ans: 1,
+        source: "AIIMS NORCET 2020",
+        explain: "Placenta previa is characterized by painless, bright red vaginal bleeding in the second or third trimester. Abruptio placentae is characterized by painful, dark bleeding with a rigid, board-like uterus."
+      },
+      {
+        q: "A nurse is assessing a newborn and notes the heart rate is 95 beats/min, respiratory effort is slow and irregular, there is some flexion of extremities, the baby grimaces in response to suction, and the body is pink with blue extremities. What is the APGAR score?",
+        opts: ["4", "5", "6", "7"],
+        ans: 1,
+        source: "RRB Staff Nurse 2019",
+        explain: "Heart rate under 100 = 1 pt. Irregular respiratory effort = 1 pt. Some flexion of extremities = 1 pt. Grimace (response to suction) = 1 pt. Acrocyanosis (pink body, blue extremities) = 1 pt. Total = 5 points."
+      },
+      {
+        q: "What is the recommended therapeutic drug of choice to prevent mother-to-child transmission (vertical transmission) of HIV during active labor?",
+        opts: ["Zidovudine (AZT)", "Efavirenz", "Tenofovir", "Atazanavir"],
+        ans: 0,
+        source: "ESIC 2016",
+        explain: "Intravenous Zidovudine (AZT) is the gold standard administered to the mother during active labor, followed by oral AZT syrup for the infant for 6 weeks, to minimize vertical HIV transmission risk."
+      },
+      {
+        q: "Which fetal heart rate monitor pattern is associated with uteroplacental insufficiency and represents a critical clinical alert?",
+        opts: ["Early decelerations", "Late decelerations", "Accelerations", "Moderate baseline variability"],
+        ans: 1,
+        source: "AIIMS NORCET 2022",
+        explain: "Late decelerations indicate uteroplacental insufficiency, which reduces fetal oxygenation during uterine contractions. Immediate nursing interventions include turning the client on her left side, administering O2, and stopping Oxytocin."
+      },
+      {
+        q: "A client at 36 weeks gestation is diagnosed with severe pre-eclampsia. Which of the following is an early indicator of Magnesium Sulfate toxicity?",
+        opts: [
+          "Hyperactive deep tendon reflexes (4+)",
+          "Loss of patellar deep tendon reflexes and bradypnea (<12 bpm)",
+          "Sudden increase in urine output (>60 mL/hr)",
+          "Rapid-onset generalized tonic-clonic seizures"
+        ],
+        ans: 1,
+        source: "AIIMS Raipur 2019",
+        explain: "Loss of deep tendon reflexes (DTRs), respiratory rate less than 12 breaths per minute, oliguria (<30 mL/hr), and cardiac arrest are primary indicators of Magnesium toxicity."
+      },
+      {
+        q: "What is the antidote for Magnesium Sulfate toxicity that the nurse must keep readily available at the bedside?",
+        opts: ["Protamine Sulfate", "Naloxone", "Calcium Gluconate", "Flumazenil"],
+        ans: 2,
+        source: "ESIC 2016",
+        explain: "Calcium Gluconate (10% solution given intravenously over 10 minutes) is the specific physiological antidote for Magnesium toxicity."
+      },
+      {
+        q: "Which hormone is primarily responsible for milk ejection ('let-down' reflex) from the mammary glands during breastfeeding?",
+        opts: ["Prolactin", "Estrogen", "Oxytocin", "Progesterone"],
+        ans: 2,
+        source: "DSSSB 2019",
+        explain: "Prolactin is responsible for milk production. Oxytocin is synthesized in the hypothalamus, released by the posterior pituitary, and triggers milk ejection ('let-down' reflex)."
+      },
+      {
+        q: "A pregnant client at 38 weeks gestation has a sudden rupture of membranes. The nurse immediately performs a sterile vaginal exam and notes a loop of the umbilical cord protruding in the vagina. What is the immediate priority action?",
+        opts: [
+          "Push the cord back into the uterus using a sterile glove",
+          "Apply continuous upward pressure on the presenting fetal part to relieve cord compression",
+          "Cover the cord with dry sterile gauze and wait for contractions",
+          "Place the client in high Fowler's position to assist descent"
+        ],
+        ans: 1,
+        source: "AIIMS NORCET 2023",
+        explain: "In a prolapsed umbilical cord, the nurse must insert a sterile gloved hand into the vagina and apply upward pressure on the presenting part to relieve pressure on the cord until an emergency Caesarean section is performed."
+      }
+    ]
+  },
+  {
+    id: "sprint-curated-5",
+    icon: "⚡",
+    title: "Daily Speed Sprint 5: Fundamentals & Clinical Procedures",
+    desc: "A multi-specialty sprint covering advanced nursing procedures, catheterization, isolation protocols, and fluid balances.",
+    questions: 10,
+    mins: 10,
+    ready: true,
+    data: [
+      {
+        q: "The physician prescribes 1000 mL of 0.9% Normal Saline to run over 8 hours. The drop factor of the IV administration set is 15 drops/mL. What is the correct flow rate in drops per minute?",
+        opts: ["21 drops/min", "31 drops/min", "42 drops/min", "52 drops/min"],
+        ans: 1,
+        source: "AIIMS NORCET 2022",
+        explain: "Flow rate (gtt/min) = [Total Volume (mL) x Drop Factor (gtt/mL)] / Total Time (minutes) = [1000 x 15] / [8 x 60] = 15000 / 480 = 31.25 drops per minute."
+      },
+      {
+        q: "Which type of transmission-based isolation precaution is mandatory for a patient admitted with active Pulmonary Tuberculosis?",
+        opts: ["Standard precautions only", "Droplet precautions", "Airborne precautions", "Contact precautions"],
+        ans: 2,
+        source: "ESIC 2019",
+        explain: "Pulmonary Tuberculosis is transmitted via small airborne droplet nuclei, requiring airborne infection isolation precautions, including a negative-pressure room and N95 respirators for staff."
+      },
+      {
+        q: "What is the primary gauge of IV cannula recommended for rapid blood transfusion and emergency fluid resuscitation in adult trauma victims?",
+        opts: ["22 Gauge (Blue)", "20 Gauge (Pink)", "18 Gauge (Green)", "16 Gauge (Grey) or 14 Gauge (Orange)"],
+        ans: 3,
+        source: "AIIMS NORCET 2021",
+        explain: "Large-bore cannulas like 16G or 14G (or at least an 18G Green) are necessary for rapid administration of blood, blood products, and viscous crystalloids in shock management."
+      },
+      {
+        q: "The nurse is inserting an indwelling Foley catheter in a female patient. Once urine is observed in the tubing, what should the nurse do next before inflating the balloon?",
+        opts: [
+          "Inflate the balloon immediately to secure placement",
+          "Advance the catheter another 1 to 2 inches (2.5 - 5 cm)",
+          "Pull the catheter back slightly until resistance is felt",
+          "Ask the patient to cough while securing the catheter"
+        ],
+        ans: 1,
+        source: "RRB 2019",
+        explain: "In females, once urine flow is seen, advancing the catheter another 1-2 inches ensures the balloon is fully inside the bladder cavity before inflation, preventing urethral trauma."
+      },
+      {
+        q: "A patient's arterial blood gas (ABG) results show: pH 7.31, PaCO2 50 mmHg, and HCO3 24 mEq/L. How should the nurse interpret these findings?",
+        opts: [
+          "Uncompensated Respiratory Acidosis",
+          "Compensated Metabolic Acidosis",
+          "Uncompensated Metabolic Alkalosis",
+          "Compensated Respiratory Alkalosis"
+        ],
+        ans: 0,
+        source: "AIIMS Patna 2020",
+        explain: "pH 7.31 is acidotic (<7.35). PaCO2 is high (>45 mmHg), and HCO3 is within normal range (22-26 mEq/L). Since the acidosis matches the high carbon dioxide level, this indicates Uncompensated Respiratory Acidosis."
+      },
+      {
+        q: "Which of the following is the most critical clinical complication the nurse must monitor for in a patient receiving rapid intravenous administration of Potassium Chloride?",
+        opts: ["Severe dehydration", "Infiltration and thrombophlebitis", "Life-threatening cardiac dysrhythmias / cardiac arrest", "Acute renal failure"],
+        ans: 2,
+        source: "AIIMS NORCET 2020",
+        explain: "Potassium Chloride must NEVER be given as an IV push or bolus. Rapid infusion of potassium can cause lethal hyperkalemia, leading to heart block, ventricular fibrillation, and cardiac arrest."
+      },
+      {
+        q: "Which positions should the patient be placed in for administering a cleansing enema and for performing rectal examination respectively?",
+        opts: [
+          "Lithotomy and Prone positions",
+          "Left Sims' and Knee-Chest positions",
+          "Trendelenburg and Supine positions",
+          "Fowler's and High Fowler's positions"
+        ],
+        ans: 1,
+        source: "DSSSB 2015",
+        explain: "The Left Sims' (semi-prone) position allows the enema solution to flow by gravity into the sigmoid colon. The knee-chest or Sims' position is ideal for rectal examinations."
+      },
+      {
+        q: "A nurse is performing chest physiotherapy on a patient. Which technique is used to loosen and mobilize thick secretions from the lungs?",
+        opts: ["Deep circular friction", "Clapping with cupped hands (percussion)", "Vigorous continuous stroking (effleurage)", "Rapid tapping with fingertips"],
+        ans: 1,
+        source: "ESIC 2016",
+        explain: "Chest percussion involves rhythmic clapping on the chest wall with cupped hands to create air vibrations, which loosen and mobilize thick pulmonary secretions from airway walls."
+      },
+      {
+        q: "What is the primary clinical purpose of placing a patient in the Trendelenburg position in an emergency setting?",
+        opts: [
+          "To promote drainage from the lower lobes of the lungs",
+          "To relieve dyspnea and increase thoracic capacity",
+          "To promote venous return and perfusion to vital organs in hypovolemic shock",
+          "To prevent aspiration during oral care of unconscious clients"
+        ],
+        ans: 2,
+        source: "NORCET 2022",
+        explain: "The Trendelenburg position (head lower than feet) increases venous return and improves perfusion to the brain and vital organs in acute hypotensive states or shock."
+      },
+      {
+        q: "Which of the following describes the correct technique for opening the airway of an unconscious trauma patient with a suspected cervical spine injury?",
+        opts: [
+          "Head-tilt, chin-lift maneuver",
+          "Jaw-thrust maneuver without head extension",
+          "Hyperextension of the neck with shoulder roll",
+          "Lateral turning of the head and neck"
+        ],
+        ans: 1,
+        source: "AIIMS NORCET 2023",
+        explain: "In a trauma victim with suspected spinal injury, the jaw-thrust maneuver is the safest method to open the airway because it does not require hyperextending or turning the neck."
+      }
+    ]
   }
-  if (qLower.includes("maternal") || qLower.includes("post-partum") || qLower.includes("delivery") || qLower.includes("pregnancy") || qLower.includes("uterus") || qLower.includes("obstetric") || qLower.includes("fetal") || qLower.includes("labor")) {
-    return "Obstetric & Gynecological Nursing";
-  }
-  if (qLower.includes("digoxin") || qLower.includes("pharmacology") || qLower.includes("medication") || qLower.includes("drug") || qLower.includes("dose") || qLower.includes("intravenous") || qLower.includes("prescribe") || qLower.includes("administer")) {
-    return "Pharmacology & Therapeutics";
-  }
-  if (qLower.includes("shock") || qLower.includes("surgery") || qLower.includes("abdominal") || qLower.includes("cardiac") || qLower.includes("renal") || qLower.includes("clinical") || qLower.includes("patient") || qLower.includes("pre-operative")) {
-    return "Medical-Surgical Nursing";
-  }
-  if (qLower.includes("unconscious") || qLower.includes("gcs") || qLower.includes("critical care") || qLower.includes("airway") || qLower.includes("intubation") || qLower.includes("emergency") || qLower.includes("ventilation")) {
-    return "Critical Care & Emergency Nursing";
-  }
-  if (qLower.includes("pediatric") || qLower.includes("child") || qLower.includes("infant") || qLower.includes("newborn") || qLower.includes("growth") || qLower.includes("development")) {
-    return "Pediatric Nursing";
-  }
-  return "General Clinical Practice";
-};
+];
 
 export default function App() {
   const initialRoute = getInitialRoute();
 
   const [subjects, setSubjects] = useState<Subject[]>(() => {
-    const defaultSubjects = [...SUBJECTS];
-    if (!defaultSubjects.some(s => s.id === "mock_tests")) {
-      defaultSubjects.push({
+    let list: Subject[] = [];
+    const saved = localStorage.getItem("np_subjects_custom_v1");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+          list = parsed;
+        }
+      } catch (e) {
+        // ignore and fallback
+      }
+    }
+    if (!list || list.length === 0) {
+      list = [...SUBJECTS];
+    }
+    if (!list.some(s => s.id === "mock_tests")) {
+      list.push({
         id: "mock_tests",
         icon: "🔥",
         name: "Mock Test Series",
         tests: generateMockTests()
       });
     }
-
-    const saved = localStorage.getItem("np_subjects_custom_v1");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed && Array.isArray(parsed) && parsed.length > 0) {
-          return defaultSubjects.map(defSubj => {
-            const foundParsed = parsed.find(p => p.id === defSubj.id);
-            if (foundParsed) {
-              return {
-                ...defSubj,
-                ...foundParsed,
-                tests: defSubj.tests.map(defTest => {
-                  const foundParsedTest = foundParsed.tests?.find((pt: any) => pt.id === defTest.id);
-                  if (foundParsedTest) {
-                    return {
-                      ...defTest,
-                      ...foundParsedTest,
-                      data: foundParsedTest.data && foundParsedTest.data.length > 0 ? foundParsedTest.data : defTest.data
-                    };
-                  }
-                  return defTest;
-                })
-              };
-            }
-            return defSubj;
-          });
-        }
-      } catch (e) {
-        // ignore and fallback
-      }
-    }
-    return defaultSubjects;
+    return list;
   });
 
   const saveSubjects = (newSubjects: Subject[]) => {
@@ -622,6 +1028,8 @@ export default function App() {
   // Navigation & Page State
   const [activePage, setActivePage] = useState<string>(initialRoute.page);
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
+  const [blogLanguage, setBlogLanguage] = useState<"en" | "hi" | "bn">("en");
   const [searchQuery, setSearchQuery] = useState<string>("all");
   const [hubSearchText, setHubSearchText] = useState<string>("");
   const [hubTab, setHubTab] = useState<"full_mock" | "pyq" | "subject" | "short">(initialRoute.tab);
@@ -667,16 +1075,6 @@ export default function App() {
   const [selectedModeForPending, setSelectedModeForPending] = useState<"practice" | "exam">("exam");
   const [activeSubjectId, setActiveSubjectId] = useState<string | null>(initialRoute.subjectId);
   const [activeTest, setActiveTest] = useState<Test | null>(initialRoute.test);
-  const [markedForReview, setMarkedForReview] = useState<boolean[]>(() =>
-    initialRoute.test ? new Array(initialRoute.test.data.length).fill(false) : []
-  );
-  const [visitedQuestions, setVisitedQuestions] = useState<boolean[]>(() => {
-    const arr = initialRoute.test ? new Array(initialRoute.test.data.length).fill(false) : [];
-    if (arr.length > 0) arr[0] = true;
-    return arr;
-  });
-  const [mobilePaletteOpen, setMobilePaletteOpen] = useState<boolean>(false);
-
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [examMode, setExamMode] = useState<boolean>(false);
   const [selectedOptions, setSelectedOptions] = useState<(number | null)[]>(
@@ -685,36 +1083,13 @@ export default function App() {
   const [questionAnswers, setQuestionAnswers] = useState<(number | null)[]>(
     initialRoute.test ? new Array(initialRoute.test.data.length).fill(null) : []
   ); // 1 for correct, -1 for incorrect, null for unanswered
+  const [reviewedQuestions, setReviewedQuestions] = useState<boolean[]>(
+    initialRoute.test ? new Array(initialRoute.test.data.length).fill(false) : []
+  );
   const [correctCount, setCorrectCount] = useState<number>(0);
   const [timeLeft, setTimeLeft] = useState<number>(initialRoute.test ? initialRoute.test.mins * 60 : 0);
   const [isTestFinished, setIsTestFinished] = useState<boolean>(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState<boolean>(false);
-
-  // Auto-mark question as visited when current index changes
-  useEffect(() => {
-    if (activeTest && currentQuestionIndex >= 0 && currentQuestionIndex < activeTest.data.length) {
-      setVisitedQuestions(prev => {
-        if (!prev[currentQuestionIndex]) {
-          const updated = [...prev];
-          updated[currentQuestionIndex] = true;
-          return updated;
-        }
-        return prev;
-      });
-    }
-  }, [currentQuestionIndex, activeTest]);
-
-  // Handle instant scroll-to-top on any page changes
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [activePage]);
-
-  // Graceful safety redirect if on test page with no loaded test data
-  useEffect(() => {
-    if (activePage === "test" && !activeTest) {
-      setActivePage(currentUser ? "hub" : "landing");
-    }
-  }, [activePage, activeTest, currentUser]);
 
   // PYQ Filter State
   const [pyqFilter, setPyqFilter] = useState<string>("all");
@@ -724,7 +1099,51 @@ export default function App() {
   const [loadingUpdates, setLoadingUpdates] = useState<boolean>(false);
   const [updatesError, setUpdatesError] = useState<string>("");
   const [activeUpdateFilter, setActiveUpdateFilter] = useState<"all" | "jobs" | "syllabus" | "motivation" | "notes">("all");
+  const [blogSearchQuery, setBlogSearchQuery] = useState<string>("");
+  const [sharingPostId, setSharingPostId] = useState<string | null>(null);
   const [selectedUpdate, setSelectedUpdate] = useState<NursingUpdate | null>(initialRoute.update);
+
+  // AI Rationale Generator State
+  const [aiRationales, setAiRationales] = useState<Record<string, { loading: boolean; text?: string; error?: string }>>({});
+
+  const generateAiRationale = async (questionText: string, opts: string[], correctAnswerIndex: number) => {
+    if (aiRationales[questionText]?.loading || aiRationales[questionText]?.text) {
+      return;
+    }
+
+    setAiRationales(prev => ({
+      ...prev,
+      [questionText]: { loading: true }
+    }));
+
+    try {
+      const res = await fetch("/api/ai/generate-rationale", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: questionText,
+          options: opts,
+          correctAnswerIndex
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to generate AI rationale");
+      }
+
+      const data = await res.json();
+      setAiRationales(prev => ({
+        ...prev,
+        [questionText]: { loading: false, text: data.rationale }
+      }));
+    } catch (err: any) {
+      console.error(err);
+      setAiRationales(prev => ({
+        ...prev,
+        [questionText]: { loading: false, error: err.message || "Unable to reach Gemini Server" }
+      }));
+    }
+  };
 
   // Client-side Settings States
   const [supUrlInput, setSupUrlInput] = useState<string>(() => localStorage.getItem("np_supabase_url") || "");
@@ -1771,46 +2190,13 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     
     setSelectedOptions(new Array(test.data.length).fill(null));
     setQuestionAnswers(new Array(test.data.length).fill(null));
-    setMarkedForReview(new Array(test.data.length).fill(false));
-    const initialVisited = new Array(test.data.length).fill(false);
-    initialVisited[0] = true;
-    setVisitedQuestions(initialVisited);
-    setMobilePaletteOpen(false);
+    setReviewedQuestions(new Array(test.data.length).fill(false));
     setCorrectCount(0);
     setTimeLeft(test.mins * 60);
     setIsTestFinished(false);
     setShowFinishConfirm(false);
     showPage("test", true, { subjectId, testId });
     triggerToast(`Good luck on your mock! 📖`, "ok");
-  };
-
-  const clearResponse = (idx: number) => {
-    if (!activeTest) return;
-    const previousSelection = selectedOptions[idx];
-    if (previousSelection === null) return;
-
-    const updatedSelected = [...selectedOptions];
-    updatedSelected[idx] = null;
-    setSelectedOptions(updatedSelected);
-
-    const updatedAnswers = [...questionAnswers];
-    updatedAnswers[idx] = null;
-    setQuestionAnswers(updatedAnswers);
-
-    const isAnsCorrect = previousSelection === activeTest.data[idx].ans;
-    if (isAnsCorrect) {
-      setCorrectCount(prev => prev - 1);
-    }
-    triggerToast("Response cleared", "ok");
-  };
-
-  const toggleMarkForReview = (idx: number) => {
-    setMarkedForReview(prev => {
-      const updated = [...prev];
-      updated[idx] = !updated[idx];
-      return updated;
-    });
-    triggerToast(markedForReview[idx] ? "Removed from Review list" : "Marked for Review 📌", "ok");
   };
 
   const triggerTestInit = (subjectId: string, testId: string) => {
@@ -1928,6 +2314,18 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     setSelectedModeForPending("practice"); // default to Practice mode for quick learning
   };
 
+  const startCuratedSprint = (sprintId: string) => {
+    const sprint = CURATED_SPRINTS.find(s => s.id === sprintId);
+    if (!sprint) return;
+
+    setPendingTest({
+      subjectId: "virtual",
+      testId: sprint.id,
+      test: sprint
+    });
+    setSelectedModeForPending("practice"); // default to Practice mode for quick learning
+  };
+
   const handleOptionSelect = (optionIndex: number) => {
     if (!activeTest) return;
     const currentQuestion = activeTest.data[currentQuestionIndex];
@@ -1977,10 +2375,16 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     }
   };
 
+  const toggleMarkForReview = (index: number) => {
+    const updated = [...reviewedQuestions];
+    updated[index] = !updated[index];
+    setReviewedQuestions(updated);
+  };
+
   const handleNextQuestion = () => {
     if (!activeTest) return;
     if (currentQuestionIndex === activeTest.data.length - 1) {
-      finishTest();
+      setCurrentQuestionIndex(0); // Wrap back to first question for smooth looping review
     } else {
       setCurrentQuestionIndex(prev => prev + 1);
     }
@@ -2152,6 +2556,191 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
   return (
     <div className="min-h-screen bg-[#080c12] text-[#e6edf3] font-sans relative">
       
+      {/* Responsive Slide-out Sidebar Drawer */}
+      <AnimatePresence>
+        {isDrawerOpen && (
+          <>
+            {/* Backdrop Overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsDrawerOpen(false)}
+              className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[999]"
+            />
+
+            {/* Main Sliding Drawer */}
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 26, stiffness: 220 }}
+              className="fixed top-0 left-0 bottom-0 w-[290px] max-w-[85vw] bg-[#0c121e] border-r border-[#1e2d45] z-[1000] shadow-2xl flex flex-col justify-between font-syne"
+            >
+              <div className="flex-1 overflow-y-auto py-6 px-6 scrollbar-thin">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-[#1e2d45]/50 pb-4 mb-6">
+                  <div 
+                    className="flex items-baseline cursor-pointer group" 
+                    onClick={() => { showPage("landing"); setIsDrawerOpen(false); }}
+                  >
+                    <span className="text-xl font-extrabold tracking-tight text-white group-hover:text-[#4f9eff] transition-colors">
+                      <span className="text-amber-500">N</span>CBT
+                    </span>
+                    <span className="text-xl font-black text-[#7ee8a2]">.in</span>
+                  </div>
+                  <button
+                    onClick={() => setIsDrawerOpen(false)}
+                    className="p-1.5 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors cursor-pointer border border-[#1e2d45]/20"
+                    title="Close Sidebar"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Navigation Links Grid */}
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-3 mb-2 select-none">Practice Centre</p>
+                  
+                  <button
+                    onClick={() => { showPage("subject_mocks"); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                      activePage === "hub" && hubTab === "subject" 
+                        ? "bg-indigo-600/10 text-indigo-400 border-indigo-500/35" 
+                        : "text-slate-300 hover:bg-white/5 hover:text-white border-transparent"
+                    }`}
+                  >
+                    <BookOpen className="w-4 h-4 text-indigo-400 shrink-0" />
+                    <span>Test Centre (Subjects)</span>
+                  </button>
+
+                  <button
+                    onClick={() => { showPage("mock_tests"); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                      activePage === "hub" && hubTab === "full_mock" 
+                        ? "bg-[#ff9e22]/10 text-[#ff9e22] border-[#ff9e22]/35" 
+                        : "text-slate-300 hover:bg-white/5 hover:text-white border-transparent"
+                    }`}
+                  >
+                    <Flame className="w-4 h-4 text-[#ff9e22] shrink-0" />
+                    <span>Full Mock Tests</span>
+                  </button>
+
+                  <button
+                    onClick={() => { showPage("pyq"); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                      activePage === "pyq" 
+                        ? "bg-emerald-600/10 text-emerald-400 border-emerald-500/35" 
+                        : "text-slate-300 hover:bg-white/5 hover:text-white border-transparent"
+                    }`}
+                  >
+                    <FileText className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Previous Year Papers (PYQ)</span>
+                  </button>
+
+                  <button
+                    onClick={() => { showPage("short_sprints"); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                      activePage === "hub" && hubTab === "short" 
+                        ? "bg-purple-600/10 text-purple-400 border-purple-500/35" 
+                        : "text-slate-300 hover:bg-white/5 hover:text-white border-transparent"
+                    }`}
+                  >
+                    <Activity className="w-4 h-4 text-purple-400 shrink-0" />
+                    <span>Daily Speed Sprints</span>
+                  </button>
+
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-3 pt-5 mb-2 select-none">Updates & Insights</p>
+
+                  <button
+                    onClick={() => { showPage("updates"); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                      activePage === "updates" 
+                        ? "bg-amber-600/10 text-amber-400 border-amber-500/35" 
+                        : "text-slate-300 hover:bg-white/5 hover:text-white border-transparent"
+                    }`}
+                  >
+                    <Newspaper className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>Blog</span>
+                  </button>
+
+                  <button
+                    onClick={() => { showPage("analytics"); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                      activePage === "analytics" 
+                        ? "bg-[#4f9eff]/10 text-[#4f9eff] border-[#4f9eff]/35" 
+                        : "text-slate-300 hover:bg-white/5 hover:text-white border-transparent"
+                    }`}
+                  >
+                    <Award className="w-4 h-4 text-[#4f9eff] shrink-0" />
+                    <span>Performance Analytics</span>
+                  </button>
+
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-3 pt-5 mb-2 select-none">Company Info</p>
+
+                  <button
+                    onClick={() => { showPage("about"); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                      activePage === "about" 
+                        ? "bg-cyan-600/10 text-cyan-400 border-cyan-500/35" 
+                        : "text-slate-300 hover:bg-white/5 hover:text-white border-transparent"
+                    }`}
+                  >
+                    <HelpCircle className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <span>About Us</span>
+                  </button>
+
+                  <button
+                    onClick={() => { showPage("contact"); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                      activePage === "contact" 
+                        ? "bg-rose-600/10 text-rose-400 border-rose-500/35" 
+                        : "text-slate-300 hover:bg-white/5 hover:text-white border-transparent"
+                    }`}
+                  >
+                    <MessageSquare className="w-4 h-4 text-rose-400 shrink-0" />
+                    <span>Contact Us</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Drawer Bottom Profile block */}
+              <div className="p-6 border-t border-[#1e2d45]/40 bg-[#080d15] select-none">
+                {currentUser ? (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-xs font-black text-indigo-400 shadow-sm shrink-0">
+                        {currentUser.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="truncate flex-1">
+                        <p className="text-xs font-extrabold text-white truncate leading-tight">{currentUser.name}</p>
+                        <p className="text-[10px] text-gray-500 truncate leading-tight">{currentUser.email}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { handleLogout(); setIsDrawerOpen(false); }}
+                      className="w-full mt-1.5 py-2 text-center rounded-xl bg-red-500/10 hover:bg-red-500/25 text-red-400 text-xs font-bold transition-colors border border-red-500/15 cursor-pointer"
+                    >
+                      Logout Session 👤
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { showPage("auth"); setIsDrawerOpen(false); }}
+                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs rounded-xl transition-all shadow-md cursor-pointer border border-indigo-500/30 text-center"
+                  >
+                    🔐 Login with Google Auth
+                  </button>
+                )}
+                <div className="mt-4 text-center">
+                  <span className="text-[9px] text-slate-600 block">NCBT.in • Version 2.5.0 • Made for Nursing Officers</span>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Dynamic Toast popup */}
       <div className={`toast transition-all duration-300 ${toastVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12 pointer-events-none"} ${toastType === "ok" ? "ok" : "err"}`}>
         {toastType === "ok" ? "✅ " : "❌ "}
@@ -2161,6 +2750,14 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       {/* Main sticky navigation bar */}
       {activePage !== "test" && (
         <nav id="main-nav">
+        <button
+          onClick={() => setIsDrawerOpen(true)}
+          className="p-1.5 hover:bg-white/10 rounded-xl transition-all cursor-pointer flex items-center justify-center shrink-0 text-white mr-1 border border-white/5 bg-[#0d1522]/30 hover:border-white/20"
+          aria-label="Open Sidebar Menu"
+          id="hamburger-menu-btn"
+        >
+          <Menu className="w-5 h-5 text-gray-300 hover:text-white" />
+        </button>
         <div className="nav-logo cursor-pointer select-none group" onClick={() => showPage("landing")}>
           <div className="flex items-baseline font-sans relative">
             <span className="text-xl font-extrabold tracking-tight text-white group-hover:text-[#4f9eff] transition-colors duration-300">
@@ -2177,7 +2774,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
             className={`nav-link flex items-center gap-1.5 ${activePage === "hub" && hubTab === "subject" ? "active" : ""}`} 
             onClick={() => showPage("subject_mocks")}
           >
-            <BookOpen className="w-4 h-4" /> Tests
+            <BookOpen className="w-4 h-4" /> Test Centre
           </button>
           <button 
             className={`nav-link flex items-center gap-1.5 ${activePage === "hub" && hubTab === "full_mock" ? "active" : ""}`} 
@@ -2195,7 +2792,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
             className={`nav-link flex items-center gap-1.5 ${activePage === "updates" ? "active" : ""}`} 
             onClick={() => showPage("updates")}
           >
-            <Newspaper className="w-4 h-4 text-emerald-400" /> Daily Pulse
+            <Newspaper className="w-4 h-4 text-emerald-400" /> Blog
           </button>
           <button 
             className={`nav-link flex items-center gap-1.5 ${activePage === "analytics" ? "active" : ""}`} 
@@ -2214,74 +2811,9 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           )}
         </div>
 
-        <div className="nav-right relative">
-          <button 
-            className="btn-nav-menu flex items-center gap-1 bg-[#0f1520] hover:bg-[#151f30] border border-[#1e293b] rounded-xl px-3.5 py-1.5 text-xs text-[#e6edf3] font-semibold transition-all shadow-md"
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            id="nav-dropdown-btn"
-          >
-            <span>Navigate ▾</span>
-          </button>
+        <div className="nav-right"></div>
 
-          {dropdownOpen && (
-            <div className="nav-dropdown-menu absolute right-0 top-11 w-48 bg-[#0f1520] border border-[#1e293b] rounded-xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-              <button 
-                className="w-full text-left px-4 py-2 text-xs text-[#e6edf3] hover:bg-[#151f30] flex items-center gap-2 transition-colors font-medium"
-                onClick={() => { showPage("subject_mocks"); setDropdownOpen(false); }}
-              >
-                <BookOpen className="w-3.5 h-3.5 text-[#388bfd]" /> Tests
-              </button>
-              <button 
-                className="w-full text-left px-4 py-2 text-xs text-[#e6edf3] hover:bg-[#151f30] flex items-center gap-2 transition-colors font-medium"
-                onClick={() => { showPage("mock_tests"); setDropdownOpen(false); }}
-              >
-                <Flame className="w-3.5 h-3.5 text-[#ff9e22]" /> Mock Tests
-              </button>
-              <button 
-                className="w-full text-left px-4 py-2 text-xs text-[#e6edf3] hover:bg-[#151f30] flex items-center gap-2 transition-colors font-medium"
-                onClick={() => { showPage("pyq"); setDropdownOpen(false); }}
-              >
-                <FileText className="w-3.5 h-3.5 text-[#56d364]" /> PYQ
-              </button>
-              <button 
-                className="w-full text-left px-4 py-2 text-xs text-[#e6edf3] hover:bg-[#151f30] flex items-center gap-2 transition-colors font-medium"
-                onClick={() => { showPage("updates"); setDropdownOpen(false); }}
-              >
-                <Newspaper className="w-3.5 h-3.5 text-emerald-400" /> Daily Pulse
-              </button>
-              <button 
-                className="w-full text-left px-4 py-2 text-xs text-[#e6edf3] hover:bg-[#151f30] flex items-center gap-2 transition-colors font-medium"
-                onClick={() => { showPage("analytics"); setDropdownOpen(false); }}
-              >
-                <Award className="w-3.5 h-3.5 text-[#f1e05a]" /> Analytics
-              </button>
-
-
-              <div className="h-[1px] bg-[#1e293b] my-2"></div>
-
-              {!currentUser ? (
-                <button 
-                  className="w-full text-left px-4 py-2 text-[11px] font-semibold text-[#58a6ff] hover:bg-[#151f30] transition-colors"
-                  onClick={() => { showPage("auth"); setDropdownOpen(false); }}
-                >
-                  🔐 Log In / Auth
-                </button>
-              ) : (
-                <div className="px-4 py-1.5 flex flex-col gap-1.5">
-                  <span className="text-[10px] text-[#8b949e] truncate leading-tight">Logged: {currentUser.name}</span>
-                  <button 
-                    className="text-left text-[11px] text-red-400 hover:text-red-300 font-semibold transition-colors"
-                    onClick={() => { handleLogout(); setDropdownOpen(false); }}
-                  >
-                    Logout 👤
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Navigate ▾ dropdown serves as primary active navigator on all devices */}
+        {/* Navigate dropdown has been removed per design specifications */}
       </nav>
       )}
 
@@ -2367,7 +2899,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
             <footer>
               NCBT · India's Nursing CBT Exam Preparation Platform ·{" "}
-              <a onClick={() => showPage("hub")}>Tests</a> ·{" "}
+              <a onClick={() => showPage("hub")}>Test Centre</a> ·{" "}
               <a onClick={() => showPage("pyq")}>PYQ</a> ·{" "}
               <a onClick={() => showPage("analytics")}>Analytics</a> · For educational use only
             </footer>
@@ -2375,1177 +2907,1002 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         )}
 
         {/* =============== HUB (TESTS) PAGE =============== */}
-        {activePage === "hub" && (
-          <div className="page active" id="page-hub">
-            {/* Unified Test Center Header */}
-            <div className="hub-header bg-gradient-to-r from-blue-950/20 to-purple-950/20 border border-[#1e293b] rounded-2xl p-6 sm:p-8 mb-8 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none"></div>
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div>
-                  <h2 className="text-3xl font-black text-white font-syne tracking-tight">NCBT Test Center</h2>
-                  <p className="text-[#8492a6] font-sans text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
-                    Access high-yield nursing board mocks, previous year actual papers, and speed sprints. Choose a test mode to practice or take a timed exam with real CBT markings.
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 w-full md:w-auto shrink-0">
-                  <div className="hub-search flex-1 md:flex-initial relative w-full md:w-64">
-                    <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input 
-                      type="text" 
-                      placeholder="Search question titles..." 
-                      className="bg-[#0c1322] border border-[#1e293b] rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500 w-full transition-colors"
-                      value={hubSearchText}
-                      onChange={(e) => setHubSearchText(e.target.value)}
-                    />
-                  </div>
-                </div>
+        {activePage === "hub" && (() => {
+          const mockSubject = subjects.find(s => s.id === "mock_tests");
+          const filteredMocks = mockSubject ? mockSubject.tests.filter(t => {
+            if (hubSearchText) {
+              const query = hubSearchText.toLowerCase();
+              if (!t.title.toLowerCase().includes(query) && !t.desc.toLowerCase().includes(query)) {
+                return false;
+              }
+            }
+            if (searchQuery === "all" || searchQuery === "ready") return true;
+            if (searchQuery === "community" && t.id === "mt-1") return true;
+            if (searchQuery === "med-surg" && t.id === "mt-2") return true;
+            if (searchQuery === "maternity" && t.id === "mt-3") return true;
+            if (searchQuery === "pediatrics" && t.id === "mt-4") return true;
+            if (searchQuery === "pharmacology" && t.id === "mt-5") return true;
+            return false;
+          }) : [];
+
+          return (
+            <div className="page active" id="page-hub">
+              {/* Premium Search Bar */}
+              <div className="relative w-full max-w-xl mx-auto mb-6" id="hub-search-container">
+                <Search className="w-4 h-4 text-neutral-500 absolute left-4 top-1/2 -translate-y-1/2" />
+                <input 
+                  type="text" 
+                  placeholder="Search tests..." 
+                  className="bg-[#0c1322] border border-[#1e293b] rounded-2xl pl-11 pr-4 py-3 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-[#388bfd]/80 w-full transition-all shadow-inner font-medium"
+                  value={hubSearchText}
+                  onChange={(e) => setHubSearchText(e.target.value)}
+                />
               </div>
 
-              {/* Redesigned Tab Buttons */}
-              <div className="flex flex-wrap gap-2 mt-6 border-t border-[#1e293b] pt-5">
-                <button 
-                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+              {/* 4-Column Tab Boxes Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6" id="hub-tabs-row">
+                {/* Box 1: Mock Tests */}
+                <div 
+                  className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-300 cursor-pointer h-24 ${
                     hubTab === "full_mock" 
-                      ? "bg-amber-500/10 border-amber-500 text-amber-450 shadow-md ring-1 ring-amber-500" 
-                      : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
+                      ? "bg-[#111726] border-[#388bfd]/80 shadow-md shadow-[#388bfd]/5" 
+                      : "bg-[#0c1322] border-[#1e293b] hover:border-neutral-700"
                   }`}
-                  onClick={() => showPage("mock_tests")}
+                  onClick={() => {
+                    showPage("mock_tests");
+                    setSearchQuery("all");
+                  }}
                 >
-                  <Flame className="w-3.5 h-3.5 text-amber-500" /> Full Mock Series
-                </button>
-                <button 
-                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  <span className="absolute top-1.5 right-1.5 w-5 h-5 bg-[#172f54] text-[#58a6ff] border border-[#388bfd]/30 text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {mockSubject?.tests.length || 6}
+                  </span>
+                  <div className="text-2xl mb-1 select-none">📝</div>
+                  <span className="text-[11px] sm:text-xs font-bold text-neutral-300">Mock Tests</span>
+                  {hubTab === "full_mock" && (
+                    <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-[#388bfd] rounded-t-full"></div>
+                  )}
+                </div>
+
+                {/* Box 2: PYQ Bank */}
+                <div 
+                  className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-300 cursor-pointer h-24 ${
                     hubTab === "pyq" 
-                      ? "bg-amber-500/10 border-amber-500 text-amber-450 shadow-md ring-1 ring-amber-500" 
-                      : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
+                      ? "bg-[#111726] border-[#8b5cf6]/80 shadow-md shadow-[#8b5cf6]/5" 
+                      : "bg-[#0c1322] border-[#1e293b] hover:border-neutral-700"
                   }`}
-                  onClick={() => showPage("pyq")}
+                  onClick={() => {
+                    showPage("pyq");
+                    setPyqFilter("all");
+                  }}
                 >
-                  <FileText className="w-3.5 h-3.5 text-[#56d364]" /> PYQ Papers
-                </button>
-                <button 
-                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  <span className="absolute top-1.5 right-1.5 w-5 h-5 bg-[#251b40] text-[#a78bfa] border border-[#8b5cf6]/30 text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {PYQ_DATA.length || 12}
+                  </span>
+                  <div className="text-2xl mb-1 select-none">📋</div>
+                  <span className="text-[11px] sm:text-xs font-bold text-neutral-300">PYQ Bank</span>
+                  {hubTab === "pyq" && (
+                    <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-[#8b5cf6] rounded-t-full"></div>
+                  )}
+                </div>
+
+                {/* Box 3: Subject-wise */}
+                <div 
+                  className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-300 cursor-pointer h-24 ${
                     hubTab === "subject" 
-                      ? "bg-amber-500/10 border-amber-500 text-amber-450 shadow-md ring-1 ring-amber-500" 
-                      : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
+                      ? "bg-[#111726] border-[#388bfd]/80 shadow-md shadow-[#388bfd]/5" 
+                      : "bg-[#0c1322] border-[#1e293b] hover:border-neutral-700"
                   }`}
-                  onClick={() => showPage("subject_mocks")}
+                  onClick={() => {
+                    showPage("subject_mocks");
+                    setSearchQuery("all");
+                  }}
                 >
-                  <BookOpen className="w-3.5 h-3.5 text-[#388bfd]" /> Subject-Wise Mocks
-                </button>
-                <button 
-                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  <span className="absolute top-1.5 right-1.5 w-5 h-5 bg-[#172f54] text-[#58a6ff] border border-[#388bfd]/30 text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {subjects.filter(s => s.id !== "mock_tests").length || 8}
+                  </span>
+                  <div className="text-2xl mb-1 select-none">📚</div>
+                  <span className="text-[11px] sm:text-xs font-bold text-neutral-300">Subject-wise</span>
+                  {hubTab === "subject" && (
+                    <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-[#388bfd] rounded-t-full"></div>
+                  )}
+                </div>
+
+                {/* Box 4: Speed Sprints */}
+                <div 
+                  className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-300 cursor-pointer h-24 ${
                     hubTab === "short" 
-                      ? "bg-amber-500/10 border-amber-500 text-amber-450 shadow-md ring-1 ring-amber-500" 
-                      : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
+                      ? "bg-[#111726] border-purple-500/80 shadow-md shadow-purple-500/5" 
+                      : "bg-[#0c1322] border-[#1e293b] hover:border-neutral-700"
                   }`}
-                  onClick={() => showPage("short_sprints")}
+                  onClick={() => {
+                    showPage("short_sprints");
+                    setSearchQuery("all");
+                  }}
                 >
-                  <span className="text-amber-400 font-bold">⚡</span> Short Speed Sprints
-                </button>
-              </div>
-            </div>
-
-            {/* TAB CONTENTS */}
-
-            {/* 1. Full Mock Tests Tab */}
-            {hubTab === "full_mock" && (
-              <div className="space-y-6">
-                <div className="bg-[#0f1520]/50 border border-[#1e293b] p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div>
-                    <h3 className="text-sm font-bold text-white flex items-center gap-1.5">🏆 Timed Board-Level Mocks</h3>
-                    <p className="text-xs text-[#8b949e]">These 50-question mocks replicate actual staff nurse competitive exams with timed countdowns and real marking scoring.</p>
-                  </div>
-                  <button 
-                    className="bg-[#21262d] hover:bg-[#30363d] border border-amber-500/30 text-amber-450 text-xs font-bold py-2 px-4 rounded-xl transition-all shadow shrink-0"
-                    onClick={() => {
-                      const saved = localStorage.getItem("np_subjects_custom_v1");
-                      if (saved) {
-                        localStorage.removeItem("np_subjects_custom_v1");
-                        triggerToast("Mock progress reset to default! 🛠️", "ok");
-                        window.location.reload();
-                      } else {
-                        triggerToast("All templates clean! 🩺", "ok");
-                      }
-                    }}
-                  >
-                    Reset Series
-                  </button>
+                  <span className="absolute top-1.5 right-1.5 w-5 h-5 bg-[#2a1b40] text-purple-400 border border-purple-500/30 text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {CURATED_SPRINTS.length}
+                  </span>
+                  <div className="text-2xl mb-1 select-none">⚡</div>
+                  <span className="text-[11px] sm:text-xs font-bold text-neutral-300">Speed Sprints</span>
+                  {hubTab === "short" && (
+                    <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-purple-500 rounded-t-full"></div>
+                  )}
                 </div>
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {subjects.find(s => s.id === "mock_tests")?.tests.filter(t => {
-                    if (!hubSearchText) return true;
-                    return t.title.toLowerCase().includes(hubSearchText.toLowerCase()) ||
-                           t.desc.toLowerCase().includes(hubSearchText.toLowerCase());
-                  }).map(t => (
-                    <div 
-                      key={t.id} 
-                      className="bg-[#0f1520] hover:bg-[#151f30] border border-[#1e293b] hover:border-amber-500/40 rounded-2xl p-5 transition-all duration-300 flex flex-col justify-between group relative cursor-pointer shadow-lg"
-                      onClick={() => triggerTestInit("mock_tests", t.id)}
+              {/* Horizontal Filter Row */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-4 pt-1 mb-6 scrollbar-none" id="hub-filter-scroll">
+                {hubTab === "full_mock" && [
+                  { id: "all", label: "All Mocks" },
+                  { id: "community", label: "Community Health" },
+                  { id: "med-surg", label: "Medical-Surgical" },
+                  { id: "maternity", label: "Midwifery & Gynae" },
+                  { id: "pediatrics", label: "Pediatric & Psychiatric" },
+                  { id: "pharmacology", label: "Pharmacology & Anatomy" }
+                ].map(pill => {
+                  const isActive = searchQuery === pill.id;
+                  return (
+                    <button 
+                      key={pill.id}
+                      className={`shrink-0 flex items-center px-4 py-1.5 rounded-full border text-[11px] font-bold transition-all cursor-pointer ${
+                        isActive 
+                          ? "bg-[#1d4ed8]/10 border-[#388bfd] text-[#58a6ff]" 
+                          : "bg-[#0c1322] border-[#1e293b] text-neutral-400 hover:border-neutral-700"
+                      }`}
+                      onClick={() => setSearchQuery(pill.id)}
                     >
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/2 rounded-full blur-2xl pointer-events-none group-hover:bg-amber-500/5 transition-all"></div>
-                      <div>
-                        <div className="flex justify-between items-center mb-3">
-                          <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center text-xl font-bold group-hover:scale-110 transition-transform">
-                            🏆
-                          </div>
-                          <span className="bg-amber-500/10 text-amber-300 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border border-amber-500/20">
-                            {t.questions} MCQs / {t.mins} Min
-                          </span>
-                        </div>
-                        <h3 className="text-md font-bold text-white mb-2 leading-tight group-hover:text-amber-300 transition-colors">
-                          {t.title}
-                        </h3>
-                        <p className="text-xs text-[#8492a6] font-sans leading-relaxed mb-4">
-                          Comprehensive compilation covering high-yield Medical-Surgical, ObGyn, Pediatric, Psychiatric, and Pharmacological clinical domains.
-                        </p>
-                      </div>
+                      <span className={`w-1.5 h-1.5 rounded-full mr-1.5 inline-block ${isActive ? "bg-[#388bfd]" : "bg-neutral-600"}`}></span>
+                      {pill.label}
+                    </button>
+                  );
+                })}
 
-                      <div className="border-t border-[#1e293b] pt-4 mt-2 flex justify-between items-center">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] text-[#8b949e]">STATUS</span>
-                          <span className="text-xs text-green-400 font-bold flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-ping"></span> Live & Ready
-                          </span>
-                        </div>
-                        <button 
-                          className="bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md group-hover:translate-x-1"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            triggerTestInit("mock_tests", t.id);
-                          }}
-                        >
-                          Enter Assessment →
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                {hubTab === "pyq" && [
+                  { id: "all", label: "All Exams" },
+                  { id: "aiims", label: "AIIMS" },
+                  { id: "rrb", label: "RRB" },
+                  { id: "esic", label: "ESIC" },
+                  { id: "dsssb", label: "DSSSB" },
+                  { id: "rpsc", label: "RPSC" }
+                ].map(pill => {
+                  const isActive = pyqFilter === pill.id;
+                  return (
+                    <button 
+                      key={pill.id}
+                      className={`shrink-0 flex items-center px-4 py-1.5 rounded-full border text-[11px] font-bold transition-all cursor-pointer ${
+                        isActive 
+                          ? "bg-[#1d4ed8]/10 border-[#388bfd] text-[#58a6ff]" 
+                          : "bg-[#0c1322] border-[#1e293b] text-neutral-400 hover:border-neutral-700"
+                      }`}
+                      onClick={() => setPyqFilter(pill.id)}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full mr-1.5 inline-block ${isActive ? "bg-[#388bfd]" : "bg-neutral-600"}`}></span>
+                      {pill.label}
+                    </button>
+                  );
+                })}
+
+                {hubTab === "subject" && [
+                  { id: "all", label: "All Subjects" },
+                  { id: "anatomy", label: "Anatomy & Physiology" },
+                  { id: "community", label: "Community Health" },
+                  { id: "med-surg", label: "Medical-Surgical" },
+                  { id: "maternal", label: "Midwifery & Gynae" },
+                  { id: "pediatric", label: "Pediatric Nursing" },
+                  { id: "mhn", label: "Mental Health" },
+                  { id: "pharmacology", label: "Pharmacology" }
+                ].map(pill => {
+                  const isActive = searchQuery === pill.id;
+                  return (
+                    <button 
+                      key={pill.id}
+                      className={`shrink-0 flex items-center px-4 py-1.5 rounded-full border text-[11px] font-bold transition-all cursor-pointer ${
+                        isActive 
+                          ? "bg-[#1d4ed8]/10 border-[#388bfd] text-[#58a6ff]" 
+                          : "bg-[#0c1322] border-[#1e293b] text-neutral-400 hover:border-neutral-700"
+                      }`}
+                      onClick={() => setSearchQuery(pill.id)}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full mr-1.5 inline-block ${isActive ? "bg-[#388bfd]" : "bg-neutral-600"}`}></span>
+                      {pill.label}
+                    </button>
+                  );
+                })}
               </div>
-            )}
 
-            {/* 2. Previous Year Papers (PYQ) Tab */}
-            {hubTab === "pyq" && (
-              <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#0f1520]/50 border border-[#1e293b] p-5 rounded-2xl">
-                  <div>
-                    <h3 className="text-sm font-bold text-white flex items-center gap-1.5">📋 Previous Year Question Papers</h3>
-                    <p className="text-xs text-[#8b949e]">Select any actual paper from past nurse officer recruitments. Practice as a real-time board simulator.</p>
+              {/* TAB CONTENTS */}
+
+              {/* 1. Full Mock Tests Tab */}
+              {hubTab === "full_mock" && (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center px-1 py-1 border-b border-[#1e293b] mb-4">
+                    <span className="text-[10px] font-black tracking-widest text-[#8b949e] uppercase">AVAILABLE NOW</span>
+                    <span className="text-[11px] font-bold text-[#8b949e]">{filteredMocks.length} tests</span>
                   </div>
-                  
-                  {/* PYQ Filter Buttons */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {["all", "aiims", "rrb", "esic", "dsssb", "rpsc"].map(filterVal => (
-                      <button 
-                        key={filterVal}
-                        className={`px-3 py-1.5 rounded-full border text-[10px] font-bold uppercase transition-all cursor-pointer ${
-                          pyqFilter === filterVal 
-                            ? "bg-amber-500/15 border-amber-500 text-amber-300" 
-                            : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
-                        }`}
-                        onClick={() => setPyqFilter(filterVal)}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredMocks.map(t => (
+                      <div 
+                        key={t.id} 
+                        className="bg-[#0f1520] hover:bg-[#121c2c] border border-[#1e293b] hover:border-[#388bfd]/50 rounded-2xl p-4 transition-all duration-300 flex items-start gap-4 group relative cursor-pointer shadow-lg"
+                        onClick={() => triggerTestInit("mock_tests", t.id)}
                       >
-                        {filterVal === "all" ? "All Papers" : filterVal.toUpperCase()}
-                      </button>
+                        {/* Double Ring Icon */}
+                        <div className="w-11 h-11 shrink-0 bg-[#0d1322] border border-[#1e293b] rounded-full flex items-center justify-center relative">
+                          <div className="absolute inset-1 rounded-full border border-amber-500/30 flex items-center justify-center text-lg">
+                            🔬
+                          </div>
+                        </div>
+
+                        {/* Card Contents */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-center gap-1.5 mb-1">
+                            <span className="bg-[#21262d] text-[#c9d1d9] text-[9px] font-bold px-2 py-0.5 rounded border border-[#30363d] flex items-center gap-1">
+                              ⏱️ {t.mins} min
+                            </span>
+                            <span className="bg-amber-500/10 text-amber-500 text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded border border-amber-500/20">
+                              NEW
+                            </span>
+                          </div>
+
+                          <h3 className="text-sm font-bold text-white group-hover:text-[#58a6ff] transition-colors truncate">
+                            {t.title}
+                          </h3>
+                          <p className="text-[11px] text-[#8b949e] font-sans line-clamp-2 leading-relaxed mt-1 mb-2">
+                            {t.desc}
+                          </p>
+
+                          <div className="flex items-center justify-between border-t border-[#1e293b]/50 pt-2.5 mt-2">
+                            <div className="flex items-center gap-3 text-[10px] text-neutral-400">
+                              <span>🗒️ {t.questions} Qs</span>
+                              <span className="text-amber-400/90 font-medium bg-amber-400/5 px-1.5 py-0.2 rounded">Medium</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#58a6ff] group-hover:text-blue-300 transition-colors">
+                              <span>Start Test</span>
+                              <div className="w-7 h-7 rounded-lg bg-[#111c2e] hover:bg-[#1d2d44] border border-[#1e293b] flex items-center justify-center text-[#58a6ff] text-xs font-bold shrink-0">
+                                →
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
+              )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {PYQ_DATA.filter(p => {
-                    const matchesFilter = pyqFilter === "all" || p.tag === pyqFilter;
-                    const matchesSearch = !hubSearchText || p.exam.toLowerCase().includes(hubSearchText.toLowerCase()) || p.year.includes(hubSearchText);
-                    return matchesFilter && matchesSearch;
-                  }).map((p, idx) => (
-                    <div 
-                      key={idx} 
-                      className="bg-[#0f1520] hover:bg-[#151f30] border border-[#1e293b] hover:border-amber-500/40 rounded-2xl p-5 transition-all duration-300 flex flex-col justify-between group relative cursor-pointer shadow-lg"
-                      onClick={() => startPyqTest(p)}
-                    >
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/2 rounded-full blur-2xl pointer-events-none group-hover:bg-amber-500/5 transition-all"></div>
-                      <div>
-                        <div className="flex justify-between items-center mb-3">
-                          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                            YEAR {p.year}
-                          </span>
-                          <span className="text-[10px] text-[#8b949e] font-semibold">
-                            {p.count} Past MCQs
-                          </span>
-                        </div>
-                        <h3 className="text-md font-bold text-white mb-2 leading-tight group-hover:text-amber-300 transition-colors">
-                          {p.exam}
-                        </h3>
-                        <p className="text-xs text-[#8492a6] font-sans leading-relaxed mb-4">
-                          Original question paper from the {p.year} nationwide recruitment cycle. Includes clinical rationales.
-                        </p>
-                      </div>
-
-                      <div className="border-t border-[#1e293b] pt-4 mt-2 flex justify-between items-center">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] text-[#8b949e]">EXAM CODE</span>
-                          <span className="text-xs text-[#56d364] font-bold uppercase tracking-wide">
-                            {p.tag} Series
-                          </span>
-                        </div>
-                        <button 
-                          className="bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md group-hover:translate-x-1"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            startPyqTest(p);
-                          }}
-                        >
-                          Start Simulated Paper →
-                        </button>
-                      </div>
+              {/* 2. Previous Year Papers (PYQ) Tab */}
+              {hubTab === "pyq" && (() => {
+                const filteredPyq = PYQ_DATA.filter(p => {
+                  const matchesFilter = pyqFilter === "all" || p.tag === pyqFilter;
+                  const matchesSearch = !hubSearchText || p.exam.toLowerCase().includes(hubSearchText.toLowerCase()) || p.year.includes(hubSearchText);
+                  return matchesFilter && matchesSearch;
+                });
+                return (
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center px-1 py-1 border-b border-[#1e293b] mb-4">
+                      <span className="text-[10px] font-black tracking-widest text-[#8b949e] uppercase">PREVIOUS YEAR QUESTIONS</span>
+                      <span className="text-[11px] font-bold text-[#8b949e]">{filteredPyq.length} sets</span>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
-            {/* 3. Subject-Wise Mocks Tab */}
-            {hubTab === "subject" && (
-              <div className="space-y-6">
-                <div className="bg-[#0f1520]/50 border border-[#1e293b] p-5 rounded-2xl flex flex-wrap gap-2 items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-bold text-white flex items-center gap-1.5">🎯 Unit-Wise Diagnostic Mocks</h3>
-                    <p className="text-xs text-[#8b949e]">Target specific nursing subjects to master individual clinical modules and unit checkpoints.</p>
-                  </div>
-                  {/* Subject filters */}
-                  <div className="flex flex-wrap gap-1">
-                    <button 
-                      className={`px-3 py-1.5 rounded-full border text-[10px] font-extrabold transition-all cursor-pointer ${
-                        searchQuery === "all" ? "bg-amber-500/10 border-amber-500 text-amber-300" : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
-                      }`}
-                      onClick={() => setSearchQuery("all")}
-                    >
-                      All Subjects
-                    </button>
-                    <button 
-                      className={`px-3 py-1.5 rounded-full border text-[10px] font-extrabold transition-all cursor-pointer ${
-                        searchQuery === "anatomy" ? "bg-amber-500/10 border-amber-500 text-amber-300" : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
-                      }`}
-                      onClick={() => setSearchQuery("anatomy")}
-                    >
-                      Anatomy
-                    </button>
-                    <button 
-                      className={`px-3 py-1.5 rounded-full border text-[10px] font-extrabold transition-all cursor-pointer ${
-                        searchQuery === "med-surg" ? "bg-amber-500/10 border-amber-500 text-amber-300" : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
-                      }`}
-                      onClick={() => setSearchQuery("med-surg")}
-                    >
-                      Med-Surg
-                    </button>
-                    <button 
-                      className={`px-3 py-1.5 rounded-full border text-[10px] font-extrabold transition-all cursor-pointer ${
-                        searchQuery === "ready" ? "bg-amber-500/10 border-amber-500 text-amber-300" : "bg-[#0c1424] border-[#1e2d45] hover:border-gray-500 text-neutral-400"
-                      }`}
-                      onClick={() => setSearchQuery("ready")}
-                    >
-                      ✅ Ready Now
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-8">
-                  {subjects.filter(subj => {
-                    if (subj.id === "mock_tests") return false;
-                    if (searchQuery === "all" || searchQuery === "ready") return true;
-                    return subj.id === searchQuery;
-                  }).map(subj => {
-                    const readyTests = subj.tests.filter(t => t.ready);
-                    if (searchQuery === "ready" && readyTests.length === 0) return null;
-
-                    const filteredTests = subj.tests.filter(t => {
-                      if (!hubSearchText) return true;
-                      return t.title.toLowerCase().includes(hubSearchText.toLowerCase()) || 
-                             t.desc.toLowerCase().includes(hubSearchText.toLowerCase());
-                    });
-
-                    if (hubSearchText && filteredTests.length === 0) return null;
-
-                    return (
-                      <div key={subj.id} className="bg-[#0b0f17] border border-[#1e293b] rounded-2xl p-6 space-y-4">
-                        <div className="flex items-center justify-between border-b border-[#1e293b] pb-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-amber-500/5 border border-amber-500/25 rounded-xl flex items-center justify-center text-xl">
-                              {subj.icon}
-                            </div>
-                            <div>
-                              <h3 className="text-md font-bold text-white">{subj.name}</h3>
-                              <p className="text-xs text-neutral-400">
-                                {readyTests.length > 0 ? `${readyTests.length} Ready CBT Modules` : "Unit tests launching soon"}
-                              </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filteredPyq.map((p, idx) => (
+                        <div 
+                          key={idx} 
+                          className="bg-[#0f1520] hover:bg-[#121c2c] border border-[#1e293b] hover:border-[#8b5cf6]/50 rounded-2xl p-4 transition-all duration-300 flex items-start gap-4 group relative cursor-pointer shadow-lg"
+                          onClick={() => startPyqTest(p)}
+                        >
+                          {/* Double Ring Icon */}
+                          <div className="w-11 h-11 shrink-0 bg-[#0d1322] border border-[#1e293b] rounded-full flex items-center justify-center relative">
+                            <div className="absolute inset-1 rounded-full border border-purple-500/30 flex items-center justify-center text-lg">
+                              📋
                             </div>
                           </div>
-                          {readyTests.length > 0 && (
-                            <button 
-                              className="bg-[#21262d] hover:bg-amber-500 hover:text-black text-white border border-[#30363d] hover:border-amber-500 text-[10px] font-extrabold px-3 py-1.5 rounded-xl transition-all flex items-center gap-1"
-                              onClick={() => startShortSprint(subj.id)}
-                            >
-                              ⚡ Sprint Mode
-                            </button>
-                          )}
-                        </div>
 
-                        {filteredTests.length === 0 ? (
-                          <div className="text-xs text-neutral-500 py-2">No matching tests found under this category.</div>
-                        ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {filteredTests.map(t => (
-                              <div 
-                                key={t.id}
-                                className={`bg-[#0f1520] hover:bg-[#151f30] border ${t.ready ? "border-[#1e293b] hover:border-amber-500/35" : "border-dashed border-neutral-800 opacity-60"} rounded-xl p-4 transition-all flex flex-col justify-between cursor-pointer`}
-                                onClick={() => t.ready && triggerTestInit(subj.id, t.id)}
-                              >
-                                <div>
-                                  <div className="flex justify-between items-start gap-2 mb-2">
-                                    <h4 className="text-xs font-bold text-white line-clamp-1 group-hover:text-amber-300 transition-colors">{t.title}</h4>
-                                    <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${t.ready ? "bg-green-500/10 text-green-400 border border-green-500/20" : "bg-neutral-800 text-neutral-400"}`}>
-                                      {t.ready ? "READY" : "SOON"}
-                                    </span>
-                                  </div>
-                                  <p className="text-[11px] text-neutral-400 font-sans line-clamp-2 leading-relaxed mb-3">{t.desc}</p>
-                                </div>
+                          {/* Card Contents */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-center gap-1.5 mb-1">
+                              <span className="bg-[#8b5cf6]/10 text-[#a78bfa] text-[9px] font-bold px-2 py-0.5 rounded border border-[#8b5cf6]/20 flex items-center gap-1">
+                                📅 {p.year}
+                              </span>
+                              <span className="bg-[#8b5cf6]/10 text-[#a78bfa] text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded border border-[#8b5cf6]/20">
+                                PYQ
+                              </span>
+                            </div>
 
-                                <div className="flex items-center justify-between border-t border-[#1e293b] pt-3 mt-1 text-[10px] text-neutral-500">
-                                  <span>{t.ready ? `${t.questions} Qs / ${t.mins} Min` : "In preparation"}</span>
-                                  {t.ready && (
-                                    <button 
-                                      className="text-amber-500 hover:text-amber-400 font-bold transition-all text-[11px]"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        triggerTestInit(subj.id, t.id);
-                                      }}
-                                    >
-                                      Launch →
-                                    </button>
-                                  )}
+                            <h3 className="text-sm font-bold text-white group-hover:text-[#a78bfa] transition-colors truncate">
+                              {p.exam}
+                            </h3>
+                            <p className="text-[11px] text-[#8b949e] font-sans line-clamp-2 leading-relaxed mt-1 mb-2">
+                              Original question paper from the {p.year} nationwide recruitment cycle. Includes clinical rationales.
+                            </p>
+
+                            <div className="flex items-center justify-between border-t border-[#1e293b]/50 pt-2.5 mt-2">
+                              <div className="flex items-center gap-3 text-[10px] text-neutral-400">
+                                <span>📋 {p.count} Past MCQs</span>
+                                <span className="text-purple-400/90 font-medium bg-[#8b5cf6]/5 px-1.5 py-0.2 rounded uppercase text-[9px] tracking-wide">{p.tag} Series</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#a78bfa] group-hover:text-purple-300 transition-colors">
+                                <span>Start Test</span>
+                                <div className="w-7 h-7 rounded-lg bg-[#141224] hover:bg-[#201d3a] border border-[#1e293b] flex items-center justify-center text-[#a78bfa] text-xs font-bold shrink-0">
+                                  →
                                 </div>
                               </div>
-                            ))}
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
-            {/* 4. Short Sprints Tab */}
-            {hubTab === "short" && (
-              <div className="space-y-6">
-                <div className="bg-[#0f1520]/50 border border-[#1e293b] p-5 rounded-2xl">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-1.5">⚡ Rapid Practice Speed Sprints (Short Mocks)</h3>
-                  <p className="text-xs text-[#8b949e]">Don't have time for a full exam? Trigger a dynamic 10-question sprint. Shuffled fresh questions from our bank every time!</p>
-                </div>
+              {/* 3. Subject-Wise Mocks Tab */}
+              {hubTab === "subject" && (() => {
+                const activeSubjects = subjects.filter(subj => {
+                  if (subj.id === "mock_tests") return false;
+                  if (searchQuery === "all") return true;
+                  return subj.id === searchQuery;
+                });
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {subjects.filter(subj => subj.id !== "mock_tests").map(subj => {
-                    return (
-                      <div 
-                        key={subj.id}
-                        className="bg-[#0f1520] hover:bg-[#151f30] border border-[#1e293b] hover:border-amber-500/40 rounded-2xl p-5 transition-all duration-300 flex flex-col justify-between group relative cursor-pointer shadow-lg"
-                        onClick={() => startShortSprint(subj.id)}
-                      >
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/2 rounded-full blur-2xl pointer-events-none group-hover:bg-amber-500/5 transition-all"></div>
-                        <div>
-                          <div className="flex justify-between items-center mb-3">
-                            <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center text-xl font-bold group-hover:scale-110 transition-transform">
+                const allSubjectTests: { subj: Subject; test: Test }[] = [];
+                activeSubjects.forEach(subj => {
+                  subj.tests.forEach(t => {
+                    if (hubSearchText) {
+                      const query = hubSearchText.toLowerCase();
+                      if (!t.title.toLowerCase().includes(query) && !t.desc.toLowerCase().includes(query)) {
+                        return;
+                      }
+                    }
+                    allSubjectTests.push({ subj, test: t });
+                  });
+                });
+
+                return (
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center px-1 py-1 border-b border-[#1e293b] mb-4">
+                      <span className="text-[10px] font-black tracking-widest text-[#8b949e] uppercase">AVAILABLE NOW</span>
+                      <span className="text-[11px] font-bold text-[#8b949e]">{allSubjectTests.length} modules</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {allSubjectTests.map(({ subj, test: t }) => (
+                        <div 
+                          key={t.id} 
+                          className={`bg-[#0f1520] hover:bg-[#121c2c] border rounded-2xl p-4 transition-all duration-300 flex items-start gap-4 group relative cursor-pointer shadow-lg ${
+                            t.ready 
+                              ? "border-[#1e293b] hover:border-[#388bfd]/50" 
+                              : "border-dashed border-neutral-800 opacity-60 hover:border-neutral-700"
+                          }`}
+                          onClick={() => t.ready && triggerTestInit(subj.id, t.id)}
+                        >
+                          {/* Double Ring Icon */}
+                          <div className="w-11 h-11 shrink-0 bg-[#0d1322] border border-[#1e293b] rounded-full flex items-center justify-center relative">
+                            <div className={`absolute inset-1 rounded-full border ${t.ready ? "border-blue-500/30" : "border-neutral-700/30"} flex items-center justify-center text-lg`}>
+                              {t.icon || subj.icon}
+                            </div>
+                          </div>
+
+                          {/* Card Contents */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-center gap-1.5 mb-1">
+                              <span className="bg-[#21262d] text-[#c9d1d9] text-[9px] font-bold px-2 py-0.5 rounded border border-[#30363d] flex items-center gap-1">
+                                ⏱️ {t.ready ? `${t.mins} min` : "Soon"}
+                              </span>
+                              <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded border ${
+                                t.ready 
+                                  ? "bg-blue-500/10 text-blue-400 border-blue-500/20" 
+                                  : "bg-neutral-800 text-neutral-400 border-neutral-700/50"
+                              }`}>
+                                {t.ready ? "NEW" : "SOON"}
+                              </span>
+                            </div>
+
+                            <h3 className="text-sm font-bold text-white group-hover:text-[#58a6ff] transition-colors truncate">
+                              {t.title}
+                            </h3>
+                            <p className="text-[11px] text-[#8b949e] font-sans line-clamp-2 leading-relaxed mt-1 mb-2">
+                              {t.ready ? t.desc : `High-yield diagnostic module covering ${t.title} topics. Releasing soon!`}
+                            </p>
+
+                            <div className="flex items-center justify-between border-t border-[#1e293b]/50 pt-2.5 mt-2">
+                              <div className="flex items-center gap-3 text-[10px] text-neutral-400">
+                                <span>🗒️ {t.ready ? `${t.questions} Qs` : "In preparation"}</span>
+                                {t.ready && (
+                                  <span className="text-blue-400/90 font-medium bg-blue-400/5 px-1.5 py-0.2 rounded">Medium</span>
+                                )}
+                              </div>
+                              {t.ready ? (
+                                <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#58a6ff] group-hover:text-blue-300 transition-colors">
+                                  <span>Start Test</span>
+                                  <div className="w-7 h-7 rounded-lg bg-[#111c2e] hover:bg-[#1d2d44] border border-[#1e293b] flex items-center justify-center text-[#58a6ff] text-xs font-bold shrink-0">
+                                    →
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5 text-[11px] font-bold text-neutral-500">
+                                  <span>Soon</span>
+                                  <div className="w-7 h-7 rounded-lg bg-neutral-800 text-neutral-600 border border-neutral-700/50 flex items-center justify-center text-xs font-bold shrink-0">
+                                    →
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* 4. Daily Speed Sprints Tab */}
+              {hubTab === "short" && (() => {
+                return (
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center px-1 py-1 border-b border-[#1e293b] mb-4">
+                      <span className="text-[10px] font-black tracking-widest text-purple-400 uppercase">⚡ DAILY SPEED SPRINTS</span>
+                      <span className="text-[11px] font-bold text-[#8b949e]">{CURATED_SPRINTS.length} premium sets</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {CURATED_SPRINTS.map(t => (
+                        <div 
+                          key={t.id} 
+                          className="bg-[#0f1520] hover:bg-[#121c2c] border border-[#1e293b] hover:border-purple-500/50 rounded-2xl p-4 transition-all duration-300 flex items-start gap-4 group relative cursor-pointer shadow-lg"
+                          onClick={() => startCuratedSprint(t.id)}
+                        >
+                          {/* Circle Icon */}
+                          <div className="w-11 h-11 shrink-0 bg-[#0d1322] border border-[#1e293b] rounded-full flex items-center justify-center relative">
+                            <div className="absolute inset-1 rounded-full border border-purple-500/30 flex items-center justify-center text-lg">
                               ⚡
                             </div>
-                            <span className="bg-amber-500/10 text-amber-300 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border border-amber-500/20">
-                              10 Qs / 10 Mins
-                            </span>
                           </div>
-                          <h3 className="text-md font-bold text-white mb-2 leading-tight group-hover:text-amber-300 transition-colors">
-                            {subj.name} Sprint
-                          </h3>
-                          <p className="text-xs text-[#8492a6] font-sans leading-relaxed mb-4">
-                            Rapid-fire randomized mock covering core topics from {subj.name}. Ideal for daily active recall.
-                          </p>
-                        </div>
 
-                        <div className="border-t border-[#1e293b] pt-4 mt-2 flex justify-between items-center">
-                          <div className="flex flex-col">
-                            <span className="text-[10px] text-[#8b949e]">SPRINT TYPE</span>
-                            <span className="text-xs text-amber-400 font-bold flex items-center gap-1">
-                              Dynamic Practice
-                            </span>
+                          {/* Card Contents */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-center gap-1.5 mb-1">
+                              <span className="bg-[#21262d] text-[#c9d1d9] text-[9px] font-bold px-2 py-0.5 rounded border border-[#30363d] flex items-center gap-1">
+                                ⏱️ {t.mins} min
+                              </span>
+                              <span className="bg-purple-500/10 text-purple-400 text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded border border-purple-500/20">
+                                SPRINT
+                              </span>
+                            </div>
+
+                            <h3 className="text-sm font-bold text-white group-hover:text-purple-400 transition-colors truncate">
+                              {t.title}
+                            </h3>
+                            <p className="text-[11px] text-[#8b949e] font-sans line-clamp-2 leading-relaxed mt-1 mb-2">
+                              {t.desc}
+                            </p>
+
+                            <div className="flex items-center justify-between border-t border-[#1e293b]/50 pt-2.5 mt-2">
+                              <div className="flex items-center gap-3 text-[10px] text-neutral-400">
+                                <span>🗒️ {t.questions} Qs</span>
+                                <span className="text-purple-400/90 font-medium bg-purple-400/5 px-1.5 py-0.2 rounded">Rapid Fire</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-[11px] font-bold text-purple-400 group-hover:text-purple-300 transition-colors">
+                                <span>Start Sprint</span>
+                                <div className="w-7 h-7 rounded-lg bg-[#111c2e] hover:bg-[#1d2d44] border border-[#1e293b] flex items-center justify-center text-purple-400 text-xs font-bold shrink-0">
+                                  →
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <button 
-                            className="bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-md group-hover:translate-x-1"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              startShortSprint(subj.id);
-                            }}
-                          >
-                            Launch Sprint →
-                          </button>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
-            <footer className="mt-12 text-center text-xs text-[#8b949e] pb-6">NCBT · India's Nursing CBT Exam Preparation Platform</footer>
-          </div>
-        )}
+              <footer className="mt-12 text-center text-xs text-[#8b949e] pb-6">NCBT · India's Nursing CBT Exam Preparation Platform</footer>
+            </div>
+          );
+        })()}
+
+
 
         {/* =============== TEST / EXAM PAGE =============== */}
         {activePage === "test" && activeTest && (
-          <div className="min-h-screen bg-[#080c12] text-[#e6edf3] flex flex-col font-sans relative" id="page-test">
+          <div className="page active" id="page-test">
             
-            {/* Elegant Sticky Header */}
-            <header className="sticky top-0 z-[100] bg-[#0d111a]/95 backdrop-blur-md border-b border-[#1e2d45] px-4 py-3 flex items-center justify-between gap-4 shadow-xl">
+            {/* Topbar inside test */}
+            <div className="test-topbar flex items-center justify-between gap-4 px-4 py-3 bg-[#0c1322] border-b border-[#1e293b] sticky top-0 z-[110]" id="test-screen-topbar">
               <div className="flex items-center gap-3">
-                <button 
-                  className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-amber-500/40 text-xs font-bold px-3 py-2 rounded-xl transition-all shadow-md cursor-pointer"
-                  onClick={() => {
-                    if (isTestFinished) {
-                      goHub();
-                    } else {
-                      setShowFinishConfirm(true);
-                    }
-                  }}
-                >
-                  ← Exit
+                <button className="back-btn shrink-0 cursor-pointer z-50" onClick={goHub}>
+                  ← Back
                 </button>
-                <div className="hidden sm:flex flex-col">
-                  <span className="text-[10px] text-[#8b949e] font-extrabold uppercase tracking-widest leading-none">TEST PORTAL</span>
-                  <span className="text-xs font-bold text-white max-w-[240px] truncate">{activeTest.title}</span>
+                <div className="hidden md:flex items-center gap-2">
+                  <span className="topbar-sep text-neutral-600">|</span>
+                  <span className="topbar-title text-sm font-bold text-white line-clamp-1">{activeTest.title}</span>
                 </div>
               </div>
 
-              {/* Status and Timer Bar */}
-              <div className="flex items-center gap-2">
-                <span className={`px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-wider border ${examMode ? "bg-red-500/10 text-red-400 border-red-500/20" : "bg-purple-500/10 text-purple-400 border-purple-500/20"}`}>
-                  {examMode ? "⏱️ Exam Mode" : "💡 Practice Mode"}
+              <div className="flex items-center gap-3 ml-auto">
+                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border hidden sm:inline-block ${examMode ? "bg-red-950/20 text-red-400 border-red-900/40" : "bg-purple-950/20 text-purple-400 border-purple-900/40"}`}>
+                  {examMode ? "⏱️ CBT Exam" : "💡 Practice"}
                 </span>
 
                 {!isTestFinished && (
-                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border tabular-nums ${timeLeft <= 120 ? "bg-red-500/10 text-red-400 border-red-500/30 animate-pulse" : "bg-white/5 text-[#8b949e] border-white/10"}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${timeLeft <= 120 ? "bg-red-500" : "bg-green-400"}`} />
+                  <div className={`timer-pill flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-xs font-bold text-neutral-300 ${timeLeft <= 120 ? "text-red-500 border-red-500/30" : ""}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full bg-green-500 ${timeLeft <= 120 ? "bg-red-500" : ""} animate-pulse`} />
                     <span>{formatTime(timeLeft)}</span>
                   </div>
                 )}
+
+                {!isTestFinished && (
+                  <button 
+                    className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-md hover:scale-[1.03] active:scale-95 cursor-pointer z-50 relative pointer-events-auto"
+                    onClick={() => {
+                      console.log("Upper Submit Test clicked");
+                      setShowFinishConfirm(true);
+                    }}
+                    title="Submit and finish this test"
+                  >
+                    🏁 Submit Test
+                  </button>
+                )}
               </div>
+            </div>
 
-              {/* Action Finish Button */}
-              {!isTestFinished && (
-                <button 
-                  className="bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-lg shadow-red-900/20 active:scale-95 cursor-pointer flex items-center gap-1.5"
-                  onClick={() => setShowFinishConfirm(true)}
-                >
-                  🏁 Submit Test
-                </button>
-              )}
-            </header>
-
-            {/* Main Workspace Grid */}
-            <div className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
-              
-              {!isTestFinished ? (
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-                  
-                  {/* LEFT PORTION: The Question Workspace Panel */}
-                  <main className="col-span-1 md:col-span-8 flex flex-col gap-4">
-                    
-                    {/* Header bar of the current question */}
-                    <div className="bg-[#0f1520] border border-[#1e2d45] rounded-2xl p-4 flex items-center justify-between gap-4 shadow-md">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-[#8b949e] font-extrabold uppercase tracking-widest">QUESTION WORKSPACE</span>
-                        <h2 className="text-sm font-extrabold text-white">
-                          Question {currentQuestionIndex + 1} <span className="text-xs text-[#8b949e] font-normal">of {activeTest.data.length}</span>
-                        </h2>
-                      </div>
-                      
-                      {/* Negative markings details - highly authentic CBT layout */}
-                      <div className="flex items-center gap-2 text-[10px] font-bold text-[#8b949e]">
-                        <span className="bg-[#1c2333] border border-[#1e2d45] text-green-400 px-2 py-1 rounded-lg">
-                          +1.0 Correct
-                        </span>
-                        {examMode && (
-                          <span className="bg-[#1c2333] border border-[#1e2d45] text-red-400 px-2 py-1 rounded-lg">
-                            -0.25 Penalty
-                          </span>
-                        )}
-                      </div>
+            {/* Statistics Bar at test progression */}
+            {!isTestFinished && (
+              <>
+                <div className="stats-bar">
+                  <div className="stat">
+                    <div className="stat-val">{activeTest.data.length}</div>
+                    <div className="stat-lbl">Questions</div>
+                  </div>
+                  <div className="stat">
+                    <div className="stat-val">
+                      {selectedOptions.filter(o => o !== null).length}
                     </div>
+                    <div className="stat-lbl">Answered</div>
+                  </div>
+                  <div className="stat">
+                    <div className="stat-val">
+                      {reviewedQuestions.filter(Boolean).length}
+                    </div>
+                    <div className="stat-lbl">Review</div>
+                  </div>
+                  <div className="stat">
+                    <div className="stat-val">
+                      {activeTest.data.length - selectedOptions.filter(o => o !== null).length}
+                    </div>
+                    <div className="stat-lbl">Left</div>
+                  </div>
+                </div>
 
-                    {/* Question Content Display */}
-                    <div className="bg-[#0f1520] border border-[#1e2d45] rounded-3xl p-6 md:p-8 shadow-lg flex flex-col gap-6 relative overflow-hidden">
-                      {/* Ambient background glow for active card */}
-                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500/40 via-blue-500/30 to-green-500/40"></div>
-                      
-                      {/* Dynamic Question Domain Category Tag (Testbook premium pattern) */}
-                      <div className="flex">
-                        <span className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2.5 py-1 rounded-lg font-bold uppercase tracking-wider flex items-center gap-1.5">
-                          📋 {getQuestionCategory(activeTest.data[currentQuestionIndex].q, activeSubjectId || "")}
-                        </span>
+                {/* Progress bar state */}
+                <div className="progress-wrap">
+                  <div className="prog-info">
+                    <span>Q {currentQuestionIndex + 1}</span>
+                    <span>
+                      {Math.round((selectedOptions.filter(o => o !== null).length / activeTest.data.length) * 100)}%
+                    </span>
+                  </div>
+                  <div className="prog-bar">
+                    <div 
+                      className="prog-fill" 
+                      style={{ 
+                        width: `${Math.round((selectedOptions.filter(o => o !== null).length / activeTest.data.length) * 100)}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Question dots visual navigation helper */}
+                <div className="dot-nav">
+                  {activeTest.data.map((_, i) => {
+                    let dClass = "dot";
+                    if (currentQuestionIndex === i) {
+                      dClass += " cur";
+                    } else if (reviewedQuestions[i]) {
+                      dClass += " review";
+                    } else if (selectedOptions[i] !== null) {
+                      if (examMode) {
+                        dClass += " done-e";
+                      } else {
+                        dClass += questionAnswers[i] === 1 ? " done-c" : " done-w";
+                      }
+                    }
+                    return (
+                      <button 
+                        key={i} 
+                        className={dClass}
+                        onClick={() => setCurrentQuestionIndex(i)}
+                      >
+                        {i + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Test quiz screen */}
+                <div id="quiz-wrap" className="mt-4 overflow-hidden relative">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={currentQuestionIndex}
+                      initial={{ opacity: 0, x: 24 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -24 }}
+                      transition={{ duration: 0.2, ease: "easeInOut" }}
+                      className="q-card active"
+                    >
+                      <div className="q-meta">
+                        <span className="q-num">Q {currentQuestionIndex + 1} / {activeTest.data.length}</span>
+                        <span className="q-src">{activeTest.data[currentQuestionIndex].source}</span>
                       </div>
 
-                      {/* Question Text */}
-                      <div className="text-sm md:text-base font-medium text-white leading-relaxed font-sans">
+                      <p className="q-text">
                         {activeTest.data[currentQuestionIndex].q}
-                      </div>
+                      </p>
 
-                      {/* Options selection container */}
-                      <div className="flex flex-col gap-3">
+                      <div className="opts">
                         {activeTest.data[currentQuestionIndex].opts.map((option, idx) => {
-                          const letterLabels = ["A", "B", "C", "D"];
+                          let optClass = "opt";
                           const isSelected = selectedOptions[currentQuestionIndex] === idx;
                           const isAnswered = questionAnswers[currentQuestionIndex] !== null;
-                          const isCorrectAns = idx === activeTest.data[currentQuestionIndex].ans;
 
-                          let optionBtnClass = "w-full text-left p-4 rounded-2xl border text-xs md:text-sm font-medium transition-all flex items-center justify-between gap-4 cursor-pointer relative overflow-hidden group ";
-                          
                           if (!examMode) {
-                            // Practice Mode Interactive State Display
                             if (isAnswered) {
-                              if (isCorrectAns) {
-                                optionBtnClass += "bg-green-500/10 border-green-500/40 text-green-300 shadow-md shadow-green-950/20";
+                              optClass += " locked";
+                              if (idx === activeTest.data[currentQuestionIndex].ans) {
+                                optClass += " correct";
                               } else if (isSelected) {
-                                optionBtnClass += "bg-red-500/10 border-red-500/40 text-red-300 shadow-md shadow-red-950/20";
-                              } else {
-                                optionBtnClass += "bg-[#141d2e]/30 border-[#1e2d45]/40 text-[#8b949e] opacity-60";
+                                optClass += " wrong";
                               }
-                            } else {
-                              if (isSelected) {
-                                optionBtnClass += "bg-amber-500/10 border-amber-500 text-amber-300 shadow-lg shadow-amber-500/5";
-                              } else {
-                                optionBtnClass += "bg-[#141d2e] border-[#1e2d45] text-[#c9d1d9] hover:bg-[#192236] hover:border-[#243550]";
-                              }
+                            } else if (isSelected) {
+                              optClass += " sel";
                             }
                           } else {
-                            // CBT Exam Mode freely toggleable state
                             if (isSelected) {
-                              optionBtnClass += "bg-blue-500/10 border-blue-500 text-blue-300 shadow-lg shadow-blue-500/10 font-semibold scale-[1.01]";
-                            } else {
-                              optionBtnClass += "bg-[#141d2e] border-[#1e2d45] text-[#c9d1d9] hover:bg-[#192236] hover:border-[#243550]";
+                              optClass += " exam-sel";
                             }
                           }
 
+                          const L = ["A", "B", "C", "D"];
+
                           return (
                             <button 
-                              key={idx}
-                              className={optionBtnClass}
+                              key={idx} 
+                              className={optClass}
                               onClick={() => handleOptionSelect(idx)}
-                              disabled={!examMode && isAnswered}
                             >
-                              <div className="flex items-center gap-3 flex-1">
-                                {/* Option letter badge */}
-                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-all ${
-                                  !examMode && isAnswered
-                                    ? isCorrectAns
-                                      ? "bg-green-500 text-black"
-                                      : isSelected
-                                        ? "bg-red-500 text-white"
-                                        : "bg-[#1e2d45]/50 text-[#8b949e]"
-                                    : isSelected
-                                      ? examMode
-                                        ? "bg-blue-500 text-black"
-                                        : "bg-amber-500 text-black"
-                                      : "bg-[#1c2333] text-[#8b949e] group-hover:bg-[#243047] group-hover:text-white"
-                                }`}>
-                                  {letterLabels[idx]}
-                                </div>
-                                <span className="flex-1 leading-normal">{option}</span>
-                              </div>
-
-                              {/* Action icons / State badges on right */}
-                              <div className="shrink-0 flex items-center">
-                                {!examMode && isAnswered && (
-                                  isCorrectAns ? (
-                                    <span className="text-green-400 text-lg font-bold">✔</span>
-                                  ) : isSelected ? (
-                                    <span className="text-red-400 text-lg font-bold">✖</span>
-                                  ) : null
-                                )}
-                                {examMode && isSelected && (
-                                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500 ring-4 ring-blue-500/25 animate-pulse" />
-                                )}
-                              </div>
+                              <span className="opt-letter">{L[idx]}</span>
+                              <span>{option}</span>
                             </button>
                           );
                         })}
                       </div>
 
-                      {/* Practice mode instant detailed explanation card */}
-                      {!examMode && questionAnswers[currentQuestionIndex] !== null && (
-                        <div className="mt-4 bg-[#141d2e] border-l-4 border-amber-500 rounded-r-2xl p-5 shadow-inner animate-fade-in">
-                          <div className="flex items-center gap-2 text-amber-400 font-extrabold text-xs mb-2">
-                            <span>💡 Detailed Clinical Rationale</span>
-                          </div>
-                          <div className="text-xs md:text-sm text-[#c9d1d9] leading-relaxed font-sans" style={{ whiteSpace: "pre-line" }}>
-                            {getDetailedExplain(activeTest.data[currentQuestionIndex])}
-                          </div>
-                          
-                          {/* Academic reference tag */}
-                          <div className="mt-3 pt-3 border-t border-[#1e2d45] flex items-center justify-between gap-4 text-[10px] text-[#8b949e]">
-                            <span>📌 Source Reference: <strong className="text-white">{activeTest.data[currentQuestionIndex].source || "NCBT Faculty Editorial Board"}</strong></span>
-                            <span className="text-amber-500 font-bold bg-amber-500/5 px-2 py-0.5 rounded border border-amber-500/10">NURSING INSIGHT</span>
-                          </div>
-                        </div>
-                      )}
+                      {/* Feedback wrapper in practice mode */}
+                      {!examMode && questionAnswers[currentQuestionIndex] !== null && (() => {
+                        const q = activeTest.data[currentQuestionIndex];
+                        const aiState = aiRationales[q.q];
+                        return (
+                          <div className="mt-4 animate-fade-in space-y-3">
+                            <div className={`fb show ${questionAnswers[currentQuestionIndex] === 1 ? "fb-ok" : "fb-no"}`}>
+                              {questionAnswers[currentQuestionIndex] === 1 ? "✅ Correct! " : `❌ Wrong. Correct Answer: ${q.opts[q.ans]}. `}
+                              <span style={{ whiteSpace: "pre-line" }}>{getDetailedExplain(q)}</span>
+                            </div>
 
-                    </div>
+                            {/* AI Rationale Button & Panel */}
+                            <div className="bg-slate-900/60 border border-indigo-500/25 rounded-xl p-4 text-left">
+                              <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                                <span className="text-xs font-bold text-indigo-400 flex items-center gap-1.5">
+                                  ✨ AI Exam Assistant (Gemini Powered)
+                                </span>
+                                {!aiState?.text && !aiState?.loading && (
+                                  <button
+                                    onClick={() => generateAiRationale(q.q, q.opts, q.ans)}
+                                    className="bg-indigo-650 hover:bg-indigo-750 active:scale-95 text-white font-extrabold text-[10px] px-3 py-1 rounded-lg transition-all cursor-pointer shadow-md border border-indigo-500/30"
+                                  >
+                                    Generate Expert Clinical Rationale
+                                  </button>
+                                )}
+                              </div>
 
-                    {/* Left Panel Workspace Navigation Controls */}
-                    <div className="bg-[#0f1520] border border-[#1e2d45] rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-md">
-                      <div className="flex items-center gap-2">
+                              {aiState?.loading && (
+                                <div className="py-4 flex flex-col items-center justify-center gap-2">
+                                  <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                                  <span className="text-[10px] text-slate-400 animate-pulse font-medium">Analyzing diagnostic criteria, Indian Nursing Council guidelines, & nursing protocols...</span>
+                                </div>
+                              )}
+
+                              {aiState?.error && (
+                                <p className="text-xs text-rose-400 mt-1">⚠️ {aiState.error}. Server running in high-yield local mode.</p>
+                              )}
+
+                              {aiState?.text && (
+                                <div className="text-xs text-slate-300 leading-relaxed space-y-2 mt-2 bg-slate-950/40 p-3 rounded-lg border border-slate-850/50 select-text">
+                                  <div className="prose-slate max-w-none text-slate-300" style={{ whiteSpace: "pre-wrap" }}>
+                                    {aiState.text}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Navigation control footer */}
+                      <div className="nav-row">
                         <button 
-                          className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1.5"
-                          onClick={handlePrevQuestion}
+                          className="btn-prev" 
                           disabled={currentQuestionIndex === 0}
+                          onClick={handlePrevQuestion}
                         >
                           ← Prev
                         </button>
-
-                        {examMode && selectedOptions[currentQuestionIndex] !== null && (
-                          <button 
-                            className="px-3 py-2 bg-transparent hover:bg-red-500/10 text-red-400 hover:text-red-300 text-xs font-extrabold rounded-xl transition-all border border-red-500/15 cursor-pointer"
-                            onClick={() => clearResponse(currentQuestionIndex)}
-                          >
-                            Clear Response
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {examMode && (
-                          <button 
-                            className={`px-3 py-2 text-xs font-extrabold rounded-xl transition-all border cursor-pointer ${
-                              markedForReview[currentQuestionIndex]
-                                ? "bg-[#382a5c] text-[#d6c4ff] border-[#6b52b2] hover:bg-[#4d3a7d]"
-                                : "bg-transparent text-amber-400 hover:bg-amber-500/10 border-amber-500/20"
-                            }`}
-                            onClick={() => {
-                              if (markedForReview[currentQuestionIndex]) {
-                                toggleMarkForReview(currentQuestionIndex);
-                              } else {
-                                setMarkedForReview(prev => {
-                                  const updated = [...prev];
-                                  updated[currentQuestionIndex] = true;
-                                  return updated;
-                                });
-                                triggerToast("Marked for Review & Advanced 📌", "ok");
-                                handleNextQuestion();
-                              }
-                            }}
-                          >
-                            {markedForReview[currentQuestionIndex] ? "📌 Unmark Review" : "Mark for Review & Next 📌"}
-                          </button>
-                        )}
+                        
+                        <button 
+                          className={`font-bold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5 ${
+                            reviewedQuestions[currentQuestionIndex] 
+                              ? "bg-purple-600 hover:bg-purple-700 text-white border border-purple-500" 
+                              : "bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-[#c9d1d9]"
+                          }`}
+                          onClick={() => toggleMarkForReview(currentQuestionIndex)}
+                          style={{ minHeight: "40px" }}
+                        >
+                          {reviewedQuestions[currentQuestionIndex] ? "🔖 Marked for Review" : "🔖 Mark for Review"}
+                        </button>
 
                         <button 
-                          className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-xs font-extrabold rounded-xl shadow-lg shadow-green-900/20 transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                          className="btn-next"
                           onClick={handleNextQuestion}
                         >
-                          {currentQuestionIndex === activeTest.data.length - 1 ? "Finish ✓" : "Save & Next →"}
+                          {currentQuestionIndex === activeTest.data.length - 1 ? "Next → (Q1)" : "Next →"}
                         </button>
                       </div>
-                    </div>
-
-                    {/* Mobile Floating Drawer Trigger */}
-                    <div className="md:hidden flex justify-center mt-2">
-                      <button 
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs px-5 py-3 rounded-2xl transition-all shadow-xl shadow-blue-900/20 flex items-center gap-2 cursor-pointer active:scale-95"
-                        onClick={() => setMobilePaletteOpen(true)}
-                      >
-                        📊 View Question Palette & Status ({selectedOptions.filter(o => o !== null).length}/{activeTest.data.length})
-                      </button>
-                    </div>
-
-                  </main>
-
-                  {/* RIGHT PORTION: The Question Navigation Palette Sidebar (Desktop) */}
-                  <aside className="col-span-1 md:col-span-4 bg-[#0f1520] border border-[#1e2d45] rounded-3xl p-6 shadow-lg flex flex-col gap-6 sticky top-[80px] hidden md:flex">
-                    
-                    {/* Candidate Identity Profile Card */}
-                    <div className="flex items-center gap-3 pb-4 border-b border-[#1e2d45]">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-500 to-red-500 text-white font-extrabold text-sm flex items-center justify-center shadow-md">
-                        {currentUser?.guest ? "A" : (currentUser?.name ? currentUser.name[0].toUpperCase() : "A")}
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold text-white leading-tight">
-                          {currentUser?.guest ? "Aspirant Scholar" : (currentUser?.name || "Aspirant Scholar")}
-                        </span>
-                        <span className="text-[10px] text-[#8b949e]">Candidate ID: NCBT-2026</span>
-                      </div>
-                    </div>
-
-                    {/* Dynamic legend status container */}
-                    <div className="space-y-3">
-                      <h3 className="text-[10px] text-[#8b949e] font-extrabold uppercase tracking-widest">PALETTE STATUS</h3>
-                      
-                      <div className="grid grid-cols-2 gap-2">
-                        {/* Answered */}
-                        <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2 flex items-center gap-2">
-                          <div className="w-3.5 h-3.5 rounded-md bg-green-500 shrink-0" />
-                          <div className="flex flex-col text-left">
-                            <span className="text-[10px] text-[#8b949e] leading-tight">Answered</span>
-                            <span className="text-xs font-extrabold text-white leading-none">
-                              {selectedOptions.filter((o, i) => o !== null && !markedForReview[i]).length}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Marked for review */}
-                        <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2 flex items-center gap-2">
-                          <div className="w-3.5 h-3.5 rounded-md bg-purple-500 shrink-0" />
-                          <div className="flex flex-col text-left">
-                            <span className="text-[10px] text-[#8b949e] leading-tight font-sans">Marked</span>
-                            <span className="text-xs font-extrabold text-white leading-none">
-                              {markedForReview.filter((m, i) => m && selectedOptions[i] === null).length}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Answered & Marked */}
-                        <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2 flex items-center gap-2 col-span-2">
-                          <div className="w-3.5 h-3.5 rounded-md bg-gradient-to-tr from-purple-500 to-green-500 shrink-0" />
-                          <div className="flex flex-col text-left flex-1">
-                            <span className="text-[10px] text-[#8b949e] leading-tight font-sans font-medium">Answered & Marked (evaluated)</span>
-                            <span className="text-xs font-extrabold text-white leading-none mt-0.5 block">
-                              {markedForReview.filter((m, i) => m && selectedOptions[i] !== null).length}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Visited / Not Answered */}
-                        <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2 flex items-center gap-2">
-                          <div className="w-3.5 h-3.5 rounded-md bg-red-500 shrink-0" />
-                          <div className="flex flex-col text-left">
-                            <span className="text-[10px] text-[#8b949e] leading-tight">Not Ans</span>
-                            <span className="text-xs font-extrabold text-white leading-none">
-                              {visitedQuestions.filter((v, i) => v && selectedOptions[i] === null && !markedForReview[i]).length}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Not Visited */}
-                        <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2 flex items-center gap-2">
-                          <div className="w-3.5 h-3.5 rounded-md bg-[#243550] shrink-0" />
-                          <div className="flex flex-col text-left">
-                            <span className="text-[10px] text-[#8b949e] leading-tight">Not Visited</span>
-                            <span className="text-xs font-extrabold text-white leading-none">
-                              {activeTest.data.length - visitedQuestions.filter(v => v).length}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Question Button Grid Palette */}
-                    <div className="flex flex-col gap-3">
-                      <h3 className="text-[10px] text-[#8b949e] font-extrabold uppercase tracking-widest">CHOOSE QUESTION DOT</h3>
-                      
-                      <div className="grid grid-cols-5 gap-2 max-h-[220px] overflow-y-auto pr-1">
-                        {activeTest.data.map((_, idx) => {
-                          const isCurrent = idx === currentQuestionIndex;
-                          const isVisited = visitedQuestions[idx];
-                          const isAnswered = selectedOptions[idx] !== null;
-                          const isMarked = markedForReview[idx];
-
-                          let dotClass = "w-full aspect-square rounded-xl font-extrabold text-xs flex items-center justify-center transition-all cursor-pointer border ";
-                          
-                          if (isCurrent) {
-                            dotClass += "ring-2 ring-amber-500 text-white font-black ";
-                          }
-
-                          if (isMarked) {
-                            if (isAnswered) {
-                              dotClass += "bg-gradient-to-tr from-purple-600 to-green-600 border-purple-400 text-white";
-                            } else {
-                              dotClass += "bg-purple-600 border-purple-400 text-white";
-                            }
-                          } else if (isAnswered) {
-                            dotClass += "bg-green-600 border-green-500 text-white";
-                          } else if (isVisited) {
-                            dotClass += "bg-red-600 border-red-500 text-white";
-                          } else {
-                            dotClass += "bg-[#141d2e] border-[#1e2d45] text-[#8b949e] hover:border-[#243550]";
-                          }
-
-                          return (
-                            <button 
-                              key={idx}
-                              className={dotClass}
-                              onClick={() => setCurrentQuestionIndex(idx)}
-                              title={`Go to Question ${idx + 1}`}
-                            >
-                              {idx + 1}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Professional instructions card inside sidebar */}
-                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-2xl p-4 text-[10px] text-[#8b949e] leading-relaxed space-y-1 mt-auto">
-                      <p className="font-extrabold text-white text-[11px] mb-1">CBT PRO-TIPS</p>
-                      <p>• Green indicates saved answers.</p>
-                      <p>• Purple indicates questions kept for future verification.</p>
-                      <p>• Review rationales immediately in Practice Mode to maximize retention.</p>
-                    </div>
-
-                  </aside>
-
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
-              ) : (
-                
-                /* =============== CBT DETAILED EVALUATION METRICS (RESULTS SCREEN) =============== */
-                <div className="max-w-3xl mx-auto bg-[#0f1520] border border-[#1e2d45] rounded-3xl p-6 md:p-8 shadow-2xl animate-fade-in text-center relative overflow-hidden">
-                  
-                  {/* Decorative background glow for results */}
-                  <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+              </>
+            )}
 
-                  <div className="w-20 h-20 bg-amber-500/10 text-amber-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-500/20 text-4xl animate-bounce">
+            {/* Custom Modal Confirmation for finishing the test */}
+            {showFinishConfirm && (
+              <div className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-[999] animate-fade-in">
+                <div className="bg-[#0d1117] border border-[#30363d] rounded-2xl p-6 max-w-md w-full shadow-2xl relative text-center">
+                  <div className="w-14 h-14 bg-red-500/10 text-red-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
+                    <span className="text-2xl">🚨</span>
+                  </div>
+                  <h3 className="text-lg font-extrabold text-white mb-2">Finish Mock Test?</h3>
+                  <p className="text-xs text-[#8b949e] mb-6 leading-relaxed">
+                    Are you sure you want to submit your test answers now? You will get detailed evaluation, score performance analysis, and detailed rationales.
+                  </p>
+
+                  {/* Progress details */}
+                  <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-4 text-left space-y-2 mb-6">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-[#8b949e]">Total Questions:</span>
+                      <span className="font-semibold text-white">{activeTest.data.length}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-[#8b949e]">Answered Questions:</span>
+                      <span className="font-semibold text-green-400">
+                        {selectedOptions.filter(o => o !== null).length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-[#8b949e]">Skipped / Unanswered:</span>
+                      <span className="font-semibold text-amber-500">
+                        {activeTest.data.length - selectedOptions.filter(o => o !== null).length}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button 
+                      className="flex-1 py-2.5 bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-[#c9d1d9] font-bold text-xs rounded-xl transition-all cursor-pointer"
+                      onClick={() => setShowFinishConfirm(false)}
+                    >
+                      Keep Solving
+                    </button>
+                    <button 
+                      className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-lg shadow-red-900/20"
+                      onClick={() => {
+                        setShowFinishConfirm(false);
+                        finishTest();
+                      }}
+                    >
+                      Yes, Submit Test
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* =============== RESULTS WRAPPER INTERFACE =============== */}
+            {isTestFinished && (
+              <div id="result-wrap" style={{ display: "block" }}>
+                <div className="result-card">
+                  <div className="result-emoji">
                     {displayPercentage >= 90 ? "🏆" : 
                      displayPercentage >= 75 ? "🎉" :
                      displayPercentage >= 55 ? "👍" : "😐"}
                   </div>
 
-                  <h2 className="text-xl md:text-2xl font-black text-white leading-tight">
-                    {displayPercentage >= 90 ? "Outstanding Performance!" :
-                     displayPercentage >= 75 ? "Great Job! Expert Level!" :
-                     displayPercentage >= 55 ? "Good Effort! Keep Pushing!" : "Needs Practice. Keep Studying!"}
-                  </h2>
-                  <p className="text-xs text-[#8b949e] mt-1 mb-6 font-sans">
-                    {activeTest.title} Completed Evaluated Score Summary
-                  </p>
-
-                  {/* Main Percentage ring-style card */}
-                  <div className="bg-[#141d2e] border border-[#1e2d45] rounded-3xl p-6 inline-block mb-6 relative">
-                    <div className="text-[10px] text-amber-500 font-extrabold uppercase tracking-widest mb-1 font-sans">ACCURACY SCORE</div>
-                    <div className="text-4xl md:text-5xl font-black text-white leading-none tracking-tight">
-                      {displayPercentage}%
-                    </div>
-                    <div className="text-xs font-semibold text-[#8b949e] mt-2 font-sans">
-                      {examMode ? (
-                        <span>
-                          Net Score: <strong className="text-amber-400">{netMarks.toFixed(2)}</strong> out of <strong>{totalQuestions}</strong>
-                        </span>
-                      ) : (
-                        <span>
-                          {correctCount} correct of {totalQuestions} total MCQs
-                        </span>
-                      )}
-                    </div>
+                  <div className="result-pct">
+                    {displayPercentage}%
                   </div>
 
-                  {/* Score breakdown metrics grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-                    
-                    {/* Correct */}
-                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-2xl p-4 flex flex-col items-center">
-                      <span className="text-lg md:text-xl font-bold text-green-400">+{correctCount}</span>
-                      <span className="text-[10px] text-[#8b949e] font-bold uppercase tracking-wider mt-1">Correct</span>
-                    </div>
+                  <div className="result-label" id="final-results-metrics">
+                    {examMode ? (
+                      <span>
+                        Net Score: <strong className="text-amber-400">{netMarks.toFixed(2)}</strong> out of <strong>{totalQuestions}</strong>
+                      </span>
+                    ) : (
+                      <span>
+                        {correctCount} of {totalQuestions} correct
+                      </span>
+                    )}
+                    {" · "}{examMode ? "CBT Exam Mode" : "Practice Mode"}
+                  </div>
 
-                    {/* Wrong */}
-                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-2xl p-4 flex flex-col items-center">
-                      <span className="text-lg md:text-xl font-bold text-red-400">
+                  <div className="result-msg">
+                    {displayPercentage >= 90 ? "Outstanding!" :
+                     displayPercentage >= 75 ? "Great Job!" :
+                     displayPercentage >= 55 ? "Good Effort!" : "Keep Practising!"}
+                  </div>
+
+                  <div className="result-sub">
+                    {examMode ? (
+                      <span className="text-xs text-[#8492a6]">
+                        CBT Evaluation Formula: {correctCount} correct (+1.0) and {wrongCount} errors (-0.25 penalty). Unattempted: {skippedCount}.
+                      </span>
+                    ) : (
+                      <span>
+                        {correctCount / totalQuestions >= 0.75 ? `You have an exam-ready grasp of ${activeTest.title}.` : "Review the correct rationales below and try again."}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="score-grid">
+                    <div className="score-box">
+                      <div className="score-box-val sc">+{correctCount}</div>
+                      <div className="score-box-lbl">Correct (+1)</div>
+                    </div>
+                    <div className="score-box">
+                      <div className="score-box-val sw">
                         {examMode ? `-${negativePenalty.toFixed(2)}` : `-${wrongCount}`}
-                      </span>
-                      <span className="text-[10px] text-[#8b949e] font-bold uppercase tracking-wider mt-1">
-                        {examMode ? "Penalty (-0.25)" : "Wrong"}
-                      </span>
+                      </div>
+                      <div className="score-box-lbl">{examMode ? "Penalty (-0.25)" : "Wrong"}</div>
                     </div>
-
-                    {/* Skipped */}
-                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-2xl p-4 flex flex-col items-center">
-                      <span className="text-lg md:text-xl font-bold text-amber-500">{skippedCount}</span>
-                      <span className="text-[10px] text-[#8b949e] font-bold uppercase tracking-wider mt-1">Skipped</span>
+                    <div className="score-box">
+                      <div className="score-box-val ss">{skippedCount}</div>
+                      <div className="score-box-lbl font-sans">Skipped</div>
                     </div>
-
-                    {/* Exam Mode badge */}
-                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-2xl p-4 flex flex-col items-center">
-                      <span className="text-xs md:text-sm font-extrabold text-blue-400 mt-1 uppercase truncate max-w-full">
-                        {examMode ? "Timed Exam" : "Practice"}
-                      </span>
-                      <span className="text-[10px] text-[#8b949e] font-bold uppercase tracking-wider mt-2.5">Mode type</span>
+                    <div className="score-box">
+                      <div className="score-box-val sp">
+                        {examMode ? netMarks.toFixed(2) : `${displayPercentage}%`}
+                      </div>
+                      <div className="score-box-lbl font-sans">{examMode ? "Net Marks" : "Score %"}</div>
                     </div>
-
                   </div>
 
-                  {/* Actions Row */}
-                  <div className="flex flex-wrap items-center justify-center gap-3 pb-6 border-b border-[#1e2d45] mb-8">
+                  <div className="result-actions">
                     <button 
-                      className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs rounded-xl shadow-lg shadow-amber-500/10 transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
+                      className="btn-retry" 
                       onClick={() => triggerTestInit(activeSubjectId!, activeTest.id)}
                     >
-                      🔄 Retake Mock Test
+                      🔄 Retry Test
                     </button>
-
-                    <button 
-                      className="px-5 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-[#c9d1d9] text-xs font-bold rounded-xl transition-all cursor-pointer"
-                      onClick={goHub}
-                    >
-                      ← Back to Dashboard
+                    <button className="btn-back-hub" onClick={goHub}>
+                      ← Back
                     </button>
-
                     <button 
-                      className="px-5 py-3 bg-[#25d366]/10 hover:bg-[#25d366]/25 border border-[#25d366]/20 text-[#25d366] text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
-                      onClick={() => shareToWhatsApp(displayPercentage, correctCount, totalQuestions, activeTest.title)}
+                      className="btn-share-wp"
+                      onClick={() => shareToWhatsApp(
+                        displayPercentage, 
+                        correctCount, 
+                        totalQuestions, 
+                        activeTest.title
+                      )}
                     >
-                      <Share2 className="w-3.5 h-3.5" /> Share to WhatsApp
+                      <Share2 className="w-4 h-4" /> Share Score to WhatsApp
                     </button>
                   </div>
 
-                  {/* DETAILED QUESTION-BY-QUESTION REVIEW PANEL */}
-                  <div className="text-left space-y-6">
-                    <div className="flex flex-col">
-                      <h3 className="text-sm font-extrabold text-white">Performance Audit Review</h3>
-                      <p className="text-[10px] text-[#8b949e]">Examine candidate choice, correct answers, and expert clinical rationales below</p>
-                    </div>
-
-                    <div className="space-y-4">
+                  {/* Fully fleshed-out Exam Mode full review table */}
+                  {examMode && (
+                    <div className="mt-8 text-left border-t border-[#1e2d45] pt-6">
+                      <div className="review-header">
+                        Full Exam Practice Review — All {activeTest.data.length} Questions
+                      </div>
+                      
                       {activeTest.data.map((q, idx) => {
-                        const candidateSelection = selectedOptions[idx];
-                        const alphabetLabels = ["A", "B", "C", "D"];
+                        const selIdx = selectedOptions[idx];
+                        const L = ["A", "B", "C", "D"];
 
                         return (
-                          <div key={idx} className="bg-[#141d2e] border border-[#1e2d45] rounded-2xl p-5 shadow-sm space-y-4 relative overflow-hidden animate-fade-in">
-                            {/* Accent vertical line indicating state */}
-                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${
-                              candidateSelection === null 
-                                ? "bg-amber-500" 
-                                : candidateSelection === q.ans 
-                                  ? "bg-green-500" 
-                                  : "bg-red-500"
-                            }`} />
-
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex items-start gap-2.5">
-                                <span className="bg-[#1c2333] border border-[#1e2d45] text-[10px] font-black px-2 py-0.5 rounded-lg text-[#8b949e] mt-0.5">
-                                  Q{idx + 1}
-                                </span>
-                                <h4 className="text-xs md:text-sm font-bold text-white leading-relaxed">
-                                  {q.q}
-                                </h4>
-                              </div>
-
-                              {/* State label */}
-                              <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full shrink-0 border ${
-                                candidateSelection === null
-                                  ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                                  : candidateSelection === q.ans
-                                    ? "bg-green-500/10 text-green-400 border-green-500/20"
-                                    : "bg-red-500/10 text-red-400 border-red-500/20"
-                              }`}>
-                                {candidateSelection === null
-                                  ? "Skipped"
-                                  : candidateSelection === q.ans
-                                    ? "Correct"
-                                    : "Incorrect"}
-                              </span>
+                          <div key={idx} className="review-q animate-fade-in">
+                            <div className="rq-top">
+                              <span className="rq-num">Q{idx + 1}</span>
+                              <span className="rq-text">{q.q}</span>
                             </div>
 
-                            {/* Option list review */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-6">
-                              {q.opts.map((option, oIdx) => {
-                                const isOptionSelectedByCandidate = candidateSelection === oIdx;
-                                const isCorrectOpt = oIdx === q.ans;
-
-                                let reviewBadgeClass = "p-3 rounded-xl border text-xs flex items-center gap-2.5 ";
-                                if (isCorrectOpt) {
-                                  reviewBadgeClass += "bg-green-500/5 border-green-500/30 text-green-300 font-medium";
-                                } else if (isOptionSelectedByCandidate) {
-                                  reviewBadgeClass += "bg-red-500/5 border-red-500/30 text-red-300";
-                                } else {
-                                  reviewBadgeClass += "bg-[#1c2333]/40 border-[#1e2d45]/40 text-[#8b949e]";
+                            <div className="rq-opts">
+                              {q.opts.map((opt, oIdx) => {
+                                let rqClass = "rq-opt";
+                                if (oIdx === selIdx && oIdx === q.ans) {
+                                  rqClass += " ro-correct";
+                                } else if (oIdx === selIdx && oIdx !== q.ans) {
+                                  rqClass += " ro-wrong";
+                                } else if (oIdx === q.ans) {
+                                  rqClass += " ro-show";
                                 }
 
                                 return (
-                                  <div key={oIdx} className={reviewBadgeClass}>
-                                    <span className={`w-5 h-5 rounded-md font-bold text-[10px] flex items-center justify-center ${
-                                      isCorrectOpt
-                                        ? "bg-green-500 text-black"
-                                        : isOptionSelectedByCandidate
-                                          ? "bg-red-500 text-white"
-                                          : "bg-[#1c2333] text-[#8b949e]"
-                                    }`}>
-                                      {alphabetLabels[oIdx]}
-                                    </span>
-                                    <span className="truncate">{option}</span>
+                                  <div key={oIdx} className={rqClass}>
+                                    <span className="r-letter">{L[oIdx]}</span>
+                                    <span>{opt}</span>
                                   </div>
                                 );
                               })}
                             </div>
 
-                            {/* Rationale box */}
-                            <div className="pl-6 pt-3 border-t border-[#1e2d45] text-xs text-[#8b949e] leading-relaxed font-sans">
-                              <p className="font-extrabold text-[#c9d1d9] text-[11px] mb-1">💡 Faculty Answer Explanation</p>
-                              <div style={{ whiteSpace: "pre-line" }}>{getDetailedExplain(q)}</div>
-                              <p className="mt-2 text-[10px] text-[#8b949e]">📌 Source Reference: <strong className="text-[#c9d1d9]">{q.source || "NCBT Clinical Education Board"}</strong></p>
-                            </div>
+                            <div className="rq-rationale font-sans space-y-3">
+                              <div className="flex-1 text-sm leading-relaxed" style={{ whiteSpace: "pre-line" }}>
+                                💡 {getDetailedExplain(q)}
+                                <span className="rq-src block mt-2 text-xs opacity-75 font-semibold" style={{ whiteSpace: "normal" }}>📌 Source: {q.source}</span>
+                              </div>
 
+                              {/* AI Rationale Button & Panel */}
+                              {(() => {
+                                const aiState = aiRationales[q.q];
+                                return (
+                                  <div className="bg-[#121c2c] border border-indigo-500/20 rounded-xl p-4 text-left mt-3">
+                                    <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                                      <span className="text-xs font-bold text-indigo-400 flex items-center gap-1.5">
+                                        ✨ AI Exam Assistant (Gemini Powered)
+                                      </span>
+                                      {!aiState?.text && !aiState?.loading && (
+                                        <button
+                                          onClick={() => generateAiRationale(q.q, q.opts, q.ans)}
+                                          className="bg-indigo-650 hover:bg-indigo-750 active:scale-95 text-white font-extrabold text-[10px] px-3 py-1 rounded-lg transition-all cursor-pointer shadow-md border border-indigo-500/30"
+                                        >
+                                          Generate Expert Clinical Rationale
+                                        </button>
+                                      )}
+                                    </div>
+
+                                    {aiState?.loading && (
+                                      <div className="py-4 flex flex-col items-center justify-center gap-2">
+                                        <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                                        <span className="text-[10px] text-slate-400 animate-pulse font-medium">Analyzing diagnostic criteria, Indian Nursing Council guidelines, & nursing protocols...</span>
+                                      </div>
+                                    )}
+
+                                    {aiState?.error && (
+                                      <p className="text-xs text-rose-400 mt-1">⚠️ {aiState.error}. Server running in high-yield local mode.</p>
+                                    )}
+
+                                    {aiState?.text && (
+                                      <div className="text-xs text-slate-300 leading-relaxed space-y-2 mt-2 bg-slate-950/40 p-3 rounded-lg border border-slate-800/50 select-text">
+                                        <div className="prose-slate max-w-none text-slate-300" style={{ whiteSpace: "pre-wrap" }}>
+                                          {aiState.text}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                            </div>
                           </div>
                         );
                       })}
                     </div>
-
-                  </div>
-
-                </div>
-              )}
-
-            </div>
-
-            {/* Mobile Bottom Responsive Drawer for Palette Grid */}
-            {mobilePaletteOpen && activeTest && (
-              <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex flex-col justify-end animate-fade-in">
-                
-                {/* Click outside to close */}
-                <div className="flex-1" onClick={() => setMobilePaletteOpen(false)} />
-
-                {/* Sliding Drawer Body */}
-                <div className="bg-[#0f1520] border-t border-[#1e2d45] rounded-t-[2.5rem] max-h-[85vh] overflow-y-auto p-6 flex flex-col gap-5 shadow-2xl relative">
-                  
-                  {/* Pull bar indicator */}
-                  <div className="w-12 h-1 bg-[#1e2d45] rounded-full mx-auto" />
-
-                  {/* Header */}
-                  <div className="flex items-center justify-between gap-4 pb-3 border-b border-[#1e2d45]">
-                    <div className="flex flex-col text-left">
-                      <span className="text-[10px] text-[#8b949e] font-extrabold uppercase tracking-widest leading-none">CBT PORTAL</span>
-                      <h3 className="text-sm font-extrabold text-white mt-1">CBT Question Map Palette</h3>
-                    </div>
-                    <button 
-                      className="w-8 h-8 rounded-full bg-white/5 border border-white/10 hover:border-amber-500/30 text-[#8b949e] hover:text-white flex items-center justify-center text-xs font-bold transition-all cursor-pointer"
-                      onClick={() => setMobilePaletteOpen(false)}
-                    >
-                      ✕
-                    </button>
-                  </div>
-
-                  {/* Stats dynamic summaries */}
-                  <div className="grid grid-cols-2 gap-2 text-left">
-                    {/* Answered */}
-                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2.5 flex items-center gap-2">
-                      <div className="w-3.5 h-3.5 rounded-md bg-green-500 shrink-0" />
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-[#8b949e] leading-none">Answered</span>
-                        <span className="text-xs font-extrabold text-white mt-1">
-                          {selectedOptions.filter((o, i) => o !== null && !markedForReview[i]).length}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Marked for review */}
-                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2.5 flex items-center gap-2">
-                      <div className="w-3.5 h-3.5 rounded-md bg-purple-500 shrink-0" />
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-[#8b949e] leading-none">Marked</span>
-                        <span className="text-xs font-extrabold text-white mt-1">
-                          {markedForReview.filter(m => m).length}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Visited / Not Answered */}
-                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2.5 flex items-center gap-2">
-                      <div className="w-3.5 h-3.5 rounded-md bg-red-500 shrink-0" />
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-[#8b949e] leading-none">Not Ans</span>
-                        <span className="text-xs font-extrabold text-white mt-1">
-                          {visitedQuestions.filter((v, i) => v && selectedOptions[i] === null && !markedForReview[i]).length}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Not Visited */}
-                    <div className="bg-[#141d2e] border border-[#1e2d45] rounded-xl p-2.5 flex items-center gap-2">
-                      <div className="w-3.5 h-3.5 rounded-md bg-[#243550] shrink-0" />
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-[#8b949e] leading-none">Not Visited</span>
-                        <span className="text-xs font-extrabold text-white mt-1">
-                          {activeTest.data.length - visitedQuestions.filter(v => v).length}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Question Grid Map */}
-                  <div className="flex flex-col gap-2.5 text-left">
-                    <span className="text-[10px] text-[#8b949e] font-extrabold uppercase tracking-widest">TAP NUMBER DOT TO JUMP</span>
-                    
-                    <div className="grid grid-cols-5 gap-2.5 max-h-[250px] overflow-y-auto pr-1">
-                      {activeTest.data.map((_, idx) => {
-                        const isCurrent = idx === currentQuestionIndex;
-                        const isVisited = visitedQuestions[idx];
-                        const isAnswered = selectedOptions[idx] !== null;
-                        const isMarked = markedForReview[idx];
-
-                        let dotClass = "w-full aspect-square rounded-xl font-extrabold text-xs flex items-center justify-center transition-all cursor-pointer border ";
-                        
-                        if (isCurrent) {
-                          dotClass += "ring-2 ring-amber-500 text-white font-black ";
-                        }
-
-                        if (isMarked) {
-                          if (isAnswered) {
-                            dotClass += "bg-gradient-to-tr from-purple-600 to-green-600 border-purple-400 text-white";
-                          } else {
-                            dotClass += "bg-purple-600 border-purple-400 text-white";
-                          }
-                        } else if (isAnswered) {
-                          dotClass += "bg-green-600 border-green-500 text-white";
-                        } else if (isVisited) {
-                          dotClass += "bg-red-600 border-red-500 text-white";
-                        } else {
-                          dotClass += "bg-[#141d2e] border-[#1e2d45] text-[#8b949e]";
-                        }
-
-                        return (
-                          <button 
-                            key={idx}
-                            className={dotClass}
-                            onClick={() => {
-                              setCurrentQuestionIndex(idx);
-                              setMobilePaletteOpen(false);
-                            }}
-                          >
-                            {idx + 1}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Prompt Action buttons */}
-                  <div className="mt-2 pt-4 border-t border-[#1e2d45] flex items-center justify-between gap-4">
-                    <button 
-                      className="flex-1 py-3 bg-[#1e2d45]/50 hover:bg-[#1e2d45] text-[#8b949e] hover:text-white text-xs font-bold rounded-xl transition-all border border-[#1e2d45]"
-                      onClick={() => setMobilePaletteOpen(false)}
-                    >
-                      Close Map
-                    </button>
-                    <button 
-                      className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white text-xs font-extrabold rounded-xl transition-all shadow-lg"
-                      onClick={() => {
-                        setMobilePaletteOpen(false);
-                        setShowFinishConfirm(true);
-                      }}
-                    >
-                      🏁 Submit CBT Mock
-                    </button>
-                  </div>
+                  )}
 
                 </div>
               </div>
             )}
 
-            <footer className="py-6 mt-12 border-t border-[#1e2d45] text-center text-xs text-[#8b949e]">
-              NCBT · India's Nursing CBT Exam Preparation Platform
-            </footer>
+            <footer>NCBT · India's Nursing CBT Exam Preparation Platform</footer>
           </div>
         )}
 
@@ -3592,407 +3949,871 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         )}
 
         {/* =============== NURSING UPDATES PAGE =============== */}
+        {/* =============== NURSING UPDATES PAGE =============== */}
         {activePage === "updates" && (
-          <div className="page active" id="page-updates">
-            <div className="max-w-6xl mx-auto px-4 py-8 font-sans">
-              
-              {/* Header block with sync button */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-[var(--border)] pb-6 mb-8">
-                <div>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="flex h-2.5 w-2.5 relative">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                    </span>
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-400">CONNECTING TO LATEST RECRUITMENT FEEDS</span>
-                  </div>
-                  <h1 className="text-2xl md:text-3xl font-black tracking-tight text-[var(--text)] flex items-center gap-2">
-                    ⚡ Daily Pulse
-                  </h1>
-                  <p className="text-[#8b949e] text-xs md:text-sm mt-1 leading-relaxed">
-                    Academic textbook notes, exam changes, dynamic career vacancies, and strategic nursing wisdom.
-                  </p>
-                </div>
-
-                <button 
-                  onClick={fetchUpdates}
-                  disabled={loadingUpdates}
-                  className="flex items-center justify-center gap-2 px-4.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 disabled:opacity-50 text-white text-xs font-black transition-all shadow-lg shadow-indigo-600/10 cursor-pointer self-start md:self-auto"
-                >
-                  {loadingUpdates ? (
-                    <span className="animate-spin border-2 border-white border-t-transparent rounded-full h-3.5 w-3.5" />
-                  ) : (
-                    <span className="text-sm">🔄</span>
-                  )}
-                  <span>Refresh News Feed</span>
-                </button>
-              </div>
-
-              {/* Updates dynamic status warnings */}
-              {updatesError && (
-                <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-2.5 mb-6 text-xs text-amber-300 flex items-center gap-2">
-                  <span>💡</span>
-                  <span>{updatesError}</span>
-                </div>
-              )}
-
-              {/* Category Filter Tabs */}
-              <div className="flex flex-wrap items-center gap-2 mb-8 bg-[var(--surface)] p-1.5 rounded-2xl border border-[var(--border)] max-w-lg shadow-sm">
-                <button 
-                  onClick={() => setActiveUpdateFilter("all")}
-                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${activeUpdateFilter === "all" ? "bg-indigo-600 text-white shadow-md" : "text-[#8b949e] hover:text-[var(--text)] hover:bg-white/5"}`}
-                >
-                  📰 All Pulse
-                </button>
-                <button 
-                  onClick={() => setActiveUpdateFilter("jobs")}
-                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${activeUpdateFilter === "jobs" ? "bg-indigo-600 text-white shadow-md" : "text-[#8b949e] hover:text-[var(--text)] hover:bg-white/5"}`}
-                >
-                  📋 Jobs
-                </button>
-                <button 
-                  onClick={() => setActiveUpdateFilter("syllabus")}
-                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${activeUpdateFilter === "syllabus" ? "bg-indigo-600 text-white shadow-md" : "text-[#8b949e] hover:text-[var(--text)] hover:bg-white/5"}`}
-                >
-                  📚 Syllabus
-                </button>
-                <button 
-                  onClick={() => setActiveUpdateFilter("motivation")}
-                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${activeUpdateFilter === "motivation" ? "bg-indigo-600 text-white shadow-md" : "text-[#8b949e] hover:text-[var(--text)] hover:bg-white/5"}`}
-                >
-                  ✨ Growth
-                </button>
-                <button 
-                  onClick={() => setActiveUpdateFilter("notes")}
-                  className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${activeUpdateFilter === "notes" ? "bg-indigo-600 text-white shadow-md" : "text-[#8b949e] hover:text-[var(--text)] hover:bg-white/5"}`}
-                >
-                  📖 Notes
-                </button>
-              </div>
-
-              {/* Grid content / Loading screen */}
-              {loadingUpdates && updates.length === 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="animate-pulse bg-[var(--surface)] border border-[var(--border)] rounded-2xl h-80 flex flex-col justify-end p-6">
-                      <div className="h-4 bg-white/10 rounded w-1/4 mb-3"></div>
-                      <div className="h-6 bg-white/10 rounded w-3/4 mb-2"></div>
-                      <div className="h-4 bg-white/10 rounded w-full mb-4"></div>
-                      <div className="h-8 bg-white/10 rounded w-1/3"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {updates
-                    .filter(u => activeUpdateFilter === "all" || u.category === activeUpdateFilter)
-                    .map((item, index) => (
-                      <motion.div 
-                        key={item.id}
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.05 }}
-                        className="group flex flex-col bg-[var(--card)] hover:bg-[var(--card2)] border border-[var(--border)] rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300"
+          <div className="page active bg-white text-slate-900 min-h-screen font-sans" id="page-updates">
+            {selectedUpdate ? (
+              /* ================= FULL PAGE DETAILED BLOG POST (WHITE BACKGROUND) ================= */
+              <div className="bg-white text-slate-900 min-h-screen py-8 md:py-12 select-text transition-colors duration-300">
+                <div className="max-w-6xl mx-auto px-4 md:px-8 font-sans">
+                  
+                  {/* Back Navigation Bar */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-4 mb-6 gap-4">
+                    <button 
+                      onClick={() => closeUpdate()}
+                      className="flex items-center gap-1.5 text-slate-500 hover:text-indigo-600 transition-colors font-bold text-xs shrink-0 cursor-pointer border-none bg-transparent p-0"
+                    >
+                      🡠 Back to Editorial News &amp; Blog Feed
+                    </button>
+                    
+                    {/* Share Actions inside header */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest select-none">Quick Share:</span>
+                      <button
+                        onClick={() => {
+                          const shareText = `*🔥 NCBT Nursing Exam Alert: ${selectedUpdate.title}*\n\n${selectedUpdate.summary}\n\n📖 Read full article & practice CBT here: ${window.location.origin}/updates?id=${selectedUpdate.id}`;
+                          const wpUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+                          window.open(wpUrl, "_blank");
+                        }}
+                        className="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-xl text-[11px] font-bold transition-all border border-emerald-200/50 flex items-center gap-1 cursor-pointer"
+                        title="Share on WhatsApp"
                       >
-                        {/* Image banner */}
-                        <div className="h-44 overflow-hidden relative shrink-0">
-                          <img 
-                            src={item.image} 
-                            alt={item.title} 
-                            referrerPolicy="no-referrer"
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-90 group-hover:brightness-100 placeholder-img" 
-                          />
-                          <div className="absolute top-3 left-3 bg-black/75 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/15 text-[9px] font-black uppercase text-white tracking-wider shadow-sm">
-                            🏷️ {item.badge}
+                        💚 WhatsApp
+                      </button>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${selectedUpdate.title} - ${selectedUpdate.summary}\n\nRead more details & attempt mock tests at: ${window.location.origin}/updates?id=${selectedUpdate.id}`);
+                          triggerToast("Study link copied to clipboard! 📋", "ok");
+                        }}
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-bold transition-all border border-slate-200 flex items-center gap-1 cursor-pointer"
+                        title="Copy Shareable Link"
+                      >
+                        🔗 Copy Link
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Multi-lingual Translation Engine Panel */}
+                  <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 mb-8 flex flex-col md:flex-row items-center justify-between gap-4 select-none">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🗣️</span>
+                      <div>
+                        <h4 className="text-xs font-black uppercase text-indigo-600 tracking-wider">Multi-Lingual Study Mode</h4>
+                        <p className="text-[11px] text-slate-500">Read this professional board update or academic clinical note in your preferred language:</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center gap-1.5 bg-slate-200/50 p-1 rounded-xl">
+                      <button
+                        onClick={() => setBlogLanguage("en")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          blogLanguage === "en" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        🇬🇧 English (Original)
+                      </button>
+                      <button
+                        onClick={() => setBlogLanguage("hi")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          blogLanguage === "hi" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        🇮🇳 हिन्दी (Hindi)
+                      </button>
+                      <button
+                        onClick={() => setBlogLanguage("bn")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          blogLanguage === "bn" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        🇮🇳 বাংলা (Bengali)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Compute Translated Values */}
+                  {(() => {
+                    let currentTitle = selectedUpdate.title;
+                    let currentSummary = selectedUpdate.summary;
+                    let currentContent = selectedUpdate.content;
+                    let currentBadge = selectedUpdate.badge;
+
+                    if (blogLanguage !== "en" && BLOG_TRANSLATIONS[selectedUpdate.id]) {
+                      const trans = BLOG_TRANSLATIONS[selectedUpdate.id][blogLanguage];
+                      if (trans) {
+                        currentTitle = trans.title;
+                        currentSummary = trans.summary;
+                        currentContent = trans.content;
+                        currentBadge = trans.badge;
+                      }
+                    }
+
+                    const renderFormattedUpdateContent = (content: string) => {
+                      if (!content) return null;
+                      const lines = content.split("\n");
+
+                      const renderTextWithInlineStyles = (raw: string) => {
+                        if (!raw) return "";
+                        const parts = raw.split(/\*\*|__/);
+                        return parts.map((part, i) => {
+                          const isBold = i % 2 !== 0;
+                          const subParts = part.split(/\*|_/);
+                          const formattedSubparts = subParts.map((sub, j) => {
+                            const isItalic = j % 2 !== 0;
+                            return isItalic ? (
+                              <em key={j} className="text-indigo-600 not-italic font-bold bg-indigo-50 px-1 py-0.5 rounded border border-indigo-100 font-mono text-[11px] inline-block mt-0.5">
+                                {sub}
+                              </em>
+                            ) : sub;
+                          });
+
+                          return isBold ? (
+                            <strong key={i} className="font-extrabold text-slate-900 text-[13px] md:text-sm tracking-tight">
+                              {formattedSubparts}
+                            </strong>
+                          ) : (
+                            <span key={i}>{formattedSubparts}</span>
+                          );
+                        });
+                      };
+
+                      const parseContentWithInternalLinks = (raw: string) => {
+                        if (!raw) return null;
+                        const parts = [];
+                        let lastIndex = 0;
+                        const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+                        let match;
+                        
+                        while ((match = linkRegex.exec(raw)) !== null) {
+                          const matchIndex = match.index;
+                          if (matchIndex > lastIndex) {
+                            parts.push(raw.substring(lastIndex, matchIndex));
+                          }
+                          parts.push({
+                            text: match[1],
+                            url: match[2],
+                            isLink: true
+                          });
+                          lastIndex = linkRegex.lastIndex;
+                        }
+                        
+                        if (lastIndex < raw.length) {
+                          parts.push(raw.substring(lastIndex));
+                        }
+                        
+                        return (
+                          <span>
+                            {parts.map((p, i) => {
+                              if (typeof p === "string") {
+                                return renderTextWithInlineStyles(p);
+                              } else {
+                                const isInternal = p.url.startsWith("/");
+                                if (isInternal) {
+                                  return (
+                                    <button
+                                      key={i}
+                                      onClick={() => {
+                                        const cleanRoute = p.url.toLowerCase();
+                                        if (cleanRoute === "/mock-tests") {
+                                          showPage("mock_tests");
+                                        } else if (cleanRoute === "/subject-mocks") {
+                                          showPage("subject_mocks");
+                                        } else if (cleanRoute === "/short-sprints") {
+                                          showPage("short_sprints");
+                                        } else if (cleanRoute === "/pyq") {
+                                          showPage("pyq");
+                                        } else {
+                                          showPage("landing");
+                                        }
+                                      }}
+                                      className="text-indigo-600 hover:text-indigo-800 font-extrabold underline transition-colors inline cursor-pointer border-none bg-transparent p-0 align-baseline text-xs md:text-[13px]"
+                                    >
+                                      {p.text}
+                                    </button>
+                                  );
+                                } else {
+                                  return (
+                                    <a
+                                      key={i}
+                                      href={p.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-indigo-600 hover:text-indigo-800 font-extrabold underline transition-colors align-baseline text-xs md:text-[13px]"
+                                    >
+                                      {p.text}
+                                    </a>
+                                  );
+                                }
+                              }
+                            })}
+                          </span>
+                        );
+                      };
+
+                      return (
+                        <div className="flex flex-col gap-4 font-sans text-xs md:text-sm text-slate-700 leading-relaxed select-text">
+                          {lines.map((line, idx) => {
+                            const trimmed = line.trim();
+                            if (!trimmed) {
+                              return <div key={idx} className="h-2" />;
+                            }
+
+                            // Skip "Pro Tip" sections completely per user request
+                            if (trimmed.toLowerCase().includes("pro tip") || trimmed.toLowerCase().includes("protip") || trimmed.startsWith("*pro tip")) {
+                              return null;
+                            }
+
+                            // Match warning blocks starting with emojis or custom labels
+                            if (trimmed.startsWith("⚠️") || trimmed.startsWith("🔥") || trimmed.startsWith("📍") || trimmed.startsWith("⚖️")) {
+                              return (
+                                <div 
+                                  key={idx} 
+                                  className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-amber-900 text-xs md:text-[13px] my-3 leading-relaxed flex gap-3 items-start shadow-sm font-sans"
+                                >
+                                  <span className="text-sm shrink-0">💡</span>
+                                  <div className="flex-1">{parseContentWithInternalLinks(trimmed.replace(/^(⚠️|🔥|📍|⚖️)\s*/i, ""))}</div>
+                                </div>
+                              );
+                            }
+
+                            // Match styled header lines
+                            const headingMatch = trimmed.match(/^(🩺|📋|🌟|🔬|🧠|⚡|📚|📂|📌|👉|🧭|📖|💪|✨|🚇)\s*(.*)/);
+                            if (headingMatch) {
+                              const emoji = headingMatch[1];
+                              const text = headingMatch[2];
+                              return (
+                                <h4 
+                                  key={idx} 
+                                  className="text-xs md:text-[14px] font-extrabold text-indigo-700 mt-5 mb-1.5 border-l-2 border-indigo-500 pl-3 leading-tight uppercase tracking-wide flex items-center gap-2 font-syne"
+                                >
+                                  <span className="text-sm">{emoji}</span>
+                                  <span>{parseContentWithInternalLinks(text)}</span>
+                                </h4>
+                              );
+                            }
+
+                            // Match numbered lists
+                            const numberedMatch = trimmed.match(/^(\d+)\.\s*(.*)/);
+                            if (numberedMatch) {
+                              const num = numberedMatch[1];
+                              const text = numberedMatch[2];
+                              return (
+                                <div key={idx} className="flex gap-2.5 items-start pl-1 text-xs md:text-[13px] leading-relaxed my-1">
+                                  <span className="bg-indigo-50 text-indigo-700 text-[10px] font-black px-1.5 py-0.5 rounded-md min-w-[20px] text-center shrink-0 border border-indigo-100">
+                                    {num}
+                                  </span>
+                                  <div className="flex-1 text-slate-700">{parseContentWithInternalLinks(text)}</div>
+                                </div>
+                              );
+                            }
+
+                            // Match bullet lists
+                            const bulletMatch = trimmed.match(/^(-\s+|\*\s+|•\s+)(.*)/);
+                            if (bulletMatch) {
+                              const text = bulletMatch[2];
+                              return (
+                                <div key={idx} className="flex gap-2.5 items-start pl-2 text-xs md:text-[13px] leading-relaxed my-1">
+                                  <span className="text-indigo-600 shrink-0 select-none text-[11px] mt-1">✦</span>
+                                  <div className="flex-1 text-slate-700">{parseContentWithInternalLinks(text)}</div>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <p key={idx} className="my-0.5 text-slate-700 text-xs md:text-[13px] leading-relaxed">
+                                {parseContentWithInternalLinks(trimmed)}
+                              </p>
+                            );
+                          })}
+                        </div>
+                      );
+                    };
+
+                    return (
+                      <div className="flex flex-col lg:flex-row gap-8 items-start">
+                        
+                        {/* Main Left Column (Article Content) */}
+                        <div className="flex-1 lg:max-w-[70%] bg-white rounded-3xl p-1 border border-slate-100">
+                          {/* Metadata */}
+                          <div className="flex items-center gap-2.5 mb-3 select-none">
+                            <span className="bg-indigo-600 text-white text-[9px] font-black uppercase px-2.5 py-1 rounded-lg tracking-wider">
+                              🏷️ {currentBadge}
+                            </span>
+                            <span className="text-slate-400 text-xs font-semibold">•</span>
+                            <span className="text-slate-500 text-xs font-semibold">📅 {selectedUpdate.date}</span>
+                            <span className="text-slate-400 text-xs font-semibold">•</span>
+                            <span className="text-slate-500 text-xs font-semibold">⏱️ {selectedUpdate.readTime}</span>
                           </div>
-                          
-                          {/* Categorized Visual Accent Bar */}
-                          <div className={`absolute bottom-0 left-0 right-0 h-1 ${
-                            item.category === "jobs" ? "bg-cyan-500" :
-                            item.category === "syllabus" ? "bg-amber-500" : "bg-purple-500"
-                          }`} />
+
+                          <h1 className="text-2xl md:text-3.5xl font-extrabold text-slate-900 mb-4 tracking-tight leading-tight select-text font-syne">
+                            {currentTitle}
+                          </h1>
+
+                          <p className="text-xs md:text-[13.5px] text-slate-500 font-medium italic border-l-2 border-slate-300 pl-4 mb-6 leading-relaxed select-text">
+                            {currentSummary}
+                          </p>
+
+                          {/* Featured Image */}
+                          <div className="relative h-64 md:h-85 rounded-2xl overflow-hidden shadow-md border border-slate-200 mb-8 select-none">
+                            <img 
+                              src={selectedUpdate.image} 
+                              alt={selectedUpdate.title} 
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                          </div>
+
+                          {/* Core content block */}
+                          <div className="select-text prose max-w-none">
+                            {renderFormattedUpdateContent(currentContent)}
+                          </div>
+
+                          {/* ================= DYNAMIC SKETCHED/TEXT-BASED VISUAL AIDS ================= */}
+                          {selectedUpdate.id === "update-notes-abg" && (
+                            <div className="my-8 p-6 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm font-sans select-none">
+                              <h4 className="text-xs font-extrabold text-indigo-700 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                                📍 Sketched Reference Chart: Clinical Acid-Base Scale
+                              </h4>
+                              <p className="text-xs text-slate-500 mb-4">A visual diagram representing critical arterial pH cutoff limits for quick board recall:</p>
+                              
+                              <div className="flex flex-col md:flex-row items-stretch justify-between border-b border-slate-200 pb-5 mb-4 gap-4 text-center">
+                                <div className="flex-1 p-3.5 bg-rose-50 text-rose-700 rounded-xl border border-rose-100 font-mono text-xs">
+                                  <strong>Acidosis (Acidemia)</strong>
+                                  <div className="h-1 bg-rose-200 rounded my-2" />
+                                  <span className="text-sm font-black">pH &lt; 7.35</span>
+                                  <div className="text-[10px] text-rose-500 mt-1">PaCO2 &gt; 45 mmHg (Resp)<br />HCO3- &lt; 22 mEq/L (Met)</div>
+                                </div>
+                                <div className="px-4 py-3 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-100 font-mono text-xs font-bold flex flex-col justify-center min-w-[140px]">
+                                  <strong>Normal Range</strong>
+                                  <div className="h-1 bg-emerald-200 rounded my-2" />
+                                  <span className="text-sm font-black">7.35 — 7.45</span>
+                                  <div className="text-[10px] text-emerald-600 mt-1">Physiologic Homeostasis</div>
+                                </div>
+                                <div className="flex-1 p-3.5 bg-sky-50 text-sky-700 rounded-xl border border-sky-100 font-mono text-xs">
+                                  <strong>Alkalosis (Alkalemia)</strong>
+                                  <div className="h-1 bg-sky-200 rounded my-2" />
+                                  <span className="text-sm font-black">pH &gt; 7.45</span>
+                                  <div className="text-[10px] text-sky-500 mt-1">PaCO2 &lt; 35 mmHg (Resp)<br />HCO3- &gt; 26 mEq/L (Met)</div>
+                                </div>
+                              </div>
+                              <div className="bg-white p-4 rounded-xl border border-slate-200/60 font-mono text-[11px] text-slate-600 leading-normal">
+                                <strong>ROME Diagnostic Rule Summary:</strong><br />
+                                • <strong>R</strong>espiratory <strong>O</strong>pposite: pH ↑ &amp; PaCO2 ↓ (Alkalosis) | pH ↓ &amp; PaCO2 ↑ (Acidosis)<br />
+                                • <strong>M</strong>etabolic <strong>E</strong>qual: pH ↑ &amp; HCO3- ↑ (Alkalosis) | pH ↓ &amp; HCO3- ↓ (Acidosis)
+                              </div>
+                            </div>
+                          )}
+
+                          {selectedUpdate.id === "update-notes-preload" && (
+                            <div className="my-8 p-6 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm font-sans select-none">
+                              <h4 className="text-xs font-extrabold text-indigo-700 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                                📍 Clinical Cheat-Sheet: IV Infusion Calculations &amp; Calibration
+                              </h4>
+                              <p className="text-xs text-slate-500 mb-4">Textbook formula guidelines extracted from Potter &amp; Perry standard curriculum:</p>
+                              
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 text-xs font-mono">
+                                <div className="p-3.5 bg-white rounded-xl border border-slate-200">
+                                  <span className="font-bold text-slate-800">Macro-Drip Set (Adult Fluid)</span>
+                                  <div className="h-[1px] bg-slate-100 my-2" />
+                                  • Drop Factors: <strong>10, 15, or 20 gtts/mL</strong><br />
+                                  • Best for: routine adult hydration, surgical fluid resuscitations, and blood transfusions.
+                                </div>
+                                <div className="p-3.5 bg-white rounded-xl border border-slate-200">
+                                  <span className="font-bold text-slate-800">Micro-Drip Set (Pediatric / ICU)</span>
+                                  <div className="h-[1px] bg-slate-100 my-2" />
+                                  • Drop Factor: <strong>60 gtts/mL</strong><br />
+                                  • Rule of thumb: flow rate (mL/hr) is exactly equal to droplets (drops/min). Best for highly reactive cardiac drips.
+                                </div>
+                              </div>
+                              <div className="bg-amber-50 text-amber-950 p-4 rounded-xl border border-amber-200/60 font-mono text-[11px] leading-relaxed flex gap-2.5">
+                                <span className="text-sm">⚠️</span>
+                                <div>
+                                  <strong>Vigilance Standard:</strong> Assess sites for localized extravasation every 1 hour for high-risk infusions (such as Potassium Chloride or Dopamine). Discontinue drip immediately upon edema.
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {selectedUpdate.id === "update-1-norcet" && (
+                            <div className="my-8 p-6 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm font-sans select-none">
+                              <h4 className="text-xs font-extrabold text-indigo-700 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                                📍 Sketched Choice Filling Timeline Workflow
+                              </h4>
+                              <p className="text-xs text-slate-500 mb-4">Step-by-step roadmap to navigate choice preferences safely:</p>
+                              
+                              <div className="flex flex-col sm:flex-row items-stretch gap-2 text-center text-xs">
+                                <div className="flex-1 p-3 bg-white rounded-xl border border-slate-200 flex flex-col justify-center">
+                                  <span className="font-black text-indigo-600">Stage 1</span>
+                                  <p className="font-bold mt-1 text-slate-800">CBT Prelims &amp; Mains</p>
+                                  <span className="text-[10px] text-emerald-600 mt-1 font-bold">✓ Completed</span>
+                                </div>
+                                <div className="flex items-center justify-center text-slate-300 font-bold sm:rotate-0 rotate-90 py-1">➔</div>
+                                <div className="flex-1 p-3 bg-indigo-50 rounded-xl border border-indigo-200 flex flex-col justify-center">
+                                  <span className="font-black text-indigo-600">Stage 2</span>
+                                  <p className="font-bold mt-1 text-indigo-800">Seat Matrix Preference</p>
+                                  <span className="text-[10px] text-indigo-600 mt-1 font-bold">Active Right Now</span>
+                                </div>
+                                <div className="flex items-center justify-center text-slate-300 font-bold sm:rotate-0 rotate-90 py-1">➔</div>
+                                <div className="flex-1 p-3 bg-white rounded-xl border border-slate-200 flex flex-col justify-center">
+                                  <span className="font-black text-slate-400">Stage 3</span>
+                                  <p className="font-bold mt-1 text-slate-800">Credential Verification</p>
+                                  <span className="text-[10px] text-slate-500 mt-1">Upcoming Gate</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Reference Resources Links */}
+                          {(selectedUpdate.pdfUrl || selectedUpdate.officialLink) && (
+                            <div className="mt-8 p-5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col gap-3">
+                              <h4 className="text-xs font-extrabold text-indigo-700 uppercase tracking-wider flex items-center gap-1.5">
+                                📋 Verification &amp; Official References
+                              </h4>
+                              <p className="text-xs text-slate-500 leading-relaxed">
+                                This article is cross-referenced with official central boards releases. Check the primary documents below:
+                              </p>
+                              <div className="flex flex-col sm:flex-row gap-3 mt-1 select-none">
+                                {selectedUpdate.pdfUrl && (
+                                  <a 
+                                    href={selectedUpdate.pdfUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="flex-1 px-4 py-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center"
+                                  >
+                                    📄 Official Circular PDF
+                                  </a>
+                                )}
+                                {selectedUpdate.officialLink && (
+                                  <a 
+                                    href={selectedUpdate.officialLink} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center"
+                                  >
+                                    🔗 Visit Announcement Portal
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* High-converting Mock CBT Promo */}
+                          <div className="mt-8 bg-gradient-to-r from-slate-100 to-indigo-50 border border-slate-200 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-5 select-none">
+                            <div className="flex items-start gap-3">
+                              <span className="text-3xl mt-0.5">⚡</span>
+                              <div>
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Secure Your Nursing Selection</h4>
+                                <p className="text-slate-700 text-xs mt-1 font-medium leading-relaxed">
+                                  Practice clinical decision-making with board-level rationales tailored specifically to these updates. Undergo strict exam modes.
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                if (selectedUpdate.category === "jobs") {
+                                  showPage("mock_tests");
+                                } else if (selectedUpdate.category === "syllabus") {
+                                  showPage("subject_mocks");
+                                } else {
+                                  showPage("short_sprints");
+                                }
+                                closeUpdate();
+                              }}
+                              className="w-full md:w-auto shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs uppercase px-5 py-3 rounded-xl transition-all cursor-pointer shadow-md text-center"
+                            >
+                              Start Free CBT Practice →
+                            </button>
+                          </div>
+
                         </div>
 
-                        {/* Text description */}
-                        <div className="p-5 flex-1 flex flex-col justify-between gap-4">
-                          <div>
-                            <div className="flex items-center gap-1.5 text-[10px] text-[#8b949e] font-black uppercase mb-1.5">
-                              <span>📅 {item.date}</span>
-                              <span>•</span>
-                              <span>{item.readTime}</span>
-                            </div>
-                            <h3 
-                              onClick={() => viewUpdate(item)}
-                              className="text-sm md:text-base font-extrabold text-[var(--text)] hover:text-indigo-400 cursor-pointer line-clamp-2 transition-colors inline-block leading-snug"
-                            >
-                              {item.title}
+                        {/* Right Sidebar Column (Desktop Only) */}
+                        <div className="w-full lg:w-[30%] lg:sticky lg:top-20 space-y-6 select-none">
+                          
+                          {/* Recommended Practice Hub */}
+                          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm">
+                            <h3 className="font-extrabold text-xs text-slate-800 uppercase tracking-wider mb-3.5 flex items-center gap-1.5 border-b border-slate-200 pb-2">
+                              📋 NCBT Practice Suite
                             </h3>
-                            <p className="text-xs text-[#8b949e] line-clamp-2 mt-2 leading-relaxed">
-                              {item.summary}
+                            <p className="text-[11px] text-slate-500 leading-normal mb-4">
+                              Access our premium preparation tools that mirror AIIMS and central government CBT exam patterns:
+                            </p>
+                            
+                            <div className="space-y-2">
+                              <button
+                                onClick={() => { showPage("subject_mocks"); closeUpdate(); }}
+                                className="w-full text-left p-3 bg-white hover:bg-indigo-50/50 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 transition-all flex items-center justify-between group cursor-pointer"
+                              >
+                                <span>🩺 Subject-Wise Test Centre</span>
+                                <span className="text-indigo-600 group-hover:translate-x-0.5 transition-transform">🡢</span>
+                              </button>
+                              
+                              <button
+                                onClick={() => { showPage("mock_tests"); closeUpdate(); }}
+                                className="w-full text-left p-3 bg-white hover:bg-amber-50/50 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 transition-all flex items-center justify-between group cursor-pointer"
+                              >
+                                <span>🔥 Full-Length Mock Exams</span>
+                                <span className="text-amber-600 group-hover:translate-x-0.5 transition-transform">🡢</span>
+                              </button>
+                              
+                              <button
+                                onClick={() => { showPage("pyq"); closeUpdate(); }}
+                                className="w-full text-left p-3 bg-white hover:bg-emerald-50/50 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 transition-all flex items-center justify-between group cursor-pointer"
+                              >
+                                <span>📄 Solved PYQ Board Papers</span>
+                                <span className="text-emerald-600 group-hover:translate-x-0.5 transition-transform">🡢</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Related Articles list */}
+                          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm">
+                            <h3 className="font-extrabold text-xs text-slate-800 uppercase tracking-wider mb-3.5 flex items-center gap-1.5 border-b border-slate-200 pb-2">
+                              📰 Trending Prep Articles
+                            </h3>
+                            
+                            <div className="space-y-4">
+                              {STATIC_NURSING_UPDATES
+                                .filter(item => item.id !== selectedUpdate.id)
+                                .slice(0, 3)
+                                .map(item => (
+                                  <div 
+                                    key={item.id} 
+                                    onClick={() => { viewUpdate(item); setBlogLanguage("en"); }}
+                                    className="cursor-pointer group flex gap-3 items-start"
+                                  >
+                                    <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-slate-200">
+                                      <img 
+                                        src={item.image} 
+                                        alt={item.title} 
+                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                                      />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-indigo-600 transition-colors line-clamp-2 leading-tight">
+                                        {item.title}
+                                      </h4>
+                                      <div className="flex items-center gap-1.5 text-[9px] text-slate-400 font-bold uppercase mt-1">
+                                        <span>📅 {item.date}</span>
+                                        <span>•</span>
+                                        <span>{item.readTime}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+
+                          {/* Exam Practice Streak Card */}
+                          <div className="bg-gradient-to-br from-indigo-900 to-indigo-950 rounded-2xl p-5 text-white shadow-md relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl pointer-events-none" />
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Daily Study Streak</h4>
+                            <div className="flex items-baseline gap-2 mt-2">
+                              <span className="text-3xl font-black text-amber-400">
+                                🔥 {(() => {
+                                  const streakKey = `np_streak_${currentUser?.email || "guest"}`;
+                                  try {
+                                    const sd = JSON.parse(localStorage.getItem(streakKey) || '{"streak":0,"last":""}');
+                                    return sd.streak || 0;
+                                  } catch (e) {
+                                    return 0;
+                                  }
+                                })()}
+                              </span>
+                              <span className="text-xs text-indigo-200">Days Active</span>
+                            </div>
+                            <p className="text-[10px] text-indigo-200/80 leading-relaxed mt-2 font-sans">
+                              NCBT rewards consistent daily practice. Take a speed sprint to keep your preparation streak rolling!
                             </p>
                           </div>
 
-                          <button 
-                            onClick={() => viewUpdate(item)}
-                            className="flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-indigo-400 hover:text-indigo-300 transition-colors bg-transparent border-none p-0 cursor-pointer self-start"
-                          >
-                            Read Full Details →
-                          </button>
                         </div>
-                      </motion.div>
-                    ))}
-                </div>
-              )}
 
-              {/* No items fallback */}
-              {!loadingUpdates && updates.filter(u => activeUpdateFilter === "all" || u.category === activeUpdateFilter).length === 0 && (
-                <div className="text-center py-16 bg-[var(--surface)] border border-[var(--border)] rounded-2xl">
-                  <div className="text-4xl mb-3">📰</div>
-                  <h3 className="font-extrabold text-sm text-[var(--text)]">No updates found in this category</h3>
-                  <p className="text-xs text-[#8b949e] mt-1">Please try refreshing the feed or selecting another filter tab.</p>
-                </div>
-              )}
-
-            </div>
-
-            {/* EXPANDED FULL DETAIL READING OVERLAY */}
-            <AnimatePresence>
-              {selectedUpdate && (() => {
-                const renderFormattedUpdateContent = (content: string) => {
-                  if (!content) return null;
-                  const lines = content.split("\n");
-
-                  const renderTextWithInlineStyles = (raw: string) => {
-                    if (!raw) return "";
-                    // Support bold segments split by ** or __
-                    const parts = raw.split(/\*\*|__/);
-                    return parts.map((part, i) => {
-                      const isBold = i % 2 !== 0;
-                      // Support italic segments split by * or _
-                      const subParts = part.split(/\*|_/);
-                      const formattedSubparts = subParts.map((sub, j) => {
-                        const isItalic = j % 2 !== 0;
-                        return isItalic ? (
-                          <em key={j} className="text-amber-400 not-italic font-bold bg-amber-500/10 px-1 py-0.5 rounded border border-amber-500/15 font-mono text-[11px] inline-block mt-0.5">
-                            {sub}
-                          </em>
-                        ) : sub;
-                      });
-
-                      return isBold ? (
-                        <strong key={i} className="font-extrabold text-white text-[13px] md:text-sm tracking-tight">
-                          {formattedSubparts}
-                        </strong>
-                      ) : (
-                        <span key={i}>{formattedSubparts}</span>
-                      );
-                    });
-                  };
-
-                  return (
-                    <div className="flex flex-col gap-3 font-sans text-xs md:text-sm text-[#ccd6f6] leading-relaxed">
-                      {lines.map((line, idx) => {
-                        const trimmed = line.trim();
-                        if (!trimmed) {
-                          return <div key={idx} className="h-2" />;
-                        }
-
-                        // Match warning blocks starting with emojis or custom labels
-                        if (trimmed.startsWith("⚠️") || trimmed.startsWith("🔥") || trimmed.startsWith("*Pro Tip") || trimmed.startsWith("📍") || trimmed.startsWith("⚖️")) {
-                          return (
-                            <div 
-                              key={idx} 
-                              className="bg-amber-500/5 border border-amber-500/15 p-4 rounded-xl text-amber-200 text-xs md:text-[13px] my-3 leading-relaxed flex gap-3 items-start shadow-sm"
-                            >
-                              <span className="text-sm shrink-0">💡</span>
-                              <div className="flex-1">{renderTextWithInlineStyles(trimmed.replace(/^(\*Pro Tip:?|⚠️|🔥|📍|⚖️)\s*/i, ""))}</div>
-                            </div>
-                          );
-                        }
-
-                        // Match styled header lines
-                        const headingMatch = trimmed.match(/^(🩺|📋|🌟|🔬|🧠|⚡|📚|📂|📌|👉|🧭|📖|💪|✨|🚇)\s*(.*)/);
-                        if (headingMatch) {
-                          const emoji = headingMatch[1];
-                          const text = headingMatch[2];
-                          return (
-                            <h4 
-                              key={idx} 
-                              className="text-xs md:text-[13px] font-extrabold text-indigo-300 mt-5 mb-1.5 border-l-2 border-indigo-500 pl-3 leading-tight uppercase tracking-wide flex items-center gap-2"
-                            >
-                              <span className="text-sm">{emoji}</span>
-                              <span>{renderTextWithInlineStyles(text)}</span>
-                            </h4>
-                          );
-                        }
-
-                        // Match numbered lists
-                        const numberedMatch = trimmed.match(/^(\d+)\.\s*(.*)/);
-                        if (numberedMatch) {
-                          const num = numberedMatch[1];
-                          const text = numberedMatch[2];
-                          return (
-                            <div key={idx} className="flex gap-2.5 items-start pl-1 text-xs md:text-[13px] leading-relaxed my-1">
-                              <span className="bg-indigo-950/80 text-indigo-400 text-[10px] font-extrabold px-1.5 py-0.5 rounded-md min-w-[20px] text-center shrink-0 border border-indigo-900/40">
-                                {num}
-                              </span>
-                              <div className="flex-1 text-[#c4d1ec]">{renderTextWithInlineStyles(text)}</div>
-                            </div>
-                          );
-                        }
-
-                        // Match bullet lists
-                        const bulletMatch = trimmed.match(/^(-\s+|\*\s+|•\s+)(.*)/);
-                        if (bulletMatch) {
-                          const text = bulletMatch[2];
-                          return (
-                            <div key={idx} className="flex gap-2.5 items-start pl-2 text-xs md:text-[13px] leading-relaxed my-1">
-                              <span className="text-indigo-400 shrink-0 select-none text-[11px] mt-1">✦</span>
-                              <div className="flex-1 text-[#c4d1ec]">{renderTextWithInlineStyles(text)}</div>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <p key={idx} className="my-0.5 text-[#b4c6e4] text-xs md:text-[13px] leading-relaxed">
-                            {renderTextWithInlineStyles(trimmed)}
-                          </p>
-                        );
-                      })}
-                    </div>
-                  );
-                };
-
-                return (
-                  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <motion.div 
-                      initial={{ opacity: 0, scale: 0.95, y: 16 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: 16 }}
-                      transition={{ type: "spring", duration: 0.4 }}
-                      className="bg-[#0b1220] border border-[#1e2d45] rounded-3xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl"
-                    >
-                      
-                      {/* Modal Banner */}
-                      <div className="h-56 relative overflow-hidden shrink-0">
-                        <img 
-                          src={selectedUpdate.image} 
-                          alt={selectedUpdate.title} 
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover brightness-75"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#0b1220] via-black/30 to-transparent" />
-                        
-                        <button 
-                          onClick={() => closeUpdate()}
-                          className="absolute top-4 right-4 bg-black/60 hover:bg-black/90 p-2 rounded-full border border-white/10 text-white w-8 h-8 flex items-center justify-center font-bold text-xs transition-transform cursor-pointer hover:scale-105 active:scale-95 z-10"
-                        >
-                          ✕
-                        </button>
-
-                        <div className="absolute bottom-4 left-5">
-                          <span className="bg-indigo-600 text-white border border-indigo-400/20 text-[9px] font-black uppercase px-2.5 py-1 rounded-lg tracking-widest shadow-md">
-                            {selectedUpdate.badge}
-                          </span>
-                          <div className="flex items-center gap-2 mt-2 text-[10px] text-[#8b949e] font-bold uppercase">
-                            <span>📅 {selectedUpdate.date}</span>
-                            <span>•</span>
-                            <span>{selectedUpdate.readTime}</span>
-                          </div>
-                        </div>
                       </div>
+                    );
+                  })()}
 
-                      {/* Modal Content Scroll viewport */}
-                      <div className="p-6 md:p-8 overflow-y-auto flex-1 font-sans">
-                        <h2 className="text-lg md:text-xl font-black text-white mb-4 leading-tight">
-                          {selectedUpdate.title}
-                        </h2>
-                        
-                        {/* Custom parsed body viewport */}
-                        <div className="font-sans select-text">
-                          {renderFormattedUpdateContent(selectedUpdate.content)}
-                        </div>
+                </div>
+              </div>
+            ) : (
+              /* ================= NORMAL BLOG LIST FEED VIEW (LIGHT THEME) ================= */
+              <div className="max-w-6xl mx-auto px-4 py-8 font-sans">
+                
+                {/* Premium Header Hero Card (Light Theme) */}
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-50/40 via-violet-50/20 to-white border border-indigo-100/60 p-6 md:p-8 mb-8 shadow-sm">
+                  {/* Decorative gradients */}
+                  <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+                  
+                  <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div>
+                      <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 font-syne m-0">
+                        NCBT Blog
+                      </h1>
+                    </div>
 
-                        {/* Government Notice PDF link banner if provided */}
-                        {selectedUpdate.pdfUrl && (
-                          <div className="mt-6 p-4 bg-rose-950/20 border border-rose-900/30 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                              <span className="text-2xl text-rose-500">📄</span>
-                              <div className="text-center sm:text-left">
-                                <h4 className="text-xs font-bold text-rose-300">Official Government Notification / Notice</h4>
-                                <p className="text-[#8b949e] text-[10px] mt-0.5">Original announcement attachment</p>
+                    <button 
+                      onClick={fetchUpdates}
+                      disabled={loadingUpdates}
+                      className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 active:scale-95 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-600/10 cursor-pointer self-start md:self-auto font-syne uppercase tracking-wider"
+                    >
+                      {loadingUpdates ? (
+                        <span className="animate-spin border-2 border-white border-t-transparent rounded-full h-3.5 w-3.5" />
+                      ) : (
+                        <span className="text-sm">🔄</span>
+                      )}
+                      <span>Sync Latest Feeds</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Updates dynamic status warnings */}
+                {updatesError && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6 text-xs text-amber-800 flex items-center gap-2">
+                    <span>💡</span>
+                    <span>{updatesError}</span>
+                  </div>
+                )}
+
+                {/* Control Station: Search and Category Filters */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
+                  {/* Category Filter Tabs */}
+                  <div className="flex flex-wrap items-center gap-1.5 bg-white p-1.5 rounded-2xl border border-slate-200/80 max-w-full overflow-x-auto shadow-sm">
+                    <button 
+                      onClick={() => setActiveUpdateFilter("all")}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeUpdateFilter === "all" ? "bg-indigo-600 text-white shadow-md" : "text-slate-500 hover:text-indigo-600 hover:bg-slate-50"}`}
+                    >
+                      📰 All Feed
+                    </button>
+                    <button 
+                      onClick={() => setActiveUpdateFilter("jobs")}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeUpdateFilter === "jobs" ? "bg-indigo-600 text-white shadow-md" : "text-slate-500 hover:text-indigo-600 hover:bg-slate-50"}`}
+                    >
+                      📋 Jobs &amp; Alerts
+                    </button>
+                    <button 
+                      onClick={() => setActiveUpdateFilter("syllabus")}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeUpdateFilter === "syllabus" ? "bg-indigo-600 text-white shadow-md" : "text-slate-500 hover:text-indigo-600 hover:bg-slate-50"}`}
+                    >
+                      📚 Syllabus
+                    </button>
+                    <button 
+                      onClick={() => setActiveUpdateFilter("notes")}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeUpdateFilter === "notes" ? "bg-indigo-600 text-white shadow-md" : "text-slate-500 hover:text-indigo-600 hover:bg-slate-50"}`}
+                    >
+                      🧠 High-Yield Notes
+                    </button>
+                    <button 
+                      onClick={() => setActiveUpdateFilter("motivation")}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeUpdateFilter === "motivation" ? "bg-indigo-600 text-white shadow-md" : "text-slate-500 hover:text-indigo-600 hover:bg-slate-50"}`}
+                    >
+                      🔥 Motivation
+                    </button>
+                  </div>
+
+                  {/* Search input */}
+                  <div className="relative w-full lg:max-w-xs shrink-0">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input 
+                      type="text" 
+                      placeholder="Search updates or notes..." 
+                      value={blogSearchQuery}
+                      onChange={(e) => setBlogSearchQuery(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm"
+                    />
+                    {blogSearchQuery.trim() !== "" && (
+                      <button 
+                        onClick={() => setBlogSearchQuery("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs bg-transparent border-none p-0 cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Sync status loader indicator */}
+                {loadingUpdates && (
+                  <div className="flex flex-col items-center justify-center py-20 bg-white border border-slate-100 rounded-3xl gap-4 shadow-sm">
+                    <span className="animate-spin border-4 border-indigo-500 border-t-transparent rounded-full h-8 w-8" />
+                    <span className="text-xs text-slate-500 font-medium tracking-wide">Polling active central recruitment servers...</span>
+                  </div>
+                )}
+
+                {/* Updates layout grid */}
+                {!loadingUpdates && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {updates
+                      .filter(item => {
+                        const matchesCategory = activeUpdateFilter === "all" || item.category === activeUpdateFilter;
+                        const matchesSearch = blogSearchQuery.trim() === "" || 
+                          item.title.toLowerCase().includes(blogSearchQuery.toLowerCase()) ||
+                          item.summary.toLowerCase().includes(blogSearchQuery.toLowerCase()) ||
+                          item.content.toLowerCase().includes(blogSearchQuery.toLowerCase());
+                        return matchesCategory && matchesSearch;
+                      })
+                      .map((item, idx) => {
+                        const isSharedOpen = sharingPostId === item.id;
+                        return (
+                          <motion.div
+                            key={item.id}
+                            initial={{ opacity: 0, y: 12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3, delay: Math.min(idx * 0.05, 0.4) }}
+                            className="bg-white border border-slate-100 hover:border-indigo-200/80 rounded-3xl overflow-hidden flex flex-col group hover:shadow-lg transition-all duration-300 relative text-left"
+                          >
+                            {/* Graphic banner */}
+                            <div className="h-44 overflow-hidden relative select-none">
+                              <img 
+                                src={item.image} 
+                                alt={item.title} 
+                                referrerPolicy="no-referrer"
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-95 group-hover:brightness-100 placeholder-img" 
+                              />
+                              <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-xl border border-white/10 text-[9px] font-bold uppercase text-white tracking-wider shadow-sm">
+                                🏷️ {item.badge}
+                              </div>
+                              
+                              {/* Categorized Visual Accent Bar */}
+                              <div className={`absolute bottom-0 left-0 right-0 h-1 ${
+                                item.category === "jobs" ? "bg-cyan-500" :
+                                item.category === "syllabus" ? "bg-amber-500" :
+                                item.category === "notes" ? "bg-indigo-500" : "bg-purple-500"
+                              }`} />
+                            </div>
+
+                            {/* Text description */}
+                            <div className="p-6 flex-1 flex flex-col justify-between gap-4">
+                              <div>
+                                <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase mb-2 select-none">
+                                  <span className="flex items-center gap-1">📅 {item.date}</span>
+                                  <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {item.readTime}</span>
+                                </div>
+                                <h3 
+                                  onClick={() => { viewUpdate(item); setBlogLanguage("en"); }}
+                                  className="text-base font-extrabold text-slate-800 hover:text-indigo-600 cursor-pointer line-clamp-2 transition-colors leading-snug mb-2 font-syne"
+                                >
+                                  {item.title}
+                                </h3>
+                                <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed mb-3 font-sans">
+                                  {item.summary}
+                                </p>
+
+                                {/* Attached official notice indicators */}
+                                {(item.pdfUrl || item.officialLink) && (
+                                  <div className="flex flex-wrap gap-1.5 mb-2 select-none">
+                                    {item.pdfUrl && (
+                                      <span className="inline-flex items-center gap-1 text-[9px] bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-lg font-bold">
+                                        📄 Official Notice PDF
+                                      </span>
+                                    )}
+                                    {item.officialLink && (
+                                      <span className="inline-flex items-center gap-1 text-[9px] bg-cyan-50 text-cyan-600 border border-cyan-200 px-2 py-0.5 rounded-lg font-bold">
+                                        🔗 Official Link Included
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="flex flex-col gap-3 pt-2 border-t border-slate-100 mt-auto">
+                                {/* Action Row */}
+                                <div className="flex items-center justify-between gap-2">
+                                  <button 
+                                    onClick={() => { viewUpdate(item); setBlogLanguage("en"); }}
+                                    className="flex items-center gap-1 text-xs font-extrabold text-indigo-600 hover:text-indigo-700 transition-colors bg-transparent border-none p-0 cursor-pointer"
+                                  >
+                                    Read Full Details →
+                                  </button>
+
+                                  {/* Interactive Share Button triggers popup */}
+                                  <div className="relative">
+                                    <button 
+                                      onClick={() => setSharingPostId(isSharedOpen ? null : item.id)}
+                                      className="p-2 bg-slate-50 hover:bg-indigo-50 rounded-xl text-slate-400 hover:text-indigo-600 transition-all cursor-pointer border border-slate-100"
+                                      title="Share Article"
+                                    >
+                                      <Share2 className="w-3.5 h-3.5" />
+                                    </button>
+                                    
+                                    {/* Absolute dropdown share helper */}
+                                    {isSharedOpen && (
+                                      <div className="absolute right-0 bottom-10 bg-white border border-slate-200 rounded-xl p-2 shadow-xl z-20 flex flex-col gap-1.5 min-w-[160px] animate-fade-in select-none">
+                                        <div className="text-[9px] font-black uppercase text-slate-400 px-2 py-1 border-b border-slate-100 mb-1">
+                                          📤 Quick Share
+                                        </div>
+                                        
+                                        {/* Whatsapp button */}
+                                        <button
+                                          onClick={() => {
+                                            const shareText = `*🔥 NCBT Nursing Exam Update: ${item.title}*\n\n${item.summary}\n\n👉 Official notification portal: ${item.officialLink || "https://ncbt-exams.in"}\n\n📖 Read full article & practice CBT here: ${window.location.origin}/updates?id=${item.id}`;
+                                            const wpUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+                                            window.open(wpUrl, "_blank");
+                                            setSharingPostId(null);
+                                          }}
+                                          className="flex items-center gap-2 text-left text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1.5 rounded-lg transition-colors cursor-pointer w-full border-none bg-transparent"
+                                        >
+                                          💚 Share to WhatsApp
+                                        </button>
+
+                                        {/* Telegram button */}
+                                        <button
+                                          onClick={() => {
+                                            const shareText = `NCBT Nursing Board Update: ${item.title}\n\n${item.summary}`;
+                                            const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(window.location.origin + "/updates?id=" + item.id)}&text=${encodeURIComponent(shareText)}`;
+                                            window.open(tgUrl, "_blank");
+                                            setSharingPostId(null);
+                                          }}
+                                          className="flex items-center gap-2 text-left text-[11px] font-bold text-cyan-600 hover:bg-cyan-50 px-2 py-1.5 rounded-lg transition-colors cursor-pointer w-full border-none bg-transparent"
+                                        >
+                                          💙 Share to Telegram
+                                        </button>
+
+                                        {/* Copy study link */}
+                                        <button
+                                          onClick={() => {
+                                            navigator.clipboard.writeText(`${item.title} - ${item.summary}\n\nRead more details & attempt mock tests at: ${window.location.origin}/updates?id=${item.id}`);
+                                            triggerToast("Study link copied to clipboard! 📋", "ok");
+                                            setSharingPostId(null);
+                                          }}
+                                          className="flex items-center gap-2 text-left text-[11px] font-bold text-slate-700 hover:bg-slate-50 px-2 py-1.5 rounded-lg transition-colors cursor-pointer w-full border-none bg-transparent"
+                                        >
+                                          🔗 Copy Shareable Link
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                            <a 
-                              href={selectedUpdate.pdfUrl} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="w-full sm:w-auto px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 shrink-0"
-                            >
-                              Download Notice PDF
-                            </a>
-                          </div>
-                        )}
-
-                        {/* High-converting mock test promotional CTA block (similar to Testbook/Adda247) */}
-                        <div className="mt-8 bg-gradient-to-r from-indigo-950/40 via-purple-950/20 to-indigo-950/40 border border-indigo-500/20 rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 select-none">
-                          <div className="flex items-start gap-3">
-                            <span className="text-2xl mt-0.5">⚡</span>
-                            <div>
-                              <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-400">PRACTICE THIS EXAM PATTERN</h4>
-                              <p className="text-[#c4d1ec] text-xs mt-0.5 font-medium leading-normal">
-                                {selectedUpdate.category === "jobs" ? "AIIMS NORCET high-yield board mock CBT series is currently open. Revise under strict negative-marking exam mode." :
-                                 selectedUpdate.category === "syllabus" ? "Clinical Nursing Unit-Wise Specialty Mock tests are ready. Practice and review detailed rationales." :
-                                 "Take our daily 10-MCQ Rapid Speed Sprints to test your active recall with quick rationale cards."}
-                              </p>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => {
-                              if (selectedUpdate.category === "jobs") {
-                                showPage("mock_tests");
-                              } else if (selectedUpdate.category === "syllabus") {
-                                showPage("subject_mocks");
-                              } else {
-                                showPage("short_sprints");
-                              }
-                              closeUpdate();
-                            }}
-                            className="w-full md:w-auto shrink-0 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase px-4.5 py-2.5 rounded-xl transition-all cursor-pointer shadow-lg shadow-indigo-600/15 text-center active:scale-95"
-                          >
-                            Start Practice CBT →
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Modal Actions Footer */}
-                      <div className="p-4 bg-[#080d17] border-t border-[#1e2d45] flex items-center justify-between gap-4 shrink-0">
-                        <button 
-                          onClick={() => {
-                            navigator.clipboard.writeText(`Check out this High-Yield B.Sc Nursing Note: ${selectedUpdate.title} - ${selectedUpdate.summary}`);
-                            triggerToast("Study link copied to clipboard! 📋", "ok");
-                          }}
-                          className="px-4 py-2 border border-[#1e2d45] hover:bg-white/5 rounded-xl text-xs font-bold text-[#8492a6] hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
-                        >
-                          <span>🔗</span> Copy study link
-                        </button>
-                        <button 
-                          onClick={() => closeUpdate()}
-                          className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-black text-white shadow-md active:scale-95 transition-all cursor-pointer"
-                        >
-                          Acknowledge & Close
-                        </button>
-                      </div>
-
-                    </motion.div>
+                          </motion.div>
+                        );
+                      })}
                   </div>
-                );
-              })()}
-            </AnimatePresence>
+                )}
 
-            <footer>NCBT · India's Nursing CBT Exam Preparation Platform</footer>
+                {/* No items fallback */}
+                {!loadingUpdates && updates.filter(u => {
+                  const matchesCategory = activeUpdateFilter === "all" || u.category === activeUpdateFilter;
+                  const matchesSearch = blogSearchQuery.trim() === "" || 
+                    u.title.toLowerCase().includes(blogSearchQuery.toLowerCase()) ||
+                    u.summary.toLowerCase().includes(blogSearchQuery.toLowerCase()) ||
+                    u.content.toLowerCase().includes(blogSearchQuery.toLowerCase());
+                  return matchesCategory && matchesSearch;
+                }).length === 0 && (
+                  <div className="text-center py-16 bg-white border border-slate-100 rounded-3xl select-none shadow-sm">
+                    <div className="text-4xl mb-3">📰</div>
+                    <h3 className="font-extrabold text-sm text-slate-800">No updates found in this category</h3>
+                    <p className="text-xs text-slate-500 mt-1">Please try refreshing the feed or selecting another filter tab.</p>
+                  </div>
+                )}
+
+                <footer className="mt-12 text-center text-slate-400 text-xs border-t border-slate-200/60 pt-6">NCBT · India's Nursing CBT Exam Preparation Platform</footer>
+              </div>
+            )}
           </div>
         )}
+
 
         {/* =============== PERSONAL ANALYTICS PAGE =============== */}
         {activePage === "analytics" && (
@@ -5195,6 +6016,195 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           </div>
         )}
 
+        {/* =============== ABOUT US PAGE =============== */}
+        {activePage === "about" && (
+          <div className="page active p-4 md:p-8 max-w-4xl mx-auto text-white animate-fade-in" id="page-about">
+            <div className="mb-8">
+              <h2 className="text-2xl sm:text-3xl font-black font-syne tracking-tight text-white m-0">🩺 About NCBT</h2>
+              <p className="text-xs text-[#8b949e] mt-1.5 leading-relaxed">
+                India's Premier Nursing CBT Exam Preparation Platform
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              {/* Mission Statement */}
+              <div className="bg-[#0f1520] border border-[#1e2d45] rounded-2xl p-6 shadow-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
+                <h3 className="font-syne text-sm font-extrabold text-white uppercase tracking-wider mb-3">Our Core Mission</h3>
+                <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                  At <strong className="text-emerald-400">NCBT.in</strong>, we aim to revolutionize how Nursing Officers prepare for India's most prestigious computer-based recruitments. We bridge the gap between heavy academic nursing textbooks and modern board-level dynamic assessments by offering clinical simulated tests with top-tier professional rationales.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                  <div className="bg-white/5 border border-white/5 p-3.5 rounded-xl">
+                    <span className="text-lg">🎯</span>
+                    <h4 className="text-xs font-bold text-white mt-1.5 mb-1 font-syne">NORCET Benchmarks</h4>
+                    <p className="text-[10px] text-slate-400 leading-normal">Simulations designed to exactly match the latest AIIMS NORCET difficulty and negative-marking system.</p>
+                  </div>
+                  <div className="bg-white/5 border border-white/5 p-3.5 rounded-xl">
+                    <span className="text-lg">🔬</span>
+                    <h4 className="text-xs font-bold text-white mt-1.5 mb-1 font-syne">Clinical Rationales</h4>
+                    <p className="text-[10px] text-slate-400 leading-normal">Deep medical-surgical, obgyn, and psychiatric rationales referenced directly from senior nursing syllabus standards.</p>
+                  </div>
+                  <div className="bg-white/5 border border-white/5 p-3.5 rounded-xl">
+                    <span className="text-lg">⚡</span>
+                    <h4 className="text-xs font-bold text-white mt-1.5 mb-1 font-syne">Active Recall</h4>
+                    <p className="text-[10px] text-slate-400 leading-normal">Dynamic rapid-fire daily speed sprints designed to build solid diagnostic intuition in under 10 minutes.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Who We Are & Academic Board */}
+              <div className="bg-[#0f1520] border border-[#1e2d45] rounded-2xl p-6 shadow-xl">
+                <h3 className="font-syne text-sm font-extrabold text-white uppercase tracking-wider mb-3">The Academic Board</h3>
+                <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                  NCBT's questions are curated and audited by a dedicated panel of experienced nursing superintendents, clinical specialists, and senior nursing tutors.
+                </p>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
+                    <div className="w-9 h-9 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-xs">
+                      DR
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white font-syne">Dr. Rajesh Kumar (Ph.D., M.Sc. Nursing)</h4>
+                      <p className="text-[10px] text-slate-400">Former Senior Academic Advisor - AIIMS Exam Board Coordinator</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
+                    <div className="w-9 h-9 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold text-xs">
+                      MS
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white font-syne">Mrs. S. Meenakshi (M.Sc. Med-Surg Nursing)</h4>
+                      <p className="text-[10px] text-slate-400">Clinical Specialist &amp; Associate Professor with 15+ years of training staff nurse aspirants</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Our Competitive Advantage */}
+              <div className="bg-[#0f1520] border border-[#1e2d45] rounded-2xl p-6 shadow-xl">
+                <h3 className="font-syne text-sm font-extrabold text-white uppercase tracking-wider mb-3">Why Thousands of Aspirants Choose NCBT</h3>
+                <ul className="space-y-2 text-xs text-slate-300 pl-1">
+                  <li className="flex items-start gap-2">
+                    <span className="text-emerald-400">✔</span>
+                    <span><strong>No-Lag Computer-Based Environment</strong>: Experience the identical visual interface of the actual national examinations to build mental stamina.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-emerald-400">✔</span>
+                    <span><strong>Intelligent Analytics</strong>: Track your progress across different specialties, monitor your speed, and watch your daily streak grow.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-emerald-400">✔</span>
+                    <span><strong>100% Reliable Syllabus</strong>: Rest easy knowing our mock tests align exactly with Indian staff nurse recruitment curriculum expectations.</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* =============== CONTACT DETAILS PAGE =============== */}
+        {activePage === "contact" && (
+          <div className="page active p-4 md:p-8 max-w-4xl mx-auto text-white animate-fade-in" id="page-contact">
+            <div className="mb-8">
+              <h2 className="text-2xl sm:text-3xl font-black font-syne tracking-tight text-white m-0">📞 Contact Us</h2>
+              <p className="text-xs text-[#8b949e] mt-1.5 leading-relaxed">
+                Have questions or need support? Our academic team is ready to assist you.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Left Column: Form */}
+              <div className="bg-[#0f1520] border border-[#1e2d45] rounded-2xl p-6 shadow-xl flex flex-col gap-4">
+                <h3 className="font-syne text-sm font-extrabold text-white uppercase tracking-wider mb-2">Academic Support Ticket</h3>
+                
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-extrabold text-[#8b949e] uppercase tracking-wider">Your Full Name</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Priyanjali Sharma" 
+                    className="bg-[#151f30] border border-[#1e293b] p-3 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 w-full"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-extrabold text-[#8b949e] uppercase tracking-wider">Email Address</label>
+                  <input 
+                    type="email" 
+                    placeholder="e.g. priya@nursing.in" 
+                    className="bg-[#151f30] border border-[#1e293b] p-3 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 w-full"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-extrabold text-[#8b949e] uppercase tracking-wider">Message Description</label>
+                  <textarea 
+                    rows={4}
+                    placeholder="Describe your query or feedback (e.g., questions regarding AIIMS NORCET mock series details)..." 
+                    className="bg-[#151f30] border border-[#1e293b] p-3 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 w-full resize-none"
+                  />
+                </div>
+
+                <button 
+                  onClick={() => triggerToast("Your ticket has been sent to our academic team! We'll reply within 12 hours.", "ok")}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-black font-extrabold text-xs py-3.5 rounded-xl transition-all shadow-md uppercase tracking-wider cursor-pointer font-syne text-center mt-2"
+                >
+                  Send Inquiry 📬
+                </button>
+              </div>
+
+              {/* Right Column: Information details */}
+              <div className="flex flex-col gap-6">
+                <div className="bg-[#0f1520] border border-[#1e2d45] rounded-2xl p-6 shadow-xl space-y-4">
+                  <h3 className="font-syne text-sm font-extrabold text-white uppercase tracking-wider border-b border-[#1e2d45] pb-2">Direct Contact Information</h3>
+                  
+                  <div className="flex items-start gap-3">
+                    <span className="text-emerald-400 text-lg">📧</span>
+                    <div>
+                      <h4 className="text-xs font-bold text-white font-syne">Email Contacts</h4>
+                      <p className="text-[11px] text-slate-300 mt-0.5">Academic Help: <a href="mailto:support@ncbt.in" className="text-blue-400 hover:underline">support@ncbt.in</a></p>
+                      <p className="text-[11px] text-slate-300">Vacancies: <a href="mailto:info@ncbt.in" className="text-blue-400 hover:underline">info@ncbt.in</a></p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <span className="text-emerald-400 text-lg">📞</span>
+                    <div>
+                      <h4 className="text-xs font-bold text-white font-syne">Phone Support</h4>
+                      <p className="text-[11px] text-slate-300 mt-0.5">Helpline: +91 98765 43210</p>
+                      <p className="text-[11px] text-slate-300">Office Desk: +91 11 4567 8910</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <span className="text-emerald-400 text-lg">📍</span>
+                    <div>
+                      <h4 className="text-xs font-bold text-white font-syne">Academic Tower</h4>
+                      <p className="text-[11px] text-slate-300 mt-0.5 leading-relaxed">
+                        NCBT Academic HQ, 4th Floor, Sector 62,<br />
+                        Noida, Delhi NCR, India, 201301
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <span className="text-emerald-400 text-lg">⏰</span>
+                    <div>
+                      <h4 className="text-xs font-bold text-white font-syne">Support Working Hours</h4>
+                      <p className="text-[11px] text-slate-300 mt-0.5">Monday to Saturday: 09:00 AM – 06:00 PM (IST)</p>
+                      <p className="text-[11px] text-slate-300">Sunday: Closed for academic research</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-amber-500/5 border border-amber-500/10 rounded-2xl p-4 text-xs text-amber-300 leading-relaxed">
+                  💡 <strong>Aspirants Note:</strong> If you are reporting a question error or requesting an answer clarification, please mention the Question Code or Test Name for a quicker response from our senior nursing faculty team!
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
 
 
@@ -5278,11 +6288,11 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-1 justify-between">
-                      <span className="font-extrabold text-xs text-white tracking-tight">⏱️ Exam Mode</span>
+                      <span className="font-extrabold text-xs text-white tracking-tight">⏱️ CBT Exam Mode</span>
                       <span className="text-[8px] bg-red-500/10 text-red-450 border border-red-500/20 px-1 py-0.2 rounded font-extrabold">NEGATIVE</span>
                     </div>
                     <p className="text-[11px] text-[#a0aec0] leading-snug">
-                      Replicates standard competitive exams. Detailed rationale is hidden until finish. <strong>-0.25 penalty value</strong> marks applied for errors.
+                      Replicates clinical exams. Detailed rationale is hidden until finish. <strong>-0.25 penalty value</strong> marks applied for errors.
                     </p>
                   </div>
 
@@ -5309,14 +6319,14 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
               {/* Official CBT Rules Checklist */}
               <div className="bg-[#0c1325] border border-[#1e2d45] rounded-xl p-4 text-[11px] text-[#a0aec0] flex flex-col gap-1.5 font-sans leading-relaxed">
-                <h6 className="font-extrabold text-white text-xs mb-1 uppercase tracking-wider">Official Staff Nurse Exam Rules</h6>
+                <h6 className="font-extrabold text-white text-xs mb-1 uppercase tracking-wider">Official Staff Nurse CBT Rules</h6>
                 <div className="flex items-start gap-1.5">
                   <span className="text-green-405 font-bold shrink-0">✔</span>
                   <span><strong>Correct Answer:</strong> +1.00 Mark holds for correct evaluated options.</span>
                 </div>
                 <div className="flex items-start gap-1.5">
                   <span className="text-red-405 font-bold shrink-0">✔</span>
-                  <span><strong>Incorrect Option:</strong> Negative penalty of <strong>-0.25 (1/4th)</strong> is deducted inside Exam Mode.</span>
+                  <span><strong>Incorrect Mistake Option:</strong> Negative penalty of <strong>-0.25 (1/4th)</strong> is deducted inside CBT Exam Mode.</span>
                 </div>
                 <div className="flex items-start gap-1.5">
                   <span className="text-amber-405 font-bold shrink-0">✔</span>
