@@ -215,9 +215,9 @@ export const SUBJECTS: Subject[] = [
      id: 'norcet-7-2024',
      icon: '📋',
      title: 'AIIMS NORCET 7 Prelims 2024',
-     desc: 'Official memory-based high-yield question paper from the AIIMS NORCET 7 Prelims exam held in 2024.',
-     questions: 20,
-     mins: 20,
+     desc: 'Official memory-based previous year question paper from the AIIMS NORCET 7 Prelims exam held in September 2024.',
+     questions: 80,
+     mins: 80,
      ready: true,
      data: [
        {
@@ -359,6 +359,636 @@ export const SUBJECTS: Subject[] = [
          ans: 0,
          source: "AIIMS NORCET 7 Prelims 2024",
          explain: "Platelets should be administered rapidly to prevent aggregation and maintain platelet viability. Standard guidelines state that each unit of platelets should be infused over 15 to 30 minutes."
+       },
+       {
+         q: "A nurse is caring for a patient with a central venous catheter and notices the flush port has not been used in the last 24 hours. What is the most appropriate nursing action?",
+         opts: ["Flush the line with normal saline immediately", "Document the finding and inform the physician", "Change the dressing on the central line", "Remove the central line and insert a new peripheral line"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "To maintain patency and prevent the formation of a blood clot or fibrin sheath, standard protocol dictates flushing the unused lumen of a CVC with normal saline or heparinized solution at least every 24 hours."
+       },
+       {
+         q: "A nurse notices swelling and a hematoma forming during the insertion of a jugular vein catheter. What is the most appropriate initial action?",
+         opts: ["Continue the procedure and apply direct pressure to the area", "Document the complication and notify the physician in charge", "Apply ice to the site and monitor the patient's vital signs", "Remove the catheter and stop the procedure immediately"],
+         ans: 3,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "If a hematoma or severe swelling occurs during central venous catheterization, the procedure must be immediately aborted, the catheter removed, and pressure applied to prevent further bleeding into surrounding neck tissues."
+       },
+       {
+         q: "A nurse observes mottling on a newborn's skin, characterized by a bluish or pale, blotchy appearance with a marbled pattern (cutis marmorata). What could be the most likely cause of this condition?",
+         opts: ["Acute respiratory distress syndrome", "Elevated blood glucose levels", "Congenital gastrointestinal complications", "Normal physiological response to cold temperatures"],
+         ans: 3,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Cutis marmorata (mottling) is a transient, lace-like bluish-red skin discoloration in newborns. It represents a normal, benign physiological vascular response to cold exposure and resolves with warming."
+       },
+       {
+         q: "When collecting sputum samples for Directly Observed Treatment, Short-course (DOTS) diagnosis under National Tuberculosis Elimination Program, how many samples are typically required for baseline testing?",
+         opts: ["1 sample", "2 samples", "3 samples", "4 samples"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Traditionally, baseline diagnosis of pulmonary tuberculosis under DOTS guidelines involved collecting three consecutive sputum specimens (including early morning samples) to maximize detection of acid-fast bacilli (AFB)."
+       },
+       {
+         q: "How many resuscitation staff should be present when a newborn is anticipated to require extensive resuscitation at birth?",
+         opts: ["1 dedicated staff", "2 dedicated staff", "3 dedicated staff", "4 dedicated staff"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "According to Neonatal Resuscitation Program (NRP) guidelines, if extensive resuscitation is anticipated, at least two trained professionals should be dedicated solely to the resuscitation and stabilization of the newborn."
+       },
+       {
+         q: "A patient exhibits no pulse and is in a pulseless rhythm (Pulseless Ventricular Tachycardia or Ventricular Fibrillation). What is the nurse's immediate next step?",
+         opts: ["Administer rapid IV saline fluids", "Perform chest compressions and apply the defibrillator", "Provide high-flow oxygen via non-rebreather mask", "Administer a dose of IV epinephrine"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "For cardiac arrest with shockable pulseless rhythms, the critical immediate actions are high-quality cardiopulmonary resuscitation (CPR/chest compressions) and immediate defibrillation."
+       },
+       {
+         q: "A nurse is setting up a three-way urinary catheter for a patient post-prostatectomy. What is the primary clinical purpose of this catheter?",
+         opts: ["To facilitate high-pressure blood drainage", "To irrigate the bladder continuously and prevent blood clot formation", "To monitor urine output hourly during pelvic surgery", "To administer intravesical chemotherapy"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "A three-way Foley catheter allows for continuous bladder irrigation (CBI). Normal saline is infused through the irrigation port to flush out blood and prevent clot retention/obstruction after prostate or bladder surgery."
+       },
+       {
+         q: "The nurse is educating a patient with hypercalcemia. Which endocrine gland is primarily responsible for regulating calcium levels in the human body?",
+         opts: ["Thyroid gland", "Adrenal glands", "Parathyroid glands", "Pancreas"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "The parathyroid glands secrete parathyroid hormone (PTH), which increases blood calcium levels by stimulating bone resorption, increasing renal calcium reabsorption, and activating Vitamin D."
+       },
+       {
+         q: "A patient presents with sharp flank pain, high fever, and chills. Pyelonephritis is diagnosed. The nurse understands that this condition is most commonly caused by:",
+         opts: ["An ascending urinary tract infection extending to the renal pelvis", "Chronic kidney disease progress", "Direct trauma to the lower abdomen", "Dehydration and electrolyte imbalances"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Acute pyelonephritis is an infectious inflammatory disease of the kidney pelvis. It is most commonly caused by bacteria (like E. coli) ascending from the lower urinary tract up the ureters into the kidneys."
+       },
+       {
+         q: "A nurse is assessing the fetal position of a pregnant woman in labor. The fetal heart tones are best heard in the left lower quadrant of the maternal abdomen. What is the most likely fetal position?",
+         opts: ["Right Occiput Anterior (ROA)", "Left Occiput Anterior (LOA)", "Right Occiput Posterior (ROP)", "Left Occiput Posterior (LOP)"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Fetal heart tones are heard loudest through the fetal back. In a cephalic presentation, if the back is on the left side of the maternal pelvis and anterior (LOA), the heart tones are best heard in the left lower maternal quadrant."
+       },
+       {
+         q: "A patient presents with bilateral eye redness, watery discharge, mild photophobia, and itching. The nurse suspects conjunctivitis. Which type of conjunctivitis is most consistent with these clinical findings?",
+         opts: ["Viral conjunctivitis", "Allergic conjunctivitis", "Bacterial conjunctivitis", "Chronic conjunctivitis"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Viral conjunctivitis typically presents with bilateral, watery/serous discharge, conjunctival injection (redness), and itching, often preceded by a viral upper respiratory infection."
+       },
+       {
+         q: "A nurse is counseling a family whose child has been diagnosed with Down syndrome. Which of the following is a classic clinical feature of Down syndrome?",
+         opts: ["Short stature, single palmar crease, and cognitive delays", "Long limbs, thin stature, and hyperactive reflexes", "Superior spatial IQ and lack of physical differences", "Tall stature with arachnodactyly"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Down syndrome (Trisomy 21) is characterized by cognitive impairment, flat facial profile, upward-slanting palpebral fissures, single palmar (simian) crease, low muscle tone, and short stature."
+       },
+       {
+         q: "A nurse observes that a patient is repeatedly denying the diagnosis of terminal cancer despite viewing biopsy reports. Which defense mechanism is this patient utilizing?",
+         opts: ["Repression", "Displacement", "Rationalization", "Denial"],
+         ans: 3,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Denial is a primitive ego defense mechanism in which the person refuses to acknowledge a painful or anxiety-producing reality, thereby protecting themselves from immediate distress."
+       },
+       {
+         q: "A psychiatric patient believes they are a royal figure with absolute power and can control global weather. This false fixed belief is known as:",
+         opts: ["Delusion of persecution", "Delusion of grandeur", "Delusion of reference", "Hallucination of control"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Delusions of grandeur involve a false, fixed belief of possessing inflated worth, power, knowledge, identity, or a special relationship to a deity or famous person."
+       },
+       {
+         q: "A patient claims that neighbors are transmitting electronic signals through the walls to poison their food. The nurse identifies this as which type of delusion?",
+         opts: ["Delusion of reference", "Delusion of grandeur", "Delusion of persecution", "Delusion of control"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Delusions of persecution (paranoid delusions) involve the central theme that the individual is being conspired against, cheated, spied on, followed, poisoned, or harassed."
+       },
+       {
+         q: "A hospitalized patient with acute delirium exhibits severe agitation and confusion. What is the priority nursing intervention to manage this patient's environment?",
+         opts: ["Apply bilateral soft wrist restraints", "Provide a calm, quiet, well-lit environment with frequent re-orientation", "Increase environmental stimulation to keep them awake", "Restrict family visits to minimize external anxiety"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Delirium management includes non-pharmacological strategies like reducing noise, maintaining gentle lighting (to prevent shadows/hallucinations), and using calendars or familiar family members for orientation."
+       },
+       {
+         q: "During Electroconvulsive Therapy (ECT), 100% supplemental oxygen is administered throughout the procedure. What is the primary physiological purpose of this intervention?",
+         opts: ["To prevent post-ictal pain", "To facilitate complete skeletal muscle relaxation", "To maintain cerebral oxygenation and reduce post-seizure confusion", "To increase the seizure duration significantly"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "The patient is hyperoxygenated with 100% oxygen during ECT because the induced seizure increases cerebral oxygen consumption. Succinylcholine (muscle relaxant) also paralyzes respiratory muscles, making mechanical ventilation necessary."
+       },
+       {
+         q: "A nurse is assisting with a surgical sterilization procedure involving the Pomeroy method. What is a notable clinical feature of this tubal ligation technique?",
+         opts: ["It is highly reversible compared to other ligation methods", "It completely prevents ectopic pregnancies entirely", "It involves insertion of metal clips on the tubes", "It is utilized to treat underlying uterine fibroids"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "While intended as a permanent female sterilization technique, the Pomeroy method causes minimal tissue destruction, making it one of the most successfully reversible tubal ligation methods if a reversal is later requested."
+       },
+       {
+         q: "A nurse is performing Leopold's maneuvers on a pregnant client. She uses one hand to grasp the lower uterine segment just above the symphysis pubis to determine the presenting part. Which maneuver is being performed?",
+         opts: ["First Maneuver (Fundal Grip)", "Second Maneuver (Umbilical Grip)", "Third Maneuver (Pawlik's Grip)", "Fourth Maneuver (Pelvic Grip)"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "The Third Maneuver (Pawlik's Grip) involves using one hand to grasp the lower abdomen to determine if the fetal presenting part is engaged in the pelvis."
+       },
+       {
+         q: "A client experiences a second-degree perineal tear during vaginal delivery. The nurse understands that this tear involves:",
+         opts: ["Vaginal mucosa and superficial skin only", "Vaginal mucosa, perineal skin, and anal sphincter muscles", "Vaginal mucosa, perineal skin, and muscles of the perineal body"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "A second-degree laceration extends through the vaginal mucosa, perineal skin, and into the fascial and muscular structures of the perineal body, but does not involve the anal sphincter."
+       },
+       {
+         q: "A nurse is administering Carboprost (15-methyl prostaglandin F2-alpha) to a patient experiencing postpartum hemorrhage (PPH). What is the primary action of this drug?",
+         opts: ["Stimulating uterine smooth muscle contractions to promote hemostasis", "Lowering systemic blood pressure to reduce active pelvic bleeding", "Directly replacing clotting factors in the uterine sinuses", "Relaxing the cervix to facilitate the manual removal of clots"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Carboprost is an oxytocic agent that directly stimulates uterine contractions. It is used to manage postpartum hemorrhage caused by uterine atony when other measures (like Oxytocin) fail."
+       },
+       {
+         q: "During a vaginal examination, the nurse determines that the fetal presenting part is at '-1 station'. How does the nurse interpret this finding?",
+         opts: ["The fetal head is engaged at the level of the ischial spines", "The fetal head is 1 cm above the pelvic inlet", "The fetal head is 1 cm below the level of the ischial spines", "The fetal head is 1 cm above the level of the ischial spines"],
+         ans: 3,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Fetal station is measured in centimeters relative to the maternal ischial spines (the zero point). Negative numbers indicate the presenting part is above the spines; '-1 station' means 1 cm above the ischial spines."
+       },
+       {
+         q: "Which obstetrical forceps are characterized by a sliding lock and are specifically designed to correct deep transverse arrest or asynclitism during rotation?",
+         opts: ["Simpson Forceps", "Wrigley's Forceps", "Kielland Forceps", "Piper Forceps"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Kielland forceps have a sliding lock and minimal pelvic curve, making them the standard choice for rotating a fetus in an occiput-transverse position (deep transverse arrest)."
+       },
+       {
+         q: "A nurse is educating a client about Saheli (Centchroman), a weekly oral contraceptive. What is the primary pharmacodynamic advantage of this method?",
+         opts: ["It inhibits ovulation like combined hormonal pills", "It is a completely non-hormonal, non-steroidal SERM with fewer metabolic side effects", "It provides 5 years of continuous contraceptive protection", "It must be taken daily at the exact same hour"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Saheli (Centchroman/Ormeloxifene) is a Selective Estrogen Receptor Modulator (SERM). It prevents implantation by altering the endometrium, is non-hormonal, has no steroidal side effects, and is taken once a week."
+       },
+       {
+         q: "Which of the following contraceptive methods is most closely associated with androgenic side effects such as hirsutism or acne due to its hormonal composition?",
+         opts: ["Progesterone-only formulations (mini-pill or injections)", "Copper-T Intrauterine Device (IUD)", "Hormone-free barrier methods", "Combined estrogen-progestin pills containing cyproterone"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Progestins (especially older generations like medroxyprogesterone acetate or levonorgestrel in progesterone-only formulations) can have androgenic properties, occasionally leading to acne, hirsutism, or weight gain."
+       },
+       {
+         q: "A client complains of a profuse, frothy, green-colored vaginal discharge accompanied by vaginal itching and burning. The nurse suspects which condition?",
+         opts: ["Bacterial vaginosis", "Candidiasis (Yeast infection)", "Trichomoniasis", "Chlamydia trachomatis infection"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Trichomoniasis, caused by the protozoan Trichomonas vaginalis, classically presents with a foul-smelling, frothy, yellow-green vaginal discharge, vulvar irritation, dysuria, and a 'strawberry cervix'."
+       },
+       {
+         q: "A nurse is assessing a child with a high fever and suspecting measles (Rubeola). Which of the following is a pathognomonic sign of measles?",
+         opts: ["Koplik's spots on the buccal mucosa", "A diffuse sandpaper-like maculopapular rash", "A bright red strawberry tongue", "Red, swollen tonsils with exams"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Koplik's spots (small, irregular red spots with blue-white centers on the mucosal lining of the cheek) are a pathognomonic early sign of measles, appearing 1-2 days before the generalized rash."
+       },
+       {
+         q: "Who was the first Indian athlete to win a gold medal in the history of the Paralympic Games?",
+         opts: ["Deepa Malik", "Devendra Jhajharia", "Mary Kom", "Murlikant Petkar"],
+         ans: 3,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Murlikant Petkar won India's first-ever Paralympic gold medal at the 1972 Heidelberg Games in the 50m freestyle swimming event, setting a world record."
+       },
+       {
+         q: "In which competition did Mary Kom win her first-ever international gold medal, paving the way for her historic career?",
+         opts: ["Asian Games", "AIBA World Boxing Championships", "London Olympic Games", "Commonwealth Games"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Mary Kom won her first international gold medal at the 2nd AIBA World Women's Boxing Championship held in Antalya, Turkey in 2002 (under the 45 kg category)."
+       },
+       {
+         q: "A nurse is caring for a client with gestational hypertension. The nurse understands that a major risk of severe untreated preeclampsia is:",
+         opts: ["Placental abruption (Abruptio Placentae)", "Gestational diabetes development", "Maternal urinary tract infection", "Maternal thyroid storm"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Severe preeclampsia causes vasospasms and endothelial damage. This can lead to placental hypoperfusion and increases the risk of premature separation of the placenta (placental abruption)."
+       },
+       {
+         q: "What is considered the gold standard laboratory method for checking exact hemoglobin levels in prospective blood donors at a blood bank?",
+         opts: ["Copper sulfate specific gravity test", "Complete Blood Count (CBC) using an automated hematology analyzer", "Hemoglobin electrophoresis", "Serum ferritin level assay"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "While the copper sulfate method is a common screening test for blood donors, the gold standard for measuring hemoglobin concentration is an automated cell counter (CBC)."
+       },
+       {
+         q: "Which of the following describes the 'General Fertility Rate' (GFR)?",
+         opts: ["The annual number of live births per 1,000 women of childbearing age (15-49 years)", "The total number of live births per 1,000 population in a year", "The average number of children born to a woman during her entire lifetime", "The ratio of total live births to maternal deaths in a year"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "The General Fertility Rate (GFR) is defined as the number of live births per 1,000 women of reproductive age (typically defined as 15 to 44 or 15 to 49 years) in a given year."
+       },
+       {
+         q: "A newborn delivered via a prolonged, difficult vacuum extraction is found to have an absent Moro reflex on the right side. What is the most likely cause?",
+         opts: ["Fractured clavicle or brachial plexus injury", "Congenital hip dysplasia", "Mild neonatal hypoglycemia", "Symmetric intracranial hemorrhage"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "An asymmetrical Moro reflex (absent on one side) in a newborn after a difficult delivery is a classic sign of a fractured clavicle or brachial plexus injury (Erb-Duchenne paralysis)."
+       },
+       {
+         q: "A nurse is presenting research data showing a relationship between patient weight and the cost of care. Which graphical representation is best to display individual coordinate data points?",
+         opts: ["Scatter Plot", "Pie Chart", "Bar Diagram", "Line Graph"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "A scatter plot is used to display values for two variables for a set of data. It is ideal for showing the relationship or correlation between two continuous variables (e.g., weight vs. cost)."
+       },
+       {
+         q: "A patient's lab results show a serum potassium level of 6.8 mEq/L. Which electrocardiogram (ECG) changes should the nurse immediately look for?",
+         opts: ["Tall, peaked T waves, prolonged PR interval, and widened QRS", "ST-segment elevation with flat T waves", "Shortened QT interval with prominent U waves", "Inverted P waves and ventricular bigeminy"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "The earliest ECG changes in hyperkalemia (potassium > 5.5 mEq/L) are tall, peaked (tented) T waves. As potassium levels rise, PR interval prolongs, P waves flatten/disappear, and the QRS complex widens."
+       },
+       {
+         q: "Which of the following blood group profiles correctly identifies the agglutinogens (antigens) on red cells and agglutinins (antibodies) in plasma?",
+         opts: ["Blood group A: Antigen A on RBCs, Anti-B antibodies in plasma", "Blood group B: Antigen A & B on RBCs, Anti-A antibodies in plasma", "Blood group AB: No antigens on RBCs, Anti-A & Anti-B in plasma", "Blood group O: Antigen A & B on RBCs, no antibodies in plasma"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "ABO blood grouping is based on inherited antigens on RBC surfaces. Group A has Antigen A on RBCs and Anti-B antibodies in plasma. Group O has no antigens on RBCs but both Anti-A and Anti-B antibodies in plasma."
+       },
+       {
+         q: "A 5-year-old child presents with severe fatigue, pallor, and developmental delays. Labs reveal macrocytic anemia. This finding is most likely associated with a deficiency of which nutrient?",
+         opts: ["Riboflavin (Vitamin B2)", "Cobalamin (Vitamin B12)", "Niacin (Vitamin B3)", "Elemental Iron"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Macrocytic (megaloblastic) anemia is caused by impaired DNA synthesis, leading to large, immature RBCs. The most common nutritional causes are deficiencies in Cobalamin (B12) or Folate (B9)."
+       },
+       {
+         q: "A patient's temperature chart shows a pattern where the daily body temperature is highest in the morning and lowest in the evening. This abnormal thermoregulatory pattern is termed:",
+         opts: ["Intermittent fever", "Inverted fever", "Continuous fever", "Remittent fever"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "In inverted fever (typus inversus), the daily temperature curve is reversed — the highest temperature is recorded in the morning and the lowest in the evening, sometimes seen in miliary tuberculosis."
+       },
+       {
+         q: "A patient with a spinal cord injury at T6 experiences Autonomic Dysreflexia. The nurse understands that this life-threatening emergency presents with which classic signs?",
+         opts: ["Severe paroxysmal hypertension and bradycardia", "Severe hypertension and tachycardia", "Marked hypotension and tachycardia", "Hypotension and bradycardia"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Autonomic dysreflexia is triggered by noxious stimuli below the level of injury. It causes uncontrolled vasoconstriction below the lesion (severe hypertension) and compensatory vagal slowing of the heart (bradycardia)."
+       },
+       {
+         q: "A 50-year-old patient experiences complete paralysis of all four limbs, along with paralysis of the neck and facial muscles. The nurse documents this condition as:",
+         opts: ["Hemiplegia", "Quadriplegia / Tetraplegia", "Paraplegia", "Pentaplegia"],
+         ans: 3,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Pentaplegia refers to the complete paralysis of all four limbs (quadriplegia) plus paralysis of the neck muscles and cranial nerves, typically resulting from high cervical spine injury or brainstem lesions."
+       },
+       {
+         q: "A client reports experiencing persistent, intrusive, unwanted thoughts and feels driven to perform repetitive hand washing rituals to relieve anxiety. The nurse recognizes this as indicating:",
+         opts: ["Generalized Anxiety Disorder", "Post-Traumatic Stress Disorder", "Obsessive-Compulsive Disorder", "Panic Disorder with Agoraphobia"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "OCD is characterized by obsessions (intrusive, distressful thoughts or images) and compulsions (repetitive behaviors or mental acts performed to neutralize the anxiety caused by the obsessions)."
+       },
+       {
+         q: "Aversion therapy, a behavior modification technique that pairs a maladaptive behavior with an unpleasant stimulus, is most commonly used in the clinical management of:",
+         opts: ["Severe clinical depression", "Smoking or alcohol addiction", "Acute panic attacks", "Phobic avoidance of heights"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Aversion therapy utilizes classical conditioning principles. For example, pairing alcohol consumption with disulfiram (Antabuse) to cause severe physical distress, thereby discouraging alcohol intake."
+       },
+       {
+         q: "Systemic desensitization, a technique where a patient is gradually exposed to a fear-inducing stimulus while practicing relaxation, is highly effective for:",
+         opts: ["Acute panic attacks", "Specific phobias", "Schizophrenic hallucinations", "Post-traumatic flashbacks"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Systemic desensitization is a behavior therapy technique developed by Joseph Wolpe. It is the gold standard for treating specific phobias and anxiety disorders by replacing fear with a relaxation response."
+       },
+       {
+         q: "A patient is prescribed Disulfiram (Antabuse) for alcohol rehabilitation. The nurse should instruct the patient that consuming alcohol while on this medication will cause:",
+         opts: ["Mild dizziness and fatigue", "Severe headache, flushing, nausea, and vomiting", "Extreme physical hyperactivity", "Rapid, uncontrolled weight gain"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Disulfiram blocks acetaldehyde dehydrogenase. Consuming even small amounts of alcohol leads to an accumulation of acetaldehyde, causing severe physical distress (flushing, throbbing headache, dyspnea, nausea, vomiting)."
+       },
+       {
+         q: "A nurse collects an arterial blood gas (ABG) sample, but the transfer to the lab is delayed by 45 minutes at room temperature. What is the most likely error in the results?",
+         opts: ["Pseudohyperkalemia and elevated pH", "Falsely low PaCO2", "Inaccurately low PaO2 and elevated PaCO2", "Falsely elevated pH and low lactate"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "If an ABG sample is not processed promptly or kept on ice, cellular respiration continues in the syringe. RBCs consume oxygen (lowering PaO2) and produce carbon dioxide (raising PaCO2 and lowering pH)."
+       },
+       {
+         q: "A nurse is preparing to administer Vitamin K intramuscularly to a newborn. Which syringe/needle selection and site are most appropriate?",
+         opts: ["1 mL syringe with a 26G needle, administered in the vastus lateralis muscle", "2 mL syringe with a 21G needle, administered in the gluteus maximus", "Insulin syringe, administered subcutaneously in the upper arm", "1 mL syringe with a 26G needle, administered intradermally in the forearm"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Vitamin K is administered to newborns intramuscularly (IM) to prevent hemorrhagic disease of the newborn. The standard site is the vastus lateralis (anterolateral thigh) using a 25G or 26G needle."
+       },
+       {
+         q: "A pediatric nurse administers 50,000 IU of Vitamin A orally to a 7-month-old infant. This supplementation is primarily indicated to:",
+         opts: ["Prevent Vitamin D resistant rickets", "Treat underlying iron deficiency anemia", "Prevent xerophthalmia, night blindness, and support childhood immunity", "Treat scurvy and skin lesions"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Under the National Prophylaxis Programme against Blindness, infants aged 6-11 months receive a single oral dose of 100,000 IU (or 50,000 IU depending on guidelines/health status) of Vitamin A to prevent xerophthalmia and boost immunity."
+       },
+       {
+         q: "When measuring manual blood pressure using the auscultatory method, the nurse should place the diaphragm of the stethoscope over which arterial landmark?",
+         opts: ["Carotid artery", "Radial artery", "Brachial artery", "Femoral artery"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "The brachial artery, located in the antecubital fossa medial to the biceps tendon, is the standard auscultation site for measuring manual blood pressure in the upper extremity."
+       },
+       {
+         q: "A nurse is reviewing an ECG showing Ventricular Tachycardia (VT). Which of the following is the defining electrocardiographic feature of VT?",
+         opts: ["Slow, irregular ventricular complexes with missing P waves", "Classic saw-tooth flutter waves", "Complete dissociation between normal P waves and narrow QRS", "A rapid ventricular rate (usually 100-250 bpm) with wide, bizarre QRS complexes"],
+         ans: 3,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Ventricular Tachycardia is defined by three or more consecutive premature ventricular complexes at a rate >100 bpm, presenting with wide, bizarre QRS complexes (>0.12 seconds) and no visible P waves."
+       },
+       {
+         q: "During rapid sequence intubation, why is cricoid pressure (Sellick's maneuver) applied?",
+         opts: ["To stabilize the cervical spine during direct laryngoscopy", "To facilitate better visualization of the adenoid tissue", "To compress the esophagus against the vertebrae and prevent gastric regurgitation and aspiration", "To open up the epiglottic fold for easier tube passage"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Cricoid pressure compresses the esophagus against the cervical vertebrae, preventing passive regurgitation of gastric contents into the pharynx and subsequent pulmonary aspiration during endotracheal intubation."
+       },
+       {
+         q: "In computer science and web development, what is the complete expansion of the term HTML?",
+         opts: ["High Text Markup Language", "Higher Text Machine Language", "Hyper Text Machine Language", "Hyper Text Markup Language"],
+         ans: 3,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "HTML stands for Hyper Text Markup Language. It is the standard markup language used to create and design the structural layout of documents displayed in web browsers."
+       },
+       {
+         q: "The abbreviation GPS, used widely for navigation and location tracking, stands for:",
+         opts: ["Global Pole Structure", "Global Positioning System", "Global PolySiliconium Store", "Global Poles System"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "GPS stands for Global Positioning System. It is a satellite-based radionavigation system owned by the United States government and operated by the United States Space Force."
+       },
+       {
+         q: "How many total medals did India win at the Tokyo 2020 Olympic Games (often referred to as their historic best performance)?",
+         opts: ["10 medals", "5 medals", "7 medals (1 Gold, 2 Silver, 4 Bronze)", "12 medals"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "India won a total of 7 medals at the Tokyo 2020 Olympics, marking their most successful Olympic campaign. Neeraj Chopra won India's historic gold in Javelin throw."
+       },
+       {
+         q: "A medical device is shown with an inflation balloon port, an irrigation fluid inlet, and a urinary drainage outlet. What is this device called?",
+         opts: ["Standard two-way Foley catheter", "Three-way urinary catheter (triple-lumen catheter)", "Levine nasogastric tube", "Endotracheal tube with subglottic suctioning"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "A triple-lumen (three-way) urinary catheter has three channels: one for balloon inflation, one for continuous bladder irrigation (CBI) fluid instillation, and one for draining urine/fluid."
+       },
+       {
+         q: "A nurse is teaching a client who has a new prescription for Phenelzine (an MAOI). The nurse instructs the client to avoid which of the following food categories?",
+         opts: ["High-protein lean poultry and fresh fish", "Complex carbohydrates like oatmeal and whole grain bread", "Low-cholesterol skimmed milk and low-sodium vegetables", "Foods high in tyramine such as aged cheeses, red wine, and cured meats"],
+         ans: 3,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "MAOIs inhibit the breakdown of tyramine in the gastrointestinal tract. Consuming tyramine-rich foods can cause an acute release of norepinephrine, leading to a hypertensive crisis."
+       },
+       {
+         q: "A client who started an antidepressant (Tricyclic Antidepressant) one week ago reports mild constipation and dry mouth, but says their mood has not improved. What is the nurse's best response?",
+         opts: ["These side effects are common, and it typically takes 3 to 4 weeks for the therapeutic effects on mood to become noticeable.", "Stop taking the medication immediately and go to the nearest emergency room.", "You should call your prescriber immediately to switch to another class of medication.", "These are signs of severe drug toxicity; you need an urgent blood level check."],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Antidepressants (TCAs and SSRIs) typically require 2 to 4 weeks (sometimes up to 6-8 weeks) of therapeutic dosing to demonstrate full clinical efficacy. Anticholinergic side effects often resolve or lessen over time."
+       },
+       {
+         q: "During a vaginal delivery utilizing forceps, the newborn suffers a birth injury presenting with a flaccid right arm and an asymmetrical Moro reflex. Which injury is indicated?",
+         opts: ["Symmetric cerebral palsy", "Sacral nerve root compression", "Cervical spinal cord transection", "Brachial plexus injury (Erb's Palsy)"],
+         ans: 3,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Erb's Palsy is caused by injury to the C5-C6 nerve roots of the brachial plexus during a difficult traction delivery. It presents with an asymmetrical Moro reflex and the arm hanging in the 'waiter's tip' position."
+       },
+       {
+         q: "Which of the following seizure types in a neonate is most commonly characterized by rhythmic, localized jerking of a single limb or facial muscles?",
+         opts: ["Generalized tonic seizure", "Focal clonic seizure", "Subtle neonatal seizure", "Typical absence seizure"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Clonic seizures in newborns are characterized by rhythmic, slow jerking movements (usually 1-3 times per second) of a limb or muscle group, which do not stop when the limb is held or repositioned."
+       },
+       {
+         q: "During electronic fetal monitoring, the nurse notes variable decelerations in the fetal heart rate. The nurse understands that this pattern is typically caused by:",
+         opts: ["Umbilical cord compression", "Uteroplacental insufficiency", "Fetal head compression during contractions", "Transient maternal pyrexia"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Variable decelerations are abrupt decreases in fetal heart rate below the baseline that vary in onset, depth, and duration, classically caused by umbilical cord compression."
+       },
+       {
+         q: "Which of the following describes the secondary level of prevention in healthcare?",
+         opts: ["Immunization against infectious diseases", "Early diagnosis and prompt treatment", "Rehabilitation and physical therapy", "Health education and lifestyle modifications"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Secondary prevention focuses on early detection (screening, diagnostic tests) and prompt intervention to limit the severity of a disease and prevent complications."
+       },
+       {
+         q: "A patient presents to the emergency department with a deep, penetrating abdominal wound. What is the nurse's immediate priority action?",
+         opts: ["Apply a tight abdominal binder", "Administer high-dose oral analgesics", "Assess airway, breathing, circulation and monitor for shock", "Gently probe the wound to check its depth"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "In any trauma patient, the initial priority is always the primary survey (ABCDEs) to stabilize life-threatening issues before addressing specific localized injuries."
+       },
+       {
+         q: "Which of the following terms describes the complete, permanent cessation of menstrual cycles in a woman?",
+         opts: ["Menarche", "Dysmenorrhea", "Menopause", "Oligomenorrhea"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Menopause is defined retrospectively as the permanent cessation of menstruation for 12 consecutive months due to the loss of ovarian follicular activity."
+       },
+       {
+         q: "A nurse is caring for a patient who has been on bed rest for 5 days. The nurse should actively assess for which musculoskeletal complication?",
+         opts: ["Deep vein thrombosis (DVT) and muscle atrophy", "Increased joint flexibility", "Scoliosis development", "Rapid bone density increase"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Prolonged immobility/bed rest leads to venous stasis, predisposing to DVT, and lack of weight-bearing leading to progressive muscle atrophy and osteoporosis."
+       },
+       {
+         q: "Which of the following standard precautions is essential when handling any patient's bodily fluids, regardless of their infectious status?",
+         opts: ["Wearing personal protective equipment (PPE) like gloves and eye protection if splashing is anticipated", "Isolating the patient in a negative-pressure room", "Administering prophylactic antibiotics to the staff", "Restricting the patient's visitor access"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Standard precautions are based on the principle that all blood, body fluids, secretions, and excretions may contain transmissible infectious agents, requiring PPE use based on the exposure risk."
+       },
+       {
+         q: "What is the primary clinical purpose of an incentive spirometer for a post-operative patient?",
+         opts: ["To measure the patient's oxygen saturation levels", "To promote deep breathing, alveolar expansion, and prevent atelectasis", "To deliver aerosolized bronchodilators", "To assess the patient's vital capacity for discharge planning"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Incentive spirometry encourages visual feedback for voluntary deep, slow inhalation, which promotes maximum lung expansion and prevents atelectasis (collapsed alveoli) post-surgery."
+       },
+       {
+         q: "A nurse is preparing to perform a sterile dressing change. Which action would compromise the sterility of the surgical field?",
+         opts: ["Opening sterile packages away from the body", "Placing non-sterile items within the 1-inch border of the sterile drape", "Keeping the sterile field continuously within the line of vision", "Pouring sterile saline into a sterile cup without splashing"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "The 1-inch outer margin of a sterile field/drape is considered contaminated. Placing any items there or touching it with sterile gloves violates aseptic technique."
+       },
+       {
+         q: "Which of the following is the standard site for assessing a pulse during adult cardiopulmonary resuscitation (CPR)?",
+         opts: ["Radial artery", "Femoral artery", "Carotid artery", "Brachial artery"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "The carotid artery in the neck is the preferred site for checking a pulse in an unresponsive adult because it is centrally located, easily accessible, and remains palpable at lower blood pressures."
+       },
+       {
+         q: "When a patient has a chest tube connected to a water-seal drainage system, the nurse notices gentle, rhythmic bubbling in the water-seal chamber during inhalation and exhalation. What does this indicate?",
+         opts: ["The system has an active air leak and must be replaced", "This is a normal finding (tidaling) indicating system patency and pleural pressure changes", "The suction control regulator is set too high", "The chest tube is completely occluded by a blood clot"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Fluctuation/tidaling in the water-seal chamber with respiration is normal. Rhythmic, mild bubbling may be seen with expiration or coughing as air leaves the pleural space. (Continuous bubbling, however, suggests a system leak)."
+       },
+       {
+         q: "A patient with a history of heart failure is prescribed furosemide. The nurse should closely monitor which laboratory value?",
+         opts: ["Serum potassium level", "Blood urea nitrogen (BUN) only", "Complete blood count (CBC)", "Serum calcium level only"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Furosemide is a loop diuretic that causes excretion of water, sodium, and potassium. Hypokalemia (low potassium) is a major side effect that can precipitate lethal arrhythmias."
+       },
+       {
+         q: "Which of the following clinical findings is a classic hallmark of acute compartment syndrome in an extremity?",
+         opts: ["Warm, flushed skin with strong palpable pulses", "Severe, disproportionate pain not relieved by analgesics, along with paresthesia", "Decreased pain upon raising the affected limb above heart level", "Rapidly resolving edema with zero pressure elevation"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "The '6 Ps' of compartment syndrome include Pain (unrelieved and out of proportion), Paresthesia (early sign of nerve compression), Pulselessness, Pallor, Paralysis, and Poikilothermia."
+       },
+       {
+         q: "A nurse is administering a blood transfusion when the patient suddenly complains of chills, lower back pain, and dyspnea. What is the nurse's priority action?",
+         opts: ["Slow down the transfusion rate and notify the doctor", "Administer intravenous diphenhydramine immediately", "Stop the blood transfusion immediately and disconnect the tubing from the cannula", "Check the patient's temperature and document the baseline"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "These symptoms indicate an acute hemolytic transfusion reaction. The transfusion must be stopped immediately to limit exposure, and the line flushed with normal saline using new tubing."
+       },
+       {
+         q: "A patient with a head injury exhibits a Glasgow Coma Scale (GCS) score of 6. How does the nurse interpret this level of consciousness?",
+         opts: ["Mild head injury with minor cognitive impairment", "Moderate head injury with stable neurological prognosis", "Severe head injury (comatose state) requiring airway protection", "Brain death state requiring immediate life support withdrawal"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "A GCS score of 8 or less is the standard definition of a severe head injury/coma, indicating a high risk of airway compromise and the necessity for endotracheal intubation."
+       },
+       {
+         q: "Which of the following positions is most appropriate for a patient in the immediate recovery phase following a supratentorial craniotomy?",
+         opts: ["Flat supine to prevent spinal headache", "Semi-Fowler's (head of bed elevated 30 to 45 degrees) with neck in neutral alignment", "Trendelenburg position to maximize cerebral blood flow", "Prone position with head rotated to the side"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Elevating the HOB to 30-45 degrees facilitates venous drainage from the brain, thereby reducing intracranial pressure (ICP), which is critical post-craniotomy."
+       },
+       {
+         q: "During assessment of a patient with a history of cirrhosis, the nurse notes flapping tremors of the hands (asterixis). What does this finding indicate?",
+         opts: ["Alcohol withdrawal tremors", "Advanced hepatic encephalopathy due to elevated ammonia levels", "Peripheral nerve damage from severe vitamin deficiency", "Acute cerebellar dysfunction"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Asterixis (liver flap) is a classic sign of hepatic encephalopathy, caused by accumulation of nitrogenous wastes (like ammonia) that cross the blood-brain barrier."
+       },
+       {
+         q: "A patient with suspected meningitis undergoes a lumbar puncture. The cerebrospinal fluid (CSF) analysis reveals high protein, low glucose, and increased neutrophils. These findings are most consistent with:",
+         opts: ["Viral meningitis", "Bacterial meningitis", "Fungal meningitis", "Tuberculous meningitis only"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Bacterial meningitis CSF is characterized by turbid appearance, elevated PMNs (neutrophils), elevated protein, and significantly decreased glucose (as bacteria consume glucose)."
+       },
+       {
+         q: "Which of the following is the primary mechanism of action of nitroglycerin when administered to a patient with angina?",
+         opts: ["Increasing systemic vascular resistance to raise coronary perfusion pressure", "Promoting generalized vasodilation, reducing preload and myocardial oxygen demand", "Directly dissolving coronary artery thrombi", "Decreasing the heart rate to prolong diastole"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Nitroglycerin is a potent vasodilator. It relaxes vascular smooth muscle, primarily venules, leading to venous pooling, which decreases venous return (preload) and workload on the heart."
+       },
+       {
+         q: "A nurse is caring for a patient who has a chest tube connected to a wet-suction control chamber. The nurse notices constant bubbling in the suction control chamber. What does this indicate?",
+         opts: ["There is a serious air leak in the patient's pleural space", "This is a normal and expected finding indicating that suction is active", "The water level in the chamber is dangerously low", "The suction tubing is completely blocked"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "In a wet-suction system, continuous gentle bubbling in the suction control chamber indicates that the prescribed suction is being applied. Bubbling in the water-seal chamber, however, indicates an air leak."
+       },
+       {
+         q: "What is the primary action of the medication spironolactone?",
+         opts: ["Excreting potassium and retaining sodium in the distal tubule", "Antagonizing aldosterone, causing sodium and water excretion while conserving potassium", "Inhibiting loop of Henle sodium reabsorption", "Directly dilating renal blood vessels to increase GFR"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Spironolactone is a potassium-sparing diuretic that blocks aldosterone receptors in the distal renal tubules, leading to sodium/water excretion and potassium retention."
+       },
+       {
+         q: "A patient with type 1 diabetes is found unresponsive with a blood glucose level of 42 mg/dL. What is the nurse's priority action?",
+         opts: ["Administer 10 units of regular insulin subcutaneously", "Give the patient 8 ounces of orange juice to drink", "Administer 50% dextrose (D50) intravenously or glucagon IM", "Start a high-flow oxygen mask and monitor vital signs"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "For an unconscious or unresponsive patient with severe hypoglycemia, oral intake is contraindicated due to aspiration risk. IV D50 or IM glucagon is the immediate treatment."
+       },
+       {
+         q: "Which of the following clinical signs is considered an early indicator of hypovolemic shock?",
+         opts: ["Severe hypotension with a bounding pulse", "Tachycardia, tachypnea, and cool, clammy skin", "Decreased respiratory rate with warm, flushed extremities", "Marked increase in urine output"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "As blood volume drops, the sympathetic nervous system compensates by increasing heart rate (tachycardia) and constricting peripheral blood vessels (producing cool, clammy skin) to maintain perfusion to vital organs."
+       },
+       {
+         q: "A patient is scheduled for an intravenous pyelogram (IVP). Which assessment is a priority before the procedure?",
+         opts: ["Assessing for allergies to iodine or shellfish and checking renal function", "Measuring the patient's abdominal girth", "Determining the patient's blood type and crossmatch status", "Evaluating the patient's range of motion in the lower limbs"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "An IVP uses iodine-based contrast dye. The nurse must assess for allergies to iodine/contrast and verify renal function (BUN/creatinine) because contrast media is nephrotoxic."
+       },
+       {
+         q: "A nurse is teaching a patient about a low-sodium diet. Which food choice indicates the patient understands the teaching?",
+         opts: ["Canned soup and crackers", "Fresh chicken breast and steamed vegetables", "Deli ham and cheese sandwich", "Pickled vegetables and soy sauce"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Processed foods, canned soups, deli meats, and condiments (like soy sauce) are extremely high in sodium. Fresh meats and fresh/steamed vegetables are naturally low in sodium."
+       },
+       {
+         q: "Which of the following is a classic clinical manifestation of a patient experiencing a thyroid storm (thyrotoxic crisis)?",
+         opts: ["Severe hypothermia, bradycardia, and lethargy", "Hyperpyrexia (extreme fever), marked tachycardia, agitation, and delirium", "Marked hypotension with generalized muscle flaccidity", "Rapid weight gain with severe generalized edema"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Thyroid storm is a hypermetabolic emergency. Classic signs include severe hyperthermia (>104F), extreme tachycardia, cardiac arrhythmias, tremors, severe agitation, delirium, or coma."
+       },
+       {
+         q: "A patient with chronic kidney disease (CKD) has a serum creatinine level of 6.2 mg/dL. The nurse understands that this finding represents:",
+         opts: ["Normal renal clearance", "Mild renal insufficiency", "Severe reduction in glomerular filtration rate (GFR)", "Acute kidney injury with fluid retention"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Creatinine is a waste product excreted by the kidneys. An elevation of this level (normal is ~0.6 to 1.2 mg/dL) directly correlates with a significant decrease in nephron function and GFR."
+       },
+       {
+         q: "Which of the following standard precautions is recommended when caring for a patient diagnosed with Pulmonary Tuberculosis?",
+         opts: ["Standard precautions only", "Droplet precautions (surgical mask for staff)", "Airborne precautions (N95 respirator and negative-pressure room)", "Contact precautions (gown and gloves for all entries)"],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Tuberculosis is transmitted via tiny droplet nuclei that remain suspended in the air. Airborne precautions (N95 mask, private negative-airflow isolation room) are required."
+       },
+       {
+         q: "What is the primary therapeutic effect of administering lactulose to a patient with advanced hepatic cirrhosis?",
+         opts: ["To promote bowel movements to reduce abdominal ascites", "To bind with systemic ammonia and promote its excretion through stool", "To lower portal vein hypertension directly", "To provide carbohydrate energy to combat hepatic cachexia"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Lactulose is broken down in the colon into acids that draw ammonia (NH3) from the blood, converting it into ammonium (NH4+), which is trapped in the gut and excreted via laxative action."
+       },
+       {
+         q: "A patient is diagnosed with systemic lupus erythematosus (SLE). The nurse should educate the patient on which key self-care measure?",
+         opts: ["Increasing direct sun exposure to boost Vitamin D", "Avoiding ultraviolet (UV) light and using high-SPF sunscreen", "Adhering to a high-protein, zero-carbohydrate diet", "Engaging in high-impact aerobic exercises daily"],
+         ans: 1,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Photosensitivity is a classic feature of SLE. Exposure to sunlight/UV radiation can trigger both cutaneous lesions and severe systemic disease flares."
+       },
+       {
+         q: "Which of the following parameters is the most sensitive and reliable indicator of a patient's fluid volume status in an acute care setting?",
+         opts: ["Daily body weights measured at the same time every morning", "Hourly monitoring of skin turgor", "Measuring intake and output records", "Assessing for peripheral edema"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Daily weight is the gold standard for tracking fluid shifts. One liter of fluid weighs exactly 1 kg (2.2 lbs). Intake/output records are often inaccurate and skin turgor is highly subjective."
+       },
+       {
+         q: "During CPR, the nurse performs chest compressions on an adult patient. What is the recommended compression depth and rate according to AHA guidelines?",
+         opts: ["At least 2 inches (5 cm) deep at a rate of 100 to 120 compressions per minute", "No more than 1.5 inches deep at a rate of 80 compressions per minute", "Exactly 3 inches deep at a rate of 140 compressions per minute", "At least 1 inch deep at a rate of 100 compressions per minute"],
+         ans: 0,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "AHA guidelines recommend chest compressions of at least 2 inches (5 cm) but not exceeding 2.4 inches (6 cm) for adults, at a rate of 100 to 120 per minute, allowing complete chest recoil."
+       },
+       {
+         q: "A nurse is caring for a patient with a permanent cardiac pacemaker. Which patient statement indicates a need for further discharge teaching?",
+         opts: ["I will carry my pacemaker identification card with me at all times.", "I can safely stand directly in front of an active microwave oven.", "I can continue to undergo routine MRI scans whenever needed.", "I will monitor my pulse rate daily and report any significant changes."],
+         ans: 2,
+         source: "AIIMS NORCET 7 Prelims 2024",
+         explain: "Most pacemakers are not MRI-safe or require specific reprogramming (MRI-conditional). Strong magnetic fields can disrupt, damage, or dislodge pacemaker components. Modern microwaves are safe to use."
        }
      ]
    }
@@ -371,7 +1001,7 @@ export const SUBJECTS: Subject[] = [
 ];
 
 export const PYQ_DATA: PyqCard[] = [
- { exam: 'AIIMS NORCET 7', tag: 'aiims', year: '2024', count: 20, color: 'var(--accent)' },
+ { exam: 'AIIMS NORCET 7', tag: 'aiims', year: '2024', count: 80, color: 'var(--accent)' },
  { exam: 'AIIMS Nursing Officer', tag: 'aiims', year: '2019', count: 18, color: 'var(--accent)' },
  { exam: 'AIIMS Nursing Officer', tag: 'aiims', year: '2018', count: 24, color: 'var(--accent)' },
  { exam: 'RRB Staff Nurse', tag: 'rrb', year: '2019', count: 22, color: 'var(--green)' },
