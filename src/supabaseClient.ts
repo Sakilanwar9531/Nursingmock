@@ -296,7 +296,8 @@ export async function getNursingUpdatesFromCloud(): Promise<NursingUpdate[] | nu
       summary: item.summary,
       content: item.content,
       image: item.image,
-      readTime: item.read_time
+      readTime: item.read_time,
+      pdfUrl: item.pdf_url || ""
     }));
   } catch (e) {
     console.error("Failed to load nursing updates from Supabase:", e);
@@ -310,22 +311,38 @@ export async function saveNursingUpdateToCloud(update: NursingUpdate): Promise<b
   if (!client) return false;
 
   try {
+    const payload: any = {
+      id: update.id,
+      title: update.title,
+      category: update.category,
+      badge: update.badge,
+      date: update.date,
+      summary: update.summary,
+      content: update.content,
+      image: update.image,
+      read_time: update.readTime,
+      created_at: new Date().toISOString()
+    };
+
+    if (update.pdfUrl !== undefined) {
+      payload.pdf_url = update.pdfUrl;
+    }
+
     const { error } = await client
       .from("nursing_updates")
-      .upsert({
-        id: update.id,
-        title: update.title,
-        category: update.category,
-        badge: update.badge,
-        date: update.date,
-        summary: update.summary,
-        content: update.content,
-        image: update.image,
-        read_time: update.readTime,
-        created_at: new Date().toISOString()
-      });
+      .upsert(payload);
 
     if (error) {
+      if (error.message.includes("pdf_url") || error.message.includes("column")) {
+        console.warn("Retrying save without 'pdf_url' column as it might not exist yet.");
+        delete payload.pdf_url;
+        const { error: retryError } = await client.from("nursing_updates").upsert(payload);
+        if (retryError) {
+          console.error("Retry saving failed:", retryError.message);
+          return false;
+        }
+        return true;
+      }
       console.error("Error saving nursing update to Supabase:", error.message);
       return false;
     }

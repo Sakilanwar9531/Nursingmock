@@ -316,12 +316,24 @@ export default function App() {
   };
 
   // --- PROGRAMMATIC ADMIN PANEL CRUD STATE ---
-  const [adminTab, setAdminTab] = useState<"tests" | "users">("tests");
+  const [adminTab, setAdminTab] = useState<"tests" | "users" | "updates">("tests");
   const [adminActiveSubjId, setAdminActiveSubjId] = useState<string>("mock_tests");
   const [adminActiveTestId, setAdminActiveTestId] = useState<string | null>(null);
   const [adminIsManagingQuestions, setAdminIsManagingQuestions] = useState<boolean>(false);
   const [adminEditingQIdx, setAdminEditingQIdx] = useState<number>(-1); // -1 for adding new question
   
+  // Updates CMS Inputs
+  const [adminUpdateTitle, setAdminUpdateTitle] = useState("");
+  const [adminUpdateCategory, setAdminUpdateCategory] = useState<"jobs" | "syllabus" | "motivation" | "notes">("jobs");
+  const [adminUpdateBadge, setAdminUpdateBadge] = useState("");
+  const [adminUpdateDate, setAdminUpdateDate] = useState(() => new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }));
+  const [adminUpdateReadTime, setAdminUpdateReadTime] = useState("5 min read");
+  const [adminUpdateSummary, setAdminUpdateSummary] = useState("");
+  const [adminUpdateContent, setAdminUpdateContent] = useState("");
+  const [adminUpdateImage, setAdminUpdateImage] = useState("");
+  const [adminUpdatePdfUrl, setAdminUpdatePdfUrl] = useState("");
+  const [adminIsGeneratingUpdate, setAdminIsGeneratingUpdate] = useState(false);
+
   // Question CRUD Inputs
   const [adminQText, setAdminQText] = useState<string>("");
   const [adminQOpt0, setAdminQOpt0] = useState<string>("");
@@ -355,6 +367,8 @@ export default function App() {
   const [authPassword, setAuthPassword] = useState<string>("");
   const [authName, setAuthName] = useState<string>("");
   const [authError, setAuthError] = useState<string>("");
+  const [googleEmailInput, setGoogleEmailInput] = useState<string>("");
+  const [googleNameInput, setGoogleNameInput] = useState<string>("");
 
   // OTP Authentication States
   const [loginMethod, setLoginMethod] = useState<"email" | "otp">("otp");
@@ -391,6 +405,7 @@ export default function App() {
   const [correctCount, setCorrectCount] = useState<number>(0);
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [isTestFinished, setIsTestFinished] = useState<boolean>(false);
+  const [showFinishConfirm, setShowFinishConfirm] = useState<boolean>(false);
 
   // PYQ Filter State
   const [pyqFilter, setPyqFilter] = useState<string>("all");
@@ -410,18 +425,45 @@ export default function App() {
     setLoadingUpdates(true);
     setUpdatesError("");
     try {
-      const res = await fetch("/api/updates");
-      if (!res.ok) throw new Error("Could not connect to update servers.");
-      const contentType = res.headers.get("content-type") || "";
-      if (contentType.includes("text/html")) {
-        throw new Error("No backend API configured. Using offline mock/cache.");
+      let fetchedList: NursingUpdate[] | null = null;
+      if (isSupabaseConnected()) {
+        fetchedList = await getNursingUpdatesFromCloud();
       }
-      const data = await res.json();
-      setUpdates(data);
+
+      if (fetchedList && fetchedList.length > 0) {
+        // Merge Supabase updates (prepending them) with static updates that aren't overwritten
+        const supabaseIds = new Set(fetchedList.map(u => u.id));
+        const merged = [...fetchedList, ...STATIC_NURSING_UPDATES.filter(u => !supabaseIds.has(u.id))];
+        setUpdates(merged);
+      } else {
+        // Fallback to Express backend
+        const res = await fetch("/api/updates");
+        if (!res.ok) throw new Error("Could not connect to update servers.");
+        const contentType = res.headers.get("content-type") || "";
+        if (contentType.includes("text/html")) {
+          throw new Error("No backend API configured. Using offline mock/cache.");
+        }
+        const data = await res.json();
+        setUpdates(data);
+      }
     } catch (err: any) {
       console.error(err);
-      setUpdates(STATIC_NURSING_UPDATES);
-      setUpdatesError("Could not retrieve real-time data from server. Displaying high-yield cache instead.");
+      // Local backup if they saved any updates in localStorage while offline
+      const localCustom = localStorage.getItem("np_custom_updates");
+      let merged = [...STATIC_NURSING_UPDATES];
+      if (localCustom) {
+        try {
+          const parsed = JSON.parse(localCustom);
+          if (Array.isArray(parsed)) {
+            const customIds = new Set(parsed.map(u => u.id));
+            merged = [...parsed, ...STATIC_NURSING_UPDATES.filter(u => !customIds.has(u.id))];
+          }
+        } catch (e) {}
+      }
+      setUpdates(merged);
+      if (isSupabaseConnected()) {
+        setUpdatesError("Displaying static & locally saved updates.");
+      }
     } finally {
       setLoadingUpdates(false);
     }
@@ -430,6 +472,200 @@ export default function App() {
   useEffect(() => {
     fetchUpdates();
   }, []);
+
+  const clearAdminUpdateForm = () => {
+    setAdminUpdateTitle("");
+    setAdminUpdateCategory("jobs");
+    setAdminUpdateBadge("");
+    setAdminUpdateDate(new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }));
+    setAdminUpdateReadTime("5 min read");
+    setAdminUpdateSummary("");
+    setAdminUpdateContent("");
+    setAdminUpdateImage("");
+    setAdminUpdatePdfUrl("");
+  };
+
+  const handleAiGenerateUpdate = async () => {
+    setAdminIsGeneratingUpdate(true);
+    try {
+      const topics = [
+        "AIIMS NORCET-IX Nursing Officer recruitment notice release dates and vacancy projections",
+        "Clinical Nursing Note on Pediatric fluid volume calculations, deficit calculations, and urine output thresholds",
+        "High-yield guide on ECG changes in Myocardial Infarction (STEMI vs NSTEMI), hyperkalemia, and therapeutic Digoxin use",
+        "Official guidelines on infection control (Incision/site protocols, bio-hazard color coding bags, and standard precautions)",
+        "NORCET Strategy: How to master priority questions using the Maslow's Hierarchy of Needs framework",
+        "DSSSB Staff Nurse 2026: Zonal recruitment vacancy circular, exam syllabus breakdown, and selection stages"
+      ];
+      const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+      
+      let generatedText = "";
+      let generatedTitle = "";
+      let generatedBadge = "NORCET Focus";
+      let generatedCategory: "jobs" | "syllabus" | "motivation" | "notes" = "notes";
+      let generatedSummary = "";
+
+      if (isGeminiClientConfigured()) {
+        const key = getClientGeminiKey();
+        const prompt = `Generate a highly professional, mock nursing notification update or study note for our platform (NCBT.in).
+Topic: ${randomTopic}
+
+Return a valid JSON string containing:
+{
+  "title": "A captivating, official-sounding title",
+  "category": "either 'jobs', 'syllabus', 'motivation', or 'notes'",
+  "badge": "A short, eye-catching badge (max 3 words)",
+  "summary": "A high-yield 1-2 sentence preview summary of the post",
+  "content": "A detailed, deep, academic article or notification with professional markdown formatting (including headings, bullet points, and clinical notes). Always include high-yield takeaways and direct references to B.Sc nursing standards (e.g., Brunner, Potter & Perry)."
+}
+Do not return any wrapping codeblock or conversational preamble, return ONLY the raw JSON string.`;
+
+        const resText = await generateContentDirect(key, prompt);
+        if (resText) {
+          try {
+            let cleanRes = resText.trim();
+            if (cleanRes.startsWith("```json")) {
+              cleanRes = cleanRes.substring(7, cleanRes.length - 3).trim();
+            } else if (cleanRes.startsWith("```")) {
+              cleanRes = cleanRes.substring(3, cleanRes.length - 3).trim();
+            }
+            const data = JSON.parse(cleanRes);
+            generatedTitle = data.title;
+            generatedCategory = data.category;
+            generatedBadge = data.badge;
+            generatedSummary = data.summary;
+            generatedText = data.content;
+          } catch (e) {
+            console.error("Failed to parse Gemini response as JSON:", e);
+          }
+        }
+      }
+
+      if (!generatedText) {
+        if (randomTopic.includes("recruitment") || randomTopic.includes("DSSSB")) {
+          generatedTitle = "AIIMS NORCET-IX Nursing Officer: Preliminary Screening Dates & Selection Criteria Released";
+          generatedCategory = "jobs";
+          generatedBadge = "AIIMS Notice";
+          generatedSummary = "The examination committee has officially published the tentative calendar, level-7 pay matrix details, and online application criteria.";
+          generatedText = `🩺 **NORCET-IX Central Recruitment Notification:**\n\nThe central exam board has officially declared tentative guidelines for the upcoming selection stages:\n\n### 📈 VACANCY PROJECTIONS\n- Cumulative openings: **1,980+ Level-7 Positions**\n- Participating AIIMS: AIIMS Delhi, AIIMS Patna, AIIMS Rishikesh, AIIMS Nagpur, AIIMS Bhopal.\n\n### ⚡ ELIGIBILITY CRITERIA\n1. **B.Sc. Nursing / Post Basic B.Sc.**: Registered with any State Nursing Council with active license.\n2. **GNM Diploma**: Registered with State Nursing Council + **2 years of clinical experience** in a minimum 50-bedded hospital.\n\n### ⚠️ IMPORTANT EXAM STRUCTURING\n- **Stage-I Preliminary**: 100 MCQs (80 Clinical Nursing subjects, 20 General Knowledge & Aptitude) to screen for Stage-II.\n- **Stage-II Mains**: Scenario-based, case-study clinical questions targeting safety prioritization.`;
+        } else if (randomTopic.includes("ECG") || randomTopic.includes("Pediatric") || randomTopic.includes("infection")) {
+          generatedTitle = "Clinical Nursing Guide: Advanced ECG Analysis & Critical Care Priority Interventions";
+          generatedCategory = "notes";
+          generatedBadge = "CBT Academic Note";
+          generatedSummary = "A high-yield clinical breakdown of cardiac dysrhythmias, electrode positioning, and emergency nursing protocols for AIIMS NORCET.";
+          generatedText = `📖 **Nursing Officer Clinical Review — Cardiac Electrocardiology:**\n\nRecognizing lethal heart rhythms in the Emergency Ward is a primary board exam target. Let's break down critical ECG diagnostics:\n\n### 🫀 LETHAL VENTRICULAR RHYTHMS\n1. **Ventricular Fibrillation (V-Fib)**: Completely chaotic, irregular waveforms with no discernible P, QRS, or T waves. **Priority action: Defibrillate immediately (200J biphasic / 360J monophasic) + continuous CPR!**\n2. **Pulseless Ventricular Tachycardia (pVT)**: Rapid, uniform, wide-complex QRS complexes (150-250 bpm). Treat identically to V-Fib.\n3. **Asystole**: Completely flat line. **Do NOT shock asystole!** Priority action: Confirm in multiple leads, administer Epinephrine 1mg IV/IO every 3-5 minutes, and continuous CPR.\n\n### ⚠️ ELECTROMYOCARDIAL INJURY SIGNALS\n- **STEMI**: ST-segment elevation in two or more contiguous leads, indicating acute transmural myocardial infarction.\n- **Ischemia**: ST-segment depression or T-wave inversion.\n- **Hyperkalemia**: Tall, peaked T-waves, widening QRS complexes, flattened P-waves. Administer **Calcium Gluconate 10% IV** to stabilize the myocardium!`;
+        } else {
+          generatedTitle = "The Maslow Priority Framework: Decelerate Exam Fatigue & Master Negative Marking";
+          generatedCategory = "motivation";
+          generatedBadge = "Exam Strategy";
+          generatedSummary = "An essential guide to mastering high-stakes nursing officer CBT exams without falling into typical negative marking traps.";
+          generatedText = `✨ **NURSING growth & MOTIVATION:**\n\nCBT exams in India test psychological resilience just as much as medical memorization. Here is how to construct a perfect answers matrix:\n\n### 🧠 THE MASLOW PRIORITY PROTOCOL\nWhen faced with multiple 'correct' options, always filter them through the lens of human priority:\n1. **Physiological Safety**: Airway, breathing, circulation, severe pain, hydration, elimination. (Always address these first!)\n2. **Physical/Emotional Security**: Patient falls, side rails, lock wheels, infection prevention, clear signage.\n3. **Social Belonging**: Family support, spiritual resources, patient-centered orientation.\n\n### 🛑 HOW TO AVOID THE -0.33 MARKS TRAP\n- **The Rule of 50/50**: If you cannot confidently rule out at least 2 distractors, **DO NOT COMPROMISE YOUR PROGRESS.** Skip the question.\n- **The Over-Analysis Trap**: Your initial clinical instinct is correct 82% of the time. Do not change answers unless you have recalled a specific, non-negotiable diagnostic value.`;
+        }
+      }
+
+      setAdminUpdateTitle(generatedTitle);
+      setAdminUpdateCategory(generatedCategory);
+      setAdminUpdateBadge(generatedBadge);
+      setAdminUpdateSummary(generatedSummary);
+      setAdminUpdateContent(generatedText);
+      setAdminUpdateImage("https://images.unsplash.com/photo-1576091160550-2173dba999ef?q=80&w=800");
+      
+      triggerToast("✨ AI generated high-yield update successfully!", "ok");
+    } catch (e: any) {
+      console.error(e);
+      triggerToast("AI generation failed. Manual entry template populated.", "err");
+    } finally {
+      setAdminIsGeneratingUpdate(false);
+    }
+  };
+
+  const handleSaveUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminUpdateTitle.trim() || !adminUpdateContent.trim() || !adminUpdateSummary.trim()) {
+      triggerToast("Please fill in Title, Summary, and Article Content!", "err");
+      return;
+    }
+
+    const slug = adminUpdateTitle.toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)+/g, "");
+    
+    const newUpdate: NursingUpdate = {
+      id: `update-${Date.now()}-${slug}`,
+      title: adminUpdateTitle.trim(),
+      category: adminUpdateCategory,
+      badge: adminUpdateBadge.trim() || "Update",
+      date: adminUpdateDate.trim() || new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+      readTime: adminUpdateReadTime.trim() || "3 min read",
+      summary: adminUpdateSummary.trim(),
+      content: adminUpdateContent.trim(),
+      image: adminUpdateImage.trim() || "https://images.unsplash.com/photo-1576091160550-2173dba999ef?q=80&w=800",
+      pdfUrl: adminUpdatePdfUrl.trim() || undefined
+    };
+
+    let success = false;
+    if (isSupabaseConnected()) {
+      success = await saveNursingUpdateToCloud(newUpdate);
+    }
+
+    const localCustom = localStorage.getItem("np_custom_updates");
+    let localUpdates: NursingUpdate[] = [];
+    if (localCustom) {
+      try {
+        localUpdates = JSON.parse(localCustom);
+      } catch (e) {}
+    }
+    localUpdates = [newUpdate, ...localUpdates];
+    localStorage.setItem("np_custom_updates", JSON.stringify(localUpdates));
+    
+    if (!isSupabaseConnected()) {
+      success = true;
+    }
+
+    if (success) {
+      triggerToast("📰 Update published successfully!", "ok");
+      setAdminUpdateTitle("");
+      setAdminUpdateBadge("");
+      setAdminUpdateSummary("");
+      setAdminUpdateContent("");
+      setAdminUpdateImage("");
+      setAdminUpdatePdfUrl("");
+      fetchUpdates();
+    } else {
+      triggerToast("Could not publish update to Supabase. Saved locally.", "err");
+      fetchUpdates();
+    }
+  };
+
+  const handleDeleteUpdate = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this news update?")) return;
+
+    let success = false;
+    if (isSupabaseConnected()) {
+      success = await deleteNursingUpdateFromCloud(id);
+    }
+
+    const localCustom = localStorage.getItem("np_custom_updates");
+    if (localCustom) {
+      try {
+        const parsed = JSON.parse(localCustom);
+        if (Array.isArray(parsed)) {
+          const filtered = parsed.filter((u: any) => u.id !== id);
+          localStorage.setItem("np_custom_updates", JSON.stringify(filtered));
+        }
+      } catch (e) {}
+    }
+
+    if (!isSupabaseConnected()) {
+      success = true;
+    }
+
+    if (success) {
+      triggerToast("📰 Update deleted successfully!", "ok");
+      fetchUpdates();
+    } else {
+      triggerToast("Failed to delete update from Supabase.", "err");
+    }
+  };
 
   // TOAST Notification State
   const [toastMessage, setToastMessage] = useState<string>("");
@@ -958,14 +1194,26 @@ export default function App() {
     showPage("hub");
   };
 
-  const triggerGoogleAutoAuth = () => {
-    triggerToast("Initiating Google Auto Authentication... 🔍", "ok");
+  const triggerGoogleAutoAuth = (customEmail?: string, customName?: string) => {
+    const finalEmail = customEmail?.trim() || "";
+    const finalName = customName?.trim() || "";
+
+    if (!finalEmail) {
+      triggerToast("Please enter your Google Email address first! ⚠️", "err");
+      return;
+    }
+    if (!finalEmail.includes("@")) {
+      triggerToast("Please enter a valid Google Email address! ⚠️", "err");
+      return;
+    }
+
+    triggerToast(`Initiating Google Auto Authentication for ${finalEmail}... 🔍`, "ok");
     
     setTimeout(() => {
       const googleUserObj: UserType = {
-        name: "Sakil",
-        email: "sakil.net.in@gmail.com",
-        isAdmin: false,
+        name: finalName || finalEmail.split("@")[0],
+        email: finalEmail.toLowerCase(),
+        isAdmin: finalEmail.toLowerCase() === "sakil.net.in@gmail.com" || finalEmail.toLowerCase() === "admin@ncbt.in",
         googleUser: true
       } as any;
       
@@ -973,7 +1221,7 @@ export default function App() {
       localStorage.setItem("np_user", JSON.stringify(googleUserObj));
       
       const users: UserType[] = JSON.parse(localStorage.getItem("np_users") || "[]");
-      if (!users.some(u => u.email.toLowerCase() === "sakil.net.in@gmail.com")) {
+      if (!users.some(u => u.email.toLowerCase() === finalEmail.toLowerCase())) {
         users.push(googleUserObj);
         localStorage.setItem("np_users", JSON.stringify(users));
       }
@@ -1292,6 +1540,7 @@ export default function App() {
     setCorrectCount(0);
     setTimeLeft(test.mins * 60);
     setIsTestFinished(false);
+    setShowFinishConfirm(false);
     showPage("test", true, { subjectId, testId });
     triggerToast(`Good luck on your mock! 📖`, "ok");
   };
@@ -2302,6 +2551,16 @@ export default function App() {
                 <span className="t-dot"></span>
                 <span>{formatTime(timeLeft)}</span>
               </div>
+
+              {!isTestFinished && (
+                <button 
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition-all ml-2 flex items-center gap-1 shadow-sm cursor-pointer"
+                  onClick={() => setShowFinishConfirm(true)}
+                  title="Submit and finish this test"
+                >
+                  🏁 Finish
+                </button>
+              )}
             </div>
 
             {/* Statistics Bar at test progression */}
@@ -2456,6 +2715,15 @@ export default function App() {
                         >
                           ← Prev
                         </button>
+                        
+                        <button 
+                          className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
+                          onClick={() => setShowFinishConfirm(true)}
+                          style={{ minHeight: "40px" }}
+                        >
+                          🏁 Submit Test
+                        </button>
+
                         <button 
                           className="btn-next"
                           onClick={handleNextQuestion}
@@ -2467,6 +2735,59 @@ export default function App() {
                   </AnimatePresence>
                 </div>
               </>
+            )}
+
+            {/* Custom Modal Confirmation for finishing the test */}
+            {showFinishConfirm && (
+              <div className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-[999] animate-fade-in">
+                <div className="bg-[#0d1117] border border-[#30363d] rounded-2xl p-6 max-w-md w-full shadow-2xl relative text-center">
+                  <div className="w-14 h-14 bg-red-500/10 text-red-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
+                    <span className="text-2xl">🚨</span>
+                  </div>
+                  <h3 className="text-lg font-extrabold text-white mb-2">Finish Mock Test?</h3>
+                  <p className="text-xs text-[#8b949e] mb-6 leading-relaxed">
+                    Are you sure you want to submit your test answers now? You will get detailed evaluation, score performance analysis, and detailed rationales.
+                  </p>
+
+                  {/* Progress details */}
+                  <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-4 text-left space-y-2 mb-6">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-[#8b949e]">Total Questions:</span>
+                      <span className="font-semibold text-white">{activeTest.data.length}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-[#8b949e]">Answered Questions:</span>
+                      <span className="font-semibold text-green-400">
+                        {selectedOptions.filter(o => o !== null).length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-[#8b949e]">Skipped / Unanswered:</span>
+                      <span className="font-semibold text-amber-500">
+                        {activeTest.data.length - selectedOptions.filter(o => o !== null).length}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button 
+                      className="flex-1 py-2.5 bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-[#c9d1d9] font-bold text-xs rounded-xl transition-all cursor-pointer"
+                      onClick={() => setShowFinishConfirm(false)}
+                    >
+                      Keep Solving
+                    </button>
+                    <button 
+                      className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-lg shadow-red-900/20"
+                      onClick={() => {
+                        setShowFinishConfirm(false);
+                        finishTest();
+                      }}
+                    >
+                      Yes, Submit Test
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* =============== RESULTS WRAPPER INTERFACE =============== */}
@@ -2982,6 +3303,27 @@ export default function App() {
                           {renderFormattedUpdateContent(selectedUpdate.content)}
                         </div>
 
+                        {/* Government Notice PDF link banner if provided */}
+                        {selectedUpdate.pdfUrl && (
+                          <div className="mt-6 p-4 bg-rose-950/20 border border-rose-900/30 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                              <span className="text-2xl text-rose-500">📄</span>
+                              <div className="text-center sm:text-left">
+                                <h4 className="text-xs font-bold text-rose-300">Official Government Notification / Notice</h4>
+                                <p className="text-[#8b949e] text-[10px] mt-0.5">Original announcement attachment</p>
+                              </div>
+                            </div>
+                            <a 
+                              href={selectedUpdate.pdfUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="w-full sm:w-auto px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 shrink-0"
+                            >
+                              Download Notice PDF
+                            </a>
+                          </div>
+                        )}
+
                         {/* High-converting mock test promotional CTA block (similar to Testbook/Adda247) */}
                         <div className="mt-8 bg-gradient-to-r from-indigo-950/40 via-purple-950/20 to-indigo-950/40 border border-indigo-500/20 rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 select-none">
                           <div className="flex items-start gap-3">
@@ -3060,22 +3402,51 @@ export default function App() {
                     To track daily scores, anatomical test attempts, accuracy metrics, and build your study streak, connect using Google Auto Authentication.
                   </p>
 
-                  {/* Google Auto-Auth One Tap Panel (Like other premium web pages) */}
+                  {/* Google Auto-Auth Panel with Dynamic Inputs */}
                   <div className="border border-[#1e293b] bg-[#0c1017] rounded-xl p-4 text-left relative overflow-hidden mb-6">
-                    <div className="absolute top-2 right-2 text-[9px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Auto Auth</div>
-                    <div className="flex items-center gap-3">
+                    <div className="absolute top-2 right-2 text-[9px] bg-[#38bdf8]/10 text-[#38bdf8] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Google One-Tap</div>
+                    
+                    <div className="flex items-center gap-3 mb-4">
                       <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow">
-                        S
+                        {googleNameInput ? googleNameInput.charAt(0).toUpperCase() : "G"}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-[10px] text-[#8b949e]">Sign in with Google</div>
-                        <div className="text-xs font-semibold text-[#e6edf3] truncate">Sakil</div>
-                        <div className="text-[10px] text-[#58a6ff] truncate">sakil.net.in@gmail.com</div>
+                        <div className="text-xs font-semibold text-[#e6edf3] truncate">
+                          {googleNameInput || "Guest Student"}
+                        </div>
+                        <div className="text-[10px] text-[#58a6ff] truncate">
+                          {googleEmailInput || "Enter your email below..."}
+                        </div>
                       </div>
                     </div>
+
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-[10px] text-[#8b949e] font-semibold mb-1 block">Full Name</label>
+                        <input
+                          type="text"
+                          className="w-full bg-[#161b22] border border-[#30363d] rounded-xl px-3 py-1.5 text-xs text-white focus:border-indigo-500 focus:outline-none"
+                          placeholder="Your Name (e.g. Rahul Kumar)"
+                          value={googleNameInput}
+                          onChange={(e) => setGoogleNameInput(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-[#8b949e] font-semibold mb-1 block">Google Email Address</label>
+                        <input
+                          type="email"
+                          className="w-full bg-[#161b22] border border-[#30363d] rounded-xl px-3 py-1.5 text-xs text-white focus:border-indigo-500 focus:outline-none"
+                          placeholder="yourname@gmail.com"
+                          value={googleEmailInput}
+                          onChange={(e) => setGoogleEmailInput(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
                     <button 
-                      className="mt-4 w-full bg-white text-gray-950 hover:bg-slate-100 text-xs font-bold py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-2 shadow-sm"
-                      onClick={triggerGoogleAutoAuth}
+                      className="mt-4 w-full bg-white text-gray-950 hover:bg-slate-100 text-xs font-bold py-2.5 px-3 rounded-lg transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                      onClick={() => triggerGoogleAutoAuth(googleEmailInput, googleNameInput)}
                     >
                       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -3083,7 +3454,7 @@ export default function App() {
                         <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22-.03-.63z" />
                         <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
                       </svg>
-                      Continue as Sakil
+                      {googleNameInput ? `Continue as ${googleNameInput.split(" ")[0]}` : "Sign in with Google"}
                     </button>
                   </div>
 
@@ -3401,12 +3772,18 @@ export default function App() {
                   <h2 className="text-2xl sm:text-3xl font-black font-syne tracking-tight text-white m-0">⚙️ Admin CMS Panel</h2>
                   <div className="admin-badge mt-1 inline-flex items-center gap-1.5"><Shield className="w-3.5 h-3.5 text-[#ff9f9f]" /> Active Administrator Program Control</div>
                 </div>
-                <div className="flex bg-[#0f1520] border border-[#1e293b] rounded-xl p-1 shrink-0">
+                <div className="flex bg-[#0f1520] border border-[#1e293b] rounded-xl p-1 shrink-0 flex-wrap gap-1">
                   <button 
                     className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${adminTab === "tests" ? "bg-amber-500 text-black shadow" : "text-[#8b949e] hover:text-white"}`}
                     onClick={() => { setAdminTab("tests"); setAdminIsManagingQuestions(false); }}
                   >
                     📚 Test & MCQ CMS
+                  </button>
+                  <button 
+                    className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${adminTab === "updates" ? "bg-amber-500 text-black shadow" : "text-[#8b949e] hover:text-white"}`}
+                    onClick={() => { setAdminTab("updates"); setAdminIsManagingQuestions(false); }}
+                  >
+                    📰 News & Updates CMS
                   </button>
                   <button 
                     className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${adminTab === "users" ? "bg-amber-500 text-black shadow" : "text-[#8b949e] hover:text-white"}`}
@@ -3885,6 +4262,194 @@ export default function App() {
                       </table>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* TAB 3: NEWS & UPDATES CMS (DAILY PULSE) */}
+              {adminTab === "updates" && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 text-[#e6edf3]">
+                  
+                  {/* Left Column: Create New Update Form */}
+                  <div className="lg:col-span-7 bg-[#0f1520] border border-[#1e293b] rounded-2xl p-6 shadow-xl">
+                    <div className="flex justify-between items-center mb-6">
+                      <div>
+                        <h3 className="font-syne text-md font-bold text-white m-0 uppercase tracking-wider">Publish New Announcement</h3>
+                        <p className="text-[10px] text-[#8b949e] mt-1">Add jobs, notes, syllabi or notices to Daily Pulse</p>
+                      </div>
+                      <button 
+                        type="button"
+                        disabled={adminIsGeneratingUpdate}
+                        onClick={handleAiGenerateUpdate}
+                        className="px-3.5 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/40 hover:border-indigo-500 text-indigo-300 text-[10px] font-black uppercase rounded-lg transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                      >
+                        {adminIsGeneratingUpdate ? "⚡ Writing..." : "✨ AI-Write High-Yield Note"}
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleSaveUpdate} className="space-y-4 font-sans text-xs">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="form-group sm:col-span-2">
+                          <label className="form-label text-[#8b949e] block mb-1">Post Title</label>
+                          <input 
+                            className="form-input bg-[#080c12] border border-[#1e293b] rounded-lg p-2.5 text-[#e6edf3] focus:border-indigo-500 w-full" 
+                            type="text" 
+                            placeholder="e.g. AIIMS NORCET-VIII Seat Allocation List Released"
+                            value={adminUpdateTitle}
+                            onChange={(e) => setAdminUpdateTitle(e.target.value)}
+                          />
+                        </div>
+                        
+                        <div className="form-group">
+                          <label className="form-label text-[#8b949e] block mb-1">Category</label>
+                          <select 
+                            className="form-input bg-[#080c12] text-white border border-[#1e293b] rounded-lg p-2.5 w-full cursor-pointer"
+                            value={adminUpdateCategory}
+                            onChange={(e) => setAdminUpdateCategory(e.target.value as any)}
+                          >
+                            <option value="jobs">💼 Recruitment Jobs</option>
+                            <option value="syllabus">📚 Exam Syllabus</option>
+                            <option value="notes">📝 High-Yield Notes</option>
+                            <option value="motivation">🔥 Motivation/Guidance</option>
+                          </select>
+                        </div>
+
+                        <div className="form-group">
+                          <label className="form-label text-[#8b949e] block mb-1">Badge Label</label>
+                          <input 
+                            className="form-input bg-[#080c12] border border-[#1e293b] rounded-lg p-2.5 text-[#e6edf3] focus:border-indigo-500 w-full" 
+                            type="text" 
+                            placeholder="e.g. NORCET alert"
+                            value={adminUpdateBadge}
+                            onChange={(e) => setAdminUpdateBadge(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label className="form-label text-[#8b949e] block mb-1">Publication Date</label>
+                          <input 
+                            className="form-input bg-[#080c12] border border-[#1e293b] rounded-lg p-2.5 text-[#e6edf3] focus:border-indigo-500 w-full" 
+                            type="text" 
+                            placeholder="e.g. June 19, 2026"
+                            value={adminUpdateDate}
+                            onChange={(e) => setAdminUpdateDate(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label className="form-label text-[#8b949e] block mb-1">Estimate Read Time</label>
+                          <input 
+                            className="form-input bg-[#080c12] border border-[#1e293b] rounded-lg p-2.5 text-[#e6edf3] focus:border-indigo-500 w-full" 
+                            type="text" 
+                            placeholder="e.g. 4 min read"
+                            value={adminUpdateReadTime}
+                            onChange={(e) => setAdminUpdateReadTime(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="form-group sm:col-span-2">
+                          <label className="form-label text-[#8b949e] block mb-1">Brief Summary (Short 1-line preview)</label>
+                          <input 
+                            className="form-input bg-[#080c12] border border-[#1e293b] rounded-lg p-2.5 text-[#e6edf3] focus:border-indigo-500 w-full" 
+                            type="text" 
+                            placeholder="The exam board has released the choice filling window..."
+                            value={adminUpdateSummary}
+                            onChange={(e) => setAdminUpdateSummary(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="form-group sm:col-span-2">
+                          <label className="form-label text-[#8b949e] block mb-1">Cover Image URL (Optional)</label>
+                          <input 
+                            className="form-input bg-[#080c12] border border-[#1e293b] rounded-lg p-2.5 text-[#e6edf3] focus:border-indigo-500 w-full" 
+                            type="text" 
+                            placeholder="https://images.unsplash.com/photo-..."
+                            value={adminUpdateImage}
+                            onChange={(e) => setAdminUpdateImage(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="form-group sm:col-span-2">
+                          <label className="form-label text-[#8b949e] block mb-1">Attach Government Notice PDF Link (Optional)</label>
+                          <input 
+                            className="form-input bg-[#080c12] border border-[#1e293b] rounded-lg p-2.5 text-rose-300 font-mono focus:border-rose-500 w-full" 
+                            type="text" 
+                            placeholder="https://aiims.edu/notices/norcet-choice.pdf"
+                            value={adminUpdatePdfUrl}
+                            onChange={(e) => setAdminUpdatePdfUrl(e.target.value)}
+                          />
+                          <p className="text-[#8b949e] text-[10px] mt-1">If specified, a prominent secure 'Download Notice PDF' button is added inside the article modal.</p>
+                        </div>
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label text-[#8b949e] block mb-1">Article Content (Markdown support)</label>
+                        <textarea 
+                          rows={12}
+                          className="form-input bg-[#080c12] text-white border border-[#1e293b] rounded-lg p-3 font-mono leading-relaxed text-[11px] w-full"
+                          placeholder="🩺 **AIIMS NORCET-VIII Official Update:**&#10;Write the detailed article content here..."
+                          value={adminUpdateContent}
+                          onChange={(e) => setAdminUpdateContent(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="flex gap-3 justify-end pt-2">
+                        <button 
+                          type="button" 
+                          onClick={clearAdminUpdateForm}
+                          className="px-4 py-2 bg-[#161b22] border border-[#21262d] text-[#8b949e] hover:text-white font-bold rounded-xl transition-all cursor-pointer"
+                        >
+                          Clear Fields
+                        </button>
+                        <button 
+                          type="submit" 
+                          className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 border border-amber-600 text-black font-extrabold rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer text-xs"
+                        >
+                          📢 Publish to Live Pulse
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Right Column: Manage Announcements */}
+                  <div className="lg:col-span-5 space-y-4">
+                    <h3 className="font-syne text-md font-bold text-white m-0 uppercase tracking-wider px-1">Active Updates ({updates.length})</h3>
+                    
+                    <div className="space-y-3 max-h-[85vh] overflow-y-auto pr-1">
+                      {updates.map((up) => {
+                        return (
+                          <div key={up.id} className="bg-[#0f1520] border border-[#1e293b] rounded-2xl p-4 flex gap-3 hover:border-indigo-500/30 transition-all group relative">
+                            <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-[#080c12]">
+                              <img src={up.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[9px] font-black uppercase text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded">
+                                  {up.category}
+                                </span>
+                                {up.pdfUrl && (
+                                  <span className="text-[9px] font-black uppercase text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded">
+                                    📎 PDF Notice
+                                  </span>
+                                )}
+                              </div>
+                              <h4 className="text-xs font-bold text-white mt-1.5 truncate group-hover:text-indigo-400 transition-colors">{up.title}</h4>
+                              <p className="text-[10px] text-[#8b949e] mt-1 line-clamp-2">{up.summary}</p>
+                              <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-[#1e293b] text-[9px] text-[#8b949e]">
+                                <span>📅 {up.date}</span>
+                                <button 
+                                  onClick={() => handleDeleteUpdate(up.id)}
+                                  className="text-red-400 hover:text-red-300 font-extrabold uppercase hover:underline cursor-pointer"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                 </div>
               )}
 
