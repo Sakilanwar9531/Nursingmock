@@ -75,8 +75,8 @@ function prerender() {
     const tagsString = headTags.join("\n    ");
     html = html.replace("</head>", `  ${tagsString}\n  </head>`);
 
-    // 3. Inject pre-rendered body content
-    html = html.replace('<div id="root"></div>', `<div id="root">${bodyContent}</div>`);
+    // 3. Inject pre-rendered body content into noscript tag for SEO crawlers without visually polluting #root
+    html = html.replace('<div id="root"></div>', `<div id="root"></div>\n  <noscript>${bodyContent}</noscript>`);
 
     // 4. Save file
     if (route === "/") {

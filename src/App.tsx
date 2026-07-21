@@ -2255,13 +2255,81 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
   };
 
   const triggerTestInit = (subjectId: string, testId: string) => {
-    const subject = subjects.find(s => s.id === subjectId);
-    if (!subject) return;
-    const test = subject.tests.find(t => t.id === testId);
-    if (!test || !test.ready) return;
+    // 1. Direct subject match
+    let targetSubject = subjects.find(s => s.id === subjectId);
+    let targetTest: Test | undefined;
 
-    setPendingTest({ subjectId, testId, test });
-    setSelectedModeForPending("exam"); // default to exam CBT mode
+    if (targetSubject) {
+      targetTest = targetSubject.tests.find(t => t.id === testId);
+    }
+
+    // 2. Specialty Drills fallback: search across ALL subjects if subjectId is "subject_mocks" or not found
+    if (!targetTest) {
+      for (const s of subjects) {
+        const found = s.tests.find(t => t.id === testId);
+        if (found) {
+          targetSubject = s;
+          targetTest = found;
+          break;
+        }
+      }
+    }
+
+    // 3. PYQs handler
+    if (!targetTest && (subjectId === "pyq" || testId.startsWith("pyq-"))) {
+      const foundPyq = PYQ_DATA.find(p => `pyq-${p.tag}-${p.year}`.toLowerCase() === testId.toLowerCase() || p.tag.toLowerCase() === testId.toLowerCase());
+      if (foundPyq) {
+        const qCount = foundPyq.count || 20;
+        const pyqQs = getQuestionsForPyq(foundPyq.exam, foundPyq.year, qCount);
+        targetTest = {
+          id: `pyq-${foundPyq.tag}-${foundPyq.year}`,
+          icon: "📋",
+          title: `${foundPyq.year} ${foundPyq.exam} Paper`,
+          desc: `Authentic simulated past year question paper covering high-yield syllabus domains with professor-rationales.`,
+          questions: qCount,
+          mins: qCount,
+          ready: true,
+          data: pyqQs
+        };
+        setPendingTest({ subjectId: "virtual", testId: targetTest.id, test: targetTest });
+        setSelectedModeForPending("exam");
+        return;
+      }
+    }
+
+    // 4. Speed Sprints handler
+    if (!targetTest && (subjectId === "short" || testId.startsWith("sprint-"))) {
+      const sprint = CURATED_SPRINTS.find(s => s.id === testId);
+      if (sprint) {
+        targetTest = sprint;
+        setPendingTest({ subjectId: "virtual", testId: sprint.id, test: sprint });
+        setSelectedModeForPending("practice");
+        return;
+      }
+      if (testId.startsWith("sprint-")) {
+        const sprintSubjId = testId.replace("sprint-", "");
+        const dynSprint = generateSprintTestPure(sprintSubjId, subjects);
+        if (dynSprint) {
+          setPendingTest({ subjectId: "virtual", testId: dynSprint.id, test: dynSprint });
+          setSelectedModeForPending("practice");
+          return;
+        }
+      }
+    }
+
+    // 5. Final launch
+    if (targetTest && targetTest.ready) {
+      setPendingTest({
+        subjectId: targetSubject ? targetSubject.id : subjectId,
+        testId: targetTest.id,
+        test: targetTest
+      });
+      setSelectedModeForPending("exam");
+    } else if (targetTest && !targetTest.ready) {
+      triggerToast(`This specialty drill is currently under preparation! 🔒`, "ok");
+    } else {
+      triggerToast(`Preparing test content... Please try again in a moment.`, "err");
+    }
   };
 
   const getQuestionsForPyq = (examName: string, year: string, count: number): Question[] => {

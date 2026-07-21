@@ -22,6 +22,7 @@
       }
       #root {
         background-color: #080c12;
+        min-height: 100vh;
       }
       html.light #root {
         background-color: #f8fafc;
@@ -33,13 +34,26 @@
           var theme = localStorage.getItem('theme') || 'dark';
           if (theme === 'light') {
             document.documentElement.classList.add('light');
-            document.addEventListener('DOMContentLoaded', function() {
-              if (document.body) document.body.classList.add('light');
-            });
           } else {
             document.documentElement.classList.remove('light');
           }
         } catch (e) {}
+
+        // Unregister stale service workers & clear legacy caches on load
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for (var registration of registrations) {
+              registration.unregister();
+            }
+          });
+        }
+        if ('caches' in window) {
+          caches.keys().then(function(names) {
+            for (var name of names) {
+              caches.delete(name);
+            }
+          });
+        }
       })();
     </script>
   </head>
