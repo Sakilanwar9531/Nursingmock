@@ -36,6 +36,7 @@ import {
   Newspaper
 } from "lucide-react";
 import { SUBJECTS, PYQ_DATA, TARGET_EXAMS } from "./data";
+import { InteractiveFAQ } from "./components/InteractiveFAQ";
 import { STATIC_NURSING_UPDATES } from "./updatesData";
 import { BLOG_TRANSLATIONS } from "./blogTranslations";
 import { Subject, Test, Question, PyqCard, User as UserType, Attempt, StreakData, NursingUpdate } from "./types";
@@ -1028,7 +1029,31 @@ export default function App() {
 
   // Navigation & Page State
   const [activePage, setActivePage] = useState<string>(initialRoute.page);
+  const [activeTargetExamIds, setActiveTargetExamIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem("np_active_exams");
+    return saved ? JSON.parse(saved) : ["aiims-norcet", "wbhrb-grade2", "esic-officer"];
+  });
   const [selectedExamId, setSelectedExamId] = useState<string>("aiims-norcet");
+
+  const toggleActiveTargetExam = (id: string) => {
+    let updated: string[];
+    if (activeTargetExamIds.includes(id)) {
+      if (activeTargetExamIds.length <= 1) {
+        triggerToast("Keep at least one target exam selected! 🎯", "err");
+        return;
+      }
+      updated = activeTargetExamIds.filter(examId => examId !== id);
+    } else {
+      updated = [...activeTargetExamIds, id];
+    }
+    setActiveTargetExamIds(updated);
+    localStorage.setItem("np_active_exams", JSON.stringify(updated));
+    
+    // Auto shift selectedExamId if the current selected exam gets deselected
+    if (selectedExamId === id && !updated.includes(id)) {
+      setSelectedExamId(updated[0]);
+    }
+  };
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [blogLanguage, setBlogLanguage] = useState<"en" | "hi" | "bn">("en");
@@ -1059,7 +1084,7 @@ export default function App() {
 
   // Theme Mode (Light / Dark) State
   const [theme, setTheme] = useState<"light" | "dark">(
-    () => (localStorage.getItem("theme") as "light" | "dark") || "light"
+    () => (localStorage.getItem("theme") as "light" | "dark") || "dark"
   );
 
   useEffect(() => {
@@ -2870,16 +2895,12 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   { name: "Community Health Care", query: "Community", tab: "subject" },
                   { name: "Previous Year Papers", query: "", tab: "pyq" },
                 ].map((cat, idx) => (
-                  <button
+                  <span
                     key={idx}
-                    onClick={() => {
-                      showPage(cat.tab === "subject" ? "subject_mocks" : cat.tab === "pyq" ? "pyq" : "mock_tests");
-                      setHubSearchText(cat.query);
-                    }}
-                    className="px-3.5 py-1.5 rounded-xl bg-card hover:bg-accent hover:text-white border border-border text-xs font-bold text-text2 transition-all cursor-pointer shadow-sm hover:shadow-accent/10"
+                    className="px-3.5 py-1.5 rounded-xl bg-card border border-border/70 text-xs font-bold text-text2 shadow-sm select-none"
                   >
                     {cat.name}
-                  </button>
+                  </span>
                 ))}
               </div>
             </div>
@@ -2890,57 +2911,118 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
               <div className="absolute top-40 right-20 w-96 h-96 bg-green/5 rounded-full filter blur-[130px] pointer-events-none"></div>
               <div className="absolute bottom-10 left-1/3 w-80 h-80 bg-purple/10 rounded-full filter blur-[120px] pointer-events-none"></div>
 
-              {/* HERO SECTION */}
-              <div className="text-center max-w-4xl mx-auto space-y-6 relative z-10">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-accent/10 border border-accent/20 text-accent rounded-full text-[11px] font-black uppercase tracking-widest mx-auto animate-fade-in shadow-md">
-                  <span className="flex h-2 w-2 relative">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
-                  </span>
-                  India's #1 Nursing CBT Prep Platform
-                </div>
-
-                <h1 className="text-4xl md:text-6xl font-black text-text tracking-tight leading-none">
-                  Crack any exam with <br />
-                  <span className="bg-gradient-to-r from-accent via-amber-500 to-green bg-clip-text text-transparent">
-                    Smarter Practice. Better Scores.
-                  </span>
-                </h1>
-
-                <p className="text-sm md:text-base text-text2 max-w-2xl mx-auto leading-relaxed font-sans">
-                  NCBT is India's most flexible and robust Nursing CBT & Mock Test Series platform — built specifically for AIIMS NORCET, ESIC, RRB, and State PSC staff nurse aspirants to achieve perfect ranks.
-                </p>
-
-                <div className="flex items-center justify-center gap-3 flex-wrap pt-4">
-                  <button 
-                    className="px-6 py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-black text-xs md:text-sm font-black shadow-xl shadow-amber-500/25 transition-all cursor-pointer transform hover:-translate-y-0.5 active:scale-95"
-                    onClick={() => showPage("hub")}
-                  >
-                    🚀 Download Free App / Start Prep
-                  </button>
-                  <button 
-                    className="px-6 py-3.5 rounded-2xl bg-surface hover:bg-card text-text text-xs md:text-sm font-bold border border-border hover:border-text2 transition-all cursor-pointer transform hover:-translate-y-0.5"
-                    onClick={() => showPage("subject_mocks")}
-                  >
-                    🔍 Find Course / Subject Mocks →
-                  </button>
-                </div>
-
-                {/* Avatar Stack Trusted Indicator */}
-                <div className="flex items-center justify-center gap-3 pt-6 flex-wrap">
-                  <div className="flex -space-x-2">
-                    <span className="w-8 h-8 rounded-full border-2 border-border bg-indigo-500 flex items-center justify-center text-[10px] font-black text-white">P</span>
-                    <span className="w-8 h-8 rounded-full border-2 border-border bg-amber-500 flex items-center justify-center text-[10px] font-black text-black">A</span>
-                    <span className="w-8 h-8 rounded-full border-2 border-border bg-teal-500 flex items-center justify-center text-[10px] font-black text-white">S</span>
-                    <span className="w-8 h-8 rounded-full border-2 border-border bg-pink-500 flex items-center justify-center text-[10px] font-black text-white">M</span>
+              {/* HERO SECTION - Optimized 2-Column Responsive Desktop Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10">
+                
+                {/* Left Column: Elegant Copywriting */}
+                <div className="lg:col-span-7 space-y-6 text-left">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-accent/10 border border-accent/20 text-accent rounded-full text-[11px] font-black uppercase tracking-widest animate-fade-in shadow-md">
+                    <span className="flex h-2 w-2 relative">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
+                    </span>
+                    India's #1 Nursing CBT Prep Platform
                   </div>
-                  <p className="text-xs text-text2">
-                    Trusted by <strong className="text-text">50,000+ Nursing Officers</strong> across India • <span className="text-amber-500 font-bold">⭐ 4.9 Rating</span> on App Store
+
+                  <h1 className="text-4xl md:text-6xl font-black text-text tracking-tight leading-tight">
+                    Crack any exam with <br />
+                    <span className="bg-gradient-to-r from-accent via-amber-500 to-green bg-clip-text text-transparent">
+                      Smarter Practice. Better Scores.
+                    </span>
+                  </h1>
+
+                  <p className="text-sm md:text-base text-text2 leading-relaxed font-sans max-w-xl">
+                    NCBT is India's most flexible and robust Nursing CBT & Mock Test Series platform — built specifically for AIIMS NORCET, ESIC, RRB, and State PSC staff nurse aspirants to achieve perfect ranks.
                   </p>
+
+                  <div className="flex items-center gap-3 flex-wrap pt-2">
+                    <button 
+                      className="px-6 py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-black text-xs md:text-sm font-black shadow-xl shadow-amber-500/25 transition-all cursor-pointer transform hover:-translate-y-0.5 active:scale-95"
+                      onClick={() => showPage("hub")}
+                    >
+                      🚀 Download Free App / Start Prep
+                    </button>
+                    <button 
+                      className="px-6 py-3.5 rounded-2xl bg-surface hover:bg-card text-text text-xs md:text-sm font-bold border border-border hover:border-text2 transition-all cursor-pointer transform hover:-translate-y-0.5"
+                      onClick={() => showPage("subject_mocks")}
+                    >
+                      🔍 Find Course / Subject Mocks →
+                    </button>
+                  </div>
+
+                  {/* Avatar Stack Trusted Indicator */}
+                  <div className="flex items-center gap-3 pt-4 flex-wrap">
+                    <div className="flex -space-x-2">
+                      <span className="w-8 h-8 rounded-full border-2 border-border bg-indigo-500 flex items-center justify-center text-[10px] font-black text-white">P</span>
+                      <span className="w-8 h-8 rounded-full border-2 border-border bg-amber-500 flex items-center justify-center text-[10px] font-black text-black">A</span>
+                      <span className="w-8 h-8 rounded-full border-2 border-border bg-teal-500 flex items-center justify-center text-[10px] font-black text-white">S</span>
+                      <span className="w-8 h-8 rounded-full border-2 border-border bg-pink-500 flex items-center justify-center text-[10px] font-black text-white">M</span>
+                    </div>
+                    <p className="text-xs text-text2">
+                      Trusted by <strong className="text-text">50,000+ Nursing Officers</strong> across India • <span className="text-amber-500 font-bold">⭐ 4.9 Rating</span>
+                    </p>
+                  </div>
                 </div>
+
+                {/* Right Column: High-Engagement CSS Study & Clinical Dashboard Widget */}
+                <div className="lg:col-span-5 hidden lg:block relative">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-accent/10 to-transparent rounded-3xl filter blur-2xl pointer-events-none animate-pulse"></div>
+                  
+                  <div className="bg-card border border-border/80 rounded-3xl p-6 shadow-2xl relative overflow-hidden space-y-6 max-w-sm mx-auto premium-glow-box">
+                    <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-green-400 animate-ping"></span>
+                        <span className="text-[10px] text-text3 font-mono">PORTAL_LIVE_CONNECT.SYS</span>
+                      </div>
+                      <span className="text-[9px] bg-accent/15 text-accent border border-accent/20 px-2 py-0.5 rounded font-black font-mono">
+                        CBT v2.6
+                      </span>
+                    </div>
+
+                    {/* Cute Pulse Graph Drawing with CSS */}
+                    <div className="bg-[#0c121e] border border-[#1e2d45] rounded-2xl p-4 space-y-2.5 relative">
+                      <div className="flex items-center justify-between text-[10px] text-text3 font-mono">
+                        <span>LIVE PERFORMANCE METRIC</span>
+                        <span className="text-green-400 animate-pulse">● STABLE</span>
+                      </div>
+                      <div className="h-12 flex items-end gap-1 px-1 pt-2">
+                        {[40, 20, 60, 30, 80, 50, 95, 45, 75, 60, 90].map((h, i) => (
+                          <div 
+                            key={i} 
+                            style={{ height: `${h}%` }} 
+                            className={`flex-1 rounded-t ${i === 6 ? 'bg-amber-500' : 'bg-accent/60'} transition-all`}
+                          ></div>
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] font-bold">
+                        <span className="text-text">Mock Average Accuracy</span>
+                        <span className="text-accent">88.4% (99th Pct)</span>
+                      </div>
+                    </div>
+
+                    {/* Active Topper Card Orbit */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 p-2.5 bg-surface/60 rounded-xl border border-border/40">
+                        <span className="text-xl">🔥</span>
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-black text-text truncate">AIIMS NORCET Series</h4>
+                          <p className="text-[9px] text-text3 font-medium uppercase tracking-wide">Live leaderboard updated</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-2.5 bg-surface/60 rounded-xl border border-border/40">
+                        <span className="text-xl">🏆</span>
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-black text-text truncate">12-Day Active Streak</h4>
+                          <p className="text-[9px] text-text3 font-medium uppercase tracking-wide">Daily clinical safety bonus ready</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
 
-              {/* INTERACTIVE MOCKUP PORTAL GRID with POPUP SCROLL ANIMATION */}
+              {/* INTERACTIVE PORTAL GRID ON MOBILE & LAPTOP CAROUSEL */}
               <div className="mt-16 relative z-10 max-w-4xl mx-auto">
                 <div className="absolute inset-0 bg-gradient-to-t from-accent/5 to-transparent rounded-3xl filter blur-3xl pointer-events-none"></div>
 
@@ -3050,7 +3132,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     whileInView={{ opacity: 1, scale: 1 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: idx * 0.1 }}
-                    className="p-4 bg-card border border-border rounded-2xl shadow-sm"
+                    className="p-4 bg-card border border-border rounded-2xl shadow-sm premium-glow-box"
                   >
                     <div className="text-2xl md:text-3xl font-black text-text tracking-tight">{statItem.value}</div>
                     <div className="text-[10px] md:text-xs text-text2 mt-1 font-medium">{statItem.label}</div>
@@ -3065,9 +3147,11 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 <span className="flex items-center gap-1.5"><span className="text-green-400 font-bold">✓</span> Clinical Explanations</span>
                 <span className="flex items-center gap-1.5"><span className="text-green-400 font-bold">✓</span> Trusted by Toppers</span>
               </div>
+            </div>
 
-              {/* EXAMS COVERED SECTION (TazaQuiz / Testbook Style) */}
-              <div className="mt-24 space-y-12 relative z-10">
+            {/* ================= SECTION 2: EXAMS COVERED (SLIDING COLOR PALETTE: bg-[#0c121e]) ================= */}
+            <div className="w-full bg-[#0c121e] border-y border-border/40 py-24 px-4 md:px-8">
+              <div className="max-w-7xl mx-auto space-y-12">
                 <div className="text-center max-w-2xl mx-auto space-y-2">
                   <div className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full">
                     🔥 POPULAR MOCK TEST SERIES
@@ -3092,14 +3176,14 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                         setSelectedExamId(exam.id);
                         showPage("hub");
                       }}
-                      className="bg-card border border-border hover:border-accent/40 rounded-3xl p-6 shadow-xl transition-all duration-300 hover:-translate-y-1.5 cursor-pointer flex flex-col justify-between group relative overflow-hidden"
+                      className="premium-glow-box rounded-3xl p-6 flex flex-col justify-between group relative overflow-hidden cursor-pointer"
                     >
                       {/* Decorative corner glow */}
                       <div className="absolute -right-8 -bottom-8 w-24 h-24 bg-accent/5 rounded-full filter blur-xl group-hover:bg-accent/10 transition-colors"></div>
                       
                       <div className="space-y-4 relative z-10">
                         <div className="flex items-center justify-between">
-                          <span className="text-2xl w-12 h-12 rounded-2xl bg-[#0c121e] border border-[#1e2d45] flex items-center justify-center">
+                          <span className="text-2xl w-12 h-12 rounded-2xl bg-[#080c12] border border-[#1e2d45] flex items-center justify-center">
                             {exam.icon}
                           </span>
                           <span className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 bg-amber-500/10 text-amber-500 rounded-full border border-amber-500/20">
@@ -3131,9 +3215,11 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   ))}
                 </div>
               </div>
+            </div>
 
-              {/* WHY STUDENTS LOVE NCBT (SCREENSHOT 6 FEATURE GRID) with POPUP SCROLL ANIMATION */}
-              <div className="mt-24 space-y-12">
+            {/* ================= SECTION 3: WHY STUDENTS LOVE NCBT (SLIDING COLOR PALETTE: bg-[#080c12]) ================= */}
+            <div className="w-full bg-[#080c12] py-24 px-4 md:px-8 max-w-7xl mx-auto">
+              <div className="space-y-12">
                 <div className="text-center max-w-2xl mx-auto space-y-2">
                   <div className="inline-flex items-center gap-1 bg-card border border-border text-text2 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full">
                     🚀 Built for Perfect Results
@@ -3161,7 +3247,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true, margin: "-50px" }}
                       transition={{ duration: 0.5, delay: fIdx * 0.05 }}
-                      className="bg-card border border-border hover:border-accent/50 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-1 flex flex-col gap-3 group relative overflow-hidden"
+                      className="premium-glow-box rounded-2xl p-6 flex flex-col gap-3 group relative overflow-hidden"
                     >
                       <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-accent/5 rounded-full filter blur-xl group-hover:bg-accent/10 transition-colors"></div>
                       <span className="text-2xl">{feat.icon}</span>
@@ -3171,9 +3257,11 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   ))}
                 </div>
               </div>
+            </div>
 
-              {/* WHAT USERS SAY (TESTIMONIALS - SCREENSHOT 5) with POPUP SCROLL ANIMATION */}
-              <div className="mt-24 space-y-12">
+            {/* ================= SECTION 4: WHAT USERS SAY - VERTICAL MOVING REVIEWS (SLIDING COLOR PALETTE: bg-[#0c121e]) ================= */}
+            <div className="w-full bg-[#0c121e] border-y border-border/40 py-24 px-4 md:px-8">
+              <div className="max-w-7xl mx-auto space-y-12">
                 <div className="text-center max-w-2xl mx-auto space-y-2">
                   <div className="inline-flex items-center gap-1 bg-card border border-border text-text2 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full">
                     ⭐ Verification Badges
@@ -3182,191 +3270,406 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     What Our Toppers Say
                   </h2>
                   <p className="text-xs md:text-sm text-text2 leading-relaxed">
-                    Success stories from central government nursing officers who prepared with NCBT and topped recruitments.
+                    Success stories from central government nursing officers who prepared with NCBT and topped recruitments. Hover over cards to pause scrolling!
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {[
-                    {
-                      quote: "NCBT feels exactly like the real AIIMS NORCET exam. The detailed clinical rationales helped me clear my basic concepts, especially in OBG and Pharmacology. I cleared NORCET in my very first attempt!",
-                      author: "Priya Sharma",
-                      exam: "AIIMS NORCET Topper (Selected)",
-                      rating: 5,
-                      avatar: "P"
-                    },
-                    {
-                      quote: "The timed practice mode is an absolute game-changer. Practising 30 questions daily in subject-wise blocks taught me when to skip questions to prevent negative marks. The negative tracking is incredible.",
-                      author: "Rahul Verma",
-                      exam: "ESIC Staff Nurse (AIR 42)",
-                      rating: 5,
-                      avatar: "R"
-                    },
-                    {
-                      quote: "We hosted our nursing college's preparation mock drills using the NCBT portal layout. The platform handles heavy traffic perfectly and students loved the instant scoreboard generation feature.",
-                      author: "Prof. Rajesh Kumar",
-                      exam: "Nursing College Principal",
-                      rating: 5,
-                      avatar: "R"
-                    },
-                    {
-                      quote: "Highly recommended for all central government vacancy preparations. The level of previous year questions is highly accurate and rationales are extremely logical, referencing top textbooks.",
-                      author: "Meenakshi Das",
-                      exam: "RRB Staff Nurse Selected",
-                      rating: 5,
-                      avatar: "M"
-                    }
-                  ].map((testi, tIdx) => (
-                    <motion.div
-                      key={tIdx}
-                      initial={{ opacity: 0, scale: 0.96 }}
-                      whileInView={{ opacity: 1, scale: 1 }}
-                      viewport={{ once: true, margin: "-50px" }}
-                      transition={{ duration: 0.5 }}
-                      className="bg-card border border-border rounded-3xl p-6 shadow-sm space-y-4 relative flex flex-col justify-between"
-                    >
-                      <div className="space-y-2">
-                        <div className="flex gap-1">
-                          {Array.from({ length: testi.rating }).map((_, rIdx) => (
-                            <span key={rIdx} className="text-amber-500 text-sm">★</span>
-                          ))}
-                        </div>
-                        <p className="text-xs md:text-sm text-text2 italic leading-relaxed font-sans">
-                          "{testi.quote}"
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3 pt-4 border-t border-border/40 mt-4">
-                        <span className="w-9 h-9 rounded-full bg-amber-500/20 text-amber-500 font-black text-sm flex items-center justify-center shrink-0">
-                          {testi.avatar}
-                        </span>
-                        <div>
-                          <h5 className="text-xs font-black text-text">{testi.author}</h5>
-                          <p className="text-[10px] text-accent flex items-center gap-1 font-medium mt-0.5">
-                            {testi.exam} <span className="bg-green-500/10 text-green-500 px-1 py-0.2 rounded text-[8px] font-bold">Verified Check ✔</span>
+                {/* Highly structured vertical scrolling marquee */}
+                <div className="vertical-slider-container max-w-2xl mx-auto border border-border/50 rounded-3xl bg-card2/30 p-4">
+                  <div className="vertical-slider-track">
+                    {[
+                      {
+                        quote: "NCBT feels exactly like the real AIIMS NORCET exam. The detailed clinical rationales helped me clear my basic concepts, especially in OBG and Pharmacology. I cleared NORCET in my very first attempt!",
+                        author: "Priya Sharma",
+                        exam: "AIIMS NORCET Topper (Selected)",
+                        rating: 5,
+                        avatar: "P"
+                      },
+                      {
+                        quote: "The timed practice mode is an absolute game-changer. Practising 30 questions daily in subject-wise blocks taught me when to skip questions to prevent negative marks. The negative tracking is incredible.",
+                        author: "Rahul Verma",
+                        exam: "ESIC Staff Nurse (AIR 42)",
+                        rating: 5,
+                        avatar: "R"
+                      },
+                      {
+                        quote: "We hosted our nursing college's preparation mock drills using the NCBT portal layout. The platform handles heavy traffic perfectly and students loved the instant scoreboard generation feature.",
+                        author: "Prof. Rajesh Kumar",
+                        exam: "Nursing College Principal",
+                        rating: 5,
+                        avatar: "R"
+                      },
+                      {
+                        quote: "Highly recommended for all central government vacancy preparations. The level of previous year questions is highly accurate and rationales are extremely logical, referencing top textbooks.",
+                        author: "Meenakshi Das",
+                        exam: "RRB Staff Nurse Selected",
+                        rating: 5,
+                        avatar: "M"
+                      }
+                    ].concat([
+                      {
+                        quote: "NCBT feels exactly like the real AIIMS NORCET exam. The detailed clinical rationales helped me clear my basic concepts, especially in OBG and Pharmacology. I cleared NORCET in my very first attempt!",
+                        author: "Priya Sharma",
+                        exam: "AIIMS NORCET Topper (Selected)",
+                        rating: 5,
+                        avatar: "P"
+                      },
+                      {
+                        quote: "The timed practice mode is an absolute game-changer. Practising 30 questions daily in subject-wise blocks taught me when to skip questions to prevent negative marks. The negative tracking is incredible.",
+                        author: "Rahul Verma",
+                        exam: "ESIC Staff Nurse (AIR 42)",
+                        rating: 5,
+                        avatar: "R"
+                      },
+                      {
+                        quote: "We hosted our nursing college's preparation mock drills using the NCBT portal layout. The platform handles heavy traffic perfectly and students loved the instant scoreboard generation feature.",
+                        author: "Prof. Rajesh Kumar",
+                        exam: "Nursing College Principal",
+                        rating: 5,
+                        avatar: "R"
+                      },
+                      {
+                        quote: "Highly recommended for all central government vacancy preparations. The level of previous year questions is highly accurate and rationales are extremely logical, referencing top textbooks.",
+                        author: "Meenakshi Das",
+                        exam: "RRB Staff Nurse Selected",
+                        rating: 5,
+                        avatar: "M"
+                      }
+                    ]).concat([
+                      {
+                        quote: "NCBT feels exactly like the real AIIMS NORCET exam. The detailed clinical rationales helped me clear my basic concepts, especially in OBG and Pharmacology. I cleared NORCET in my very first attempt!",
+                        author: "Priya Sharma",
+                        exam: "AIIMS NORCET Topper (Selected)",
+                        rating: 5,
+                        avatar: "P"
+                      },
+                      {
+                        quote: "The timed practice mode is an absolute game-changer. Practising 30 questions daily in subject-wise blocks taught me when to skip questions to prevent negative marks. The negative tracking is incredible.",
+                        author: "Rahul Verma",
+                        exam: "ESIC Staff Nurse (AIR 42)",
+                        rating: 5,
+                        avatar: "R"
+                      },
+                      {
+                        quote: "We hosted our nursing college's preparation mock drills using the NCBT portal layout. The platform handles heavy traffic perfectly and students loved the instant scoreboard generation feature.",
+                        author: "Prof. Rajesh Kumar",
+                        exam: "Nursing College Principal",
+                        rating: 5,
+                        avatar: "R"
+                      },
+                      {
+                        quote: "Highly recommended for all central government vacancy preparations. The level of previous year questions is highly accurate and rationales are extremely logical, referencing top textbooks.",
+                        author: "Meenakshi Das",
+                        exam: "RRB Staff Nurse Selected",
+                        rating: 5,
+                        avatar: "M"
+                      }
+                    ]).map((testi, tIdx) => (
+                      <div
+                        key={tIdx}
+                        className="bg-card border border-border/70 rounded-3xl p-6 shadow-md space-y-4 relative flex flex-col justify-between premium-glow-box"
+                      >
+                        <div className="space-y-2">
+                          <div className="flex gap-1">
+                            {Array.from({ length: testi.rating }).map((_, rIdx) => (
+                              <span key={rIdx} className="text-amber-500 text-sm">★</span>
+                            ))}
+                          </div>
+                          <p className="text-xs md:text-sm text-text2 italic leading-relaxed font-sans">
+                            "{testi.quote}"
                           </p>
                         </div>
+                        <div className="flex items-center gap-3 pt-4 border-t border-border/40 mt-2">
+                          <span className="w-9 h-9 rounded-full bg-amber-500/20 text-amber-500 font-black text-sm flex items-center justify-center shrink-0">
+                            {testi.avatar}
+                          </span>
+                          <div>
+                            <h5 className="text-xs font-black text-text">{testi.author}</h5>
+                            <p className="text-[10px] text-accent flex items-center gap-1 font-medium mt-0.5">
+                              {testi.exam} <span className="bg-green-500/10 text-green-500 px-1 py-0.2 rounded text-[8px] font-bold">Verified Check ✔</span>
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                    </motion.div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
+            </div>
 
-              {/* DENSE LONG SEO ACADEMIC SECTOR (SUPER SEO FRIENDLY DETAILED SECTION WITH MANY LINKS) */}
-              <div className="mt-28 border-t border-border/50 pt-16 max-w-4xl mx-auto space-y-12">
-                <div className="bg-card/40 border border-border rounded-3xl p-6 md:p-8 space-y-8 shadow-sm relative">
-                  <div className="absolute top-0 right-10 w-40 h-40 bg-accent/5 rounded-full filter blur-xl"></div>
-                  
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-1.5 text-accent text-[10px] font-black uppercase tracking-widest bg-accent/10 border border-accent/20 px-3 py-1 rounded-full w-fit">
-                      📚 Deep-Dive Professional Career Blueprint
+            {/* ================= SECTION 5: DEDICATED BROKEN-UP SEO BLOG & LINK TILES (SLIDING COLOR PALETTE: bg-[#080c12]) ================= */}
+            <div className="w-full bg-[#080c12] py-24 px-4 md:px-8">
+              <div className="max-w-4xl mx-auto space-y-16">
+                
+                {/* Header for SEO Blog */}
+                <div className="space-y-3 text-center">
+                  <div className="flex items-center gap-1.5 text-accent text-[10px] font-black uppercase tracking-widest bg-accent/10 border border-accent/20 px-3 py-1 rounded-full w-fit mx-auto">
+                    📚 Deep-Dive Professional Career Blueprint
+                  </div>
+                  <h2 className="text-2xl md:text-4xl font-black text-text tracking-tight leading-snug">
+                    {SEO_ARTICLES.homepage.title}
+                  </h2>
+                  <p className="text-xs md:text-sm text-text2 italic font-sans leading-relaxed max-w-2xl mx-auto">
+                    {SEO_ARTICLES.homepage.subtitle}
+                  </p>
+                </div>
+
+                {/* Broken Up Block 1: What is NCBT */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-[#0c121e] border border-border/60 p-6 md:p-8 rounded-3xl premium-glow-box">
+                  <div className="space-y-4">
+                    <div className="text-[10px] bg-accent/15 text-accent border border-accent/20 rounded-full px-2.5 py-0.5 font-black uppercase tracking-wider w-fit">
+                      🩺 WHO WE ARE
                     </div>
-                    <h2 className="text-xl md:text-3xl font-black text-text tracking-tight leading-snug">
-                      {SEO_ARTICLES.homepage.title}
-                    </h2>
-                    <p className="text-xs text-text2 italic font-sans leading-relaxed">
-                      {SEO_ARTICLES.homepage.subtitle}
+                    <h3 className="text-lg md:text-xl font-black text-text tracking-tight">1. What is NCBT.in & What Does It Do?</h3>
+                    <p className="text-xs md:text-sm text-text2 leading-relaxed font-sans">
+                      <strong>NCBT.in (Nursing Computer Based Test)</strong> is a cutting-edge, comprehensive exam preparation portal designed specifically for nursing professionals in India. We bridge the gap between academic theory and practical exam execution. Our platform simulates the <strong>actual Computer Based Test (CBT) environment</strong> used by major recruitment boards including AIIMS, ESIC, RRB, and State health departments.
+                    </p>
+                    <p className="text-xs md:text-sm text-text2 leading-relaxed font-sans">
+                      By providing an authentic testing engine, structured subject tests, and real previous year solved papers (PYQs), NCBT empowers aspirants to transform their raw medical knowledge into rapid, accurate clinical decision-making on exam day.
                     </p>
                   </div>
-
-                  <div 
-                    className="prose max-w-none text-text2 text-xs md:text-sm space-y-6 leading-relaxed font-sans"
-                    dangerouslySetInnerHTML={{ __html: SEO_ARTICLES.homepage.contentHtml }}
-                  />
-
-                  {/* Dense Links Directories (Many many links for extreme SEO relevance) */}
-                  <div className="border-t border-border/50 pt-8 mt-10 space-y-8">
-                    <div>
-                      <h4 className="text-xs font-black text-text uppercase tracking-wider mb-3.5 flex items-center gap-1.5">
-                        <span className="text-amber-500">🔗</span> Comprehensive Prep Syllabus Links
-                      </h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                        {[
-                          { label: "Anatomy & Physiology", query: "Anatomy", tab: "subject" },
-                          { label: "Critical Care Pharmacology", query: "Pharmacology", tab: "subject" },
-                          { label: "Fluid & Electrolyte Balance", query: "Fluid", tab: "subject" },
-                          { label: "Maternal Health & Midwifery", query: "Midwifery", tab: "subject" },
-                          { label: "Pediatric Growth Milestones", query: "Pediatric", tab: "subject" },
-                          { label: "Psychiatric Nursing Principles", query: "Psychiatric", tab: "subject" },
-                          { label: "Fundamental Clinical Skills", query: "Foundation", tab: "subject" },
-                          { label: "Community Health Nursing", query: "Community", tab: "subject" },
-                          { label: "Oncology & Chemotherapy Care", query: "Oncology", tab: "subject" },
-                        ].map((lnk, lIdx) => (
-                          <button
-                            key={lIdx}
-                            onClick={() => {
-                              showPage(lnk.tab === "subject" ? "subject_mocks" : "mock_tests");
-                              setHubSearchText(lnk.query);
-                            }}
-                            className="text-[11px] text-text2 hover:text-accent hover:underline text-left cursor-pointer transition-colors"
-                          >
-                            • {lnk.label}
-                          </button>
-                        ))}
+                  {/* Inline high-engagement visual telemetry mockup to reduce monotony */}
+                  <div className="bg-[#080c12] border border-border/80 rounded-2xl p-5 space-y-3 shadow-md relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-accent/5 rounded-full filter blur-md"></div>
+                    <h4 className="text-xs font-black text-text uppercase tracking-wider flex items-center gap-1.5 border-b border-border/40 pb-2">
+                      <span>📊</span> CBT Telemetry Monitor
+                    </h4>
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-text2">Simulated Timer accuracy</span>
+                        <span className="text-green-400 font-mono font-bold">100% Match</span>
                       </div>
-                    </div>
-
-                    <div>
-                      <h4 className="text-xs font-black text-text uppercase tracking-wider mb-3.5 flex items-center gap-1.5">
-                        <span className="text-accent">📄</span> Free Solved Previous Year Papers (PYQs)
-                      </h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                        {[
-                          { label: "AIIMS NORCET Past Papers", query: "NORCET" },
-                          { label: "ESIC Officer Solved Mock", query: "ESIC" },
-                          { label: "RRB Staff Nurse PYQ Solutions", query: "RRB" },
-                          { label: "DSSSB Board Exam Paper Pack", query: "DSSSB" },
-                          { label: "RPSC Staff Nurse Model Solved", query: "RPSC" },
-                          { label: "State PSC Recruitment Drills", query: "State" },
-                          { label: "CHO Entrance Selected PYQs", query: "CHO" },
-                          { label: "JIPMER Staff Nurse Solved Mock", query: "JIPMER" },
-                          { label: "BHU Nursing Officer Papers", query: "BHU" },
-                        ].map((pyqL, pIdx) => (
-                          <button
-                            key={pIdx}
-                            onClick={() => {
-                              showPage("pyq");
-                              setHubSearchText(pyqL.query);
-                            }}
-                            className="text-[11px] text-text2 hover:text-accent hover:underline text-left cursor-pointer transition-colors"
-                          >
-                            • {pyqL.label}
-                          </button>
-                        ))}
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-text2">Negative Marking Calculator</span>
+                        <span className="text-accent font-mono font-bold">Activated (1/3 & 1/4)</span>
                       </div>
-                    </div>
-
-                    <div>
-                      <h4 className="text-xs font-black text-text uppercase tracking-wider mb-3.5 flex items-center gap-1.5">
-                        <span className="text-purple-400">📝</span> Nursing Academic Guides & Career News
-                      </h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                        {[
-                          { label: "Central Government level 7 pay scale details", page: "updates" },
-                          { label: "WBHRB Grade II complete syllabus guide", page: "updates" },
-                          { label: "Community Health Officer career path analysis", page: "updates" },
-                          { label: "CBT exam format negative marking strategies", page: "updates" },
-                          { label: "West Bengal Staff Nurse vacancy notification", page: "updates" },
-                          { label: "How to practice high-yield clinical MCQs", page: "updates" },
-                          { label: "About NCBT Academic Core Philosophy", page: "about" },
-                          { label: "Contact NCBT Institutional Support Team", page: "contact" },
-                          { label: "System Diagnostic & Score Analytics", page: "analytics" },
-                        ].map((acL, aIdx) => (
-                          <button
-                            key={aIdx}
-                            onClick={() => {
-                              showPage(acL.page);
-                            }}
-                            className="text-[11px] text-text2 hover:text-accent hover:underline text-left cursor-pointer transition-colors"
-                          >
-                            • {acL.label}
-                          </button>
-                        ))}
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-text2">Percentile Engine</span>
+                        <span className="text-amber-500 font-mono font-bold">Adaptive Ranking</span>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
+                {/* Broken Up Block 2: How It Works */}
+                <div className="space-y-6">
+                  <div className="text-center max-w-xl mx-auto space-y-1.5">
+                    <div className="text-[10px] bg-green-500/10 text-green-400 border border-green-500/20 rounded-full px-2.5 py-0.5 font-black uppercase tracking-wider w-fit mx-auto">
+                      ⚙️ METHODOLOGY
+                    </div>
+                    <h3 className="text-lg md:text-xl font-black text-text">2. How Does It Work?</h3>
+                    <p className="text-xs text-text2">NCBT makes digital learning extremely streamlined in 3 clean interactive steps.</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div className="bg-card border border-border/50 rounded-2xl p-5 space-y-2.5 hover:border-accent/40 transition-colors">
+                      <span className="w-8 h-8 rounded-full bg-accent/20 text-accent font-black text-sm flex items-center justify-center">1</span>
+                      <h4 className="text-xs font-black text-text uppercase tracking-wider">Select Your Target Exam</h4>
+                      <p className="text-[11px] text-text2 leading-relaxed font-sans">
+                        Choose your specific target exam (e.g., AIIMS NORCET, WBHRB, ESIC, RRB, or CHO) to immediately align your dashboard with the correct syllabus, pattern, and mock criteria.
+                      </p>
+                    </div>
+                    <div className="bg-card border border-border/50 rounded-2xl p-5 space-y-2.5 hover:border-accent/40 transition-colors">
+                      <span className="w-8 h-8 rounded-full bg-green-500/20 text-green-400 font-black text-sm flex items-center justify-center">2</span>
+                      <h4 className="text-xs font-black text-text uppercase tracking-wider">Choose Practice Format</h4>
+                      <p className="text-[11px] text-text2 leading-relaxed font-sans">
+                        Toggle between <strong>CBT Exam Mode</strong> (with strict timers and negative marking penalties) or <strong>Practice Mode</strong> (with instant answers and logical clinical explanations).
+                      </p>
+                    </div>
+                    <div className="bg-card border border-border/50 rounded-2xl p-5 space-y-2.5 hover:border-accent/40 transition-colors">
+                      <span className="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 font-black text-sm flex items-center justify-center">3</span>
+                      <h4 className="text-xs font-black text-text uppercase tracking-wider">Review Detailed Analytics</h4>
+                      <p className="text-[11px] text-text2 leading-relaxed font-sans">
+                        After submission, deep-dive into performance metrics. See your speed statistics, category accuracy levels, percentile projections, and step-by-step rationales.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Broken Up Block 3: Immense Benefits */}
+                <div className="bg-[#0c121e] border border-border/60 p-6 md:p-8 rounded-3xl premium-glow-box space-y-6">
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-full px-2.5 py-0.5 font-black uppercase tracking-wider w-fit">
+                      🌟 COMPETITIVE ADVANTAGES
+                    </div>
+                    <h3 className="text-lg md:text-xl font-black text-text tracking-tight">3. Immense Benefits of Practicing on NCBT</h3>
+                    <p className="text-xs text-text2">Why candidates preparing on NCBT.in have an unmatched edge over regular book readers.</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="flex gap-3">
+                      <span className="text-lg p-2 rounded-lg bg-red-500/10 text-red-500 h-fit">🛡️</span>
+                      <div>
+                        <h4 className="text-xs font-black text-text uppercase tracking-wider">Eliminate Test Anxiety</h4>
+                        <p className="text-[11px] text-text2 leading-relaxed mt-1 font-sans">
+                          Our test window recreates the precise color coding, font layout, question navigation panel, and timer placement of official CBT interfaces. This makes the real exam feel like just another practice set.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <span className="text-lg p-2 rounded-lg bg-amber-500/10 text-amber-500 h-fit">🎯</span>
+                      <div>
+                        <h4 className="text-xs font-black text-text uppercase tracking-wider">Tackle Negative Markings</h4>
+                        <p className="text-[11px] text-text2 leading-relaxed mt-1 font-sans">
+                          With a 1/3rd or 1/4th penalty on incorrect answers, guessing is lethal. NCBT trains your intuition, helping you eliminate options and skip questions when confidence is low.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <span className="text-lg p-2 rounded-lg bg-green-500/10 text-green-400 h-fit">🧠</span>
+                      <div>
+                        <h4 className="text-xs font-black text-text uppercase tracking-wider">Active Recall & High-Yield Content</h4>
+                        <p className="text-[11px] text-text2 leading-relaxed mt-1 font-sans">
+                          Rather than passive reading, our questions utilize active recall spanning scenario-based, clinical safety, drug pharmacology, and anatomy questions.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <span className="text-lg p-2 rounded-lg bg-accent/15 text-accent h-fit">🎁</span>
+                      <div>
+                        <h4 className="text-xs font-black text-text uppercase tracking-wider">100% Free with No Hidden Paywalls</h4>
+                        <p className="text-[11px] text-text2 leading-relaxed mt-1 font-sans">
+                          Gain complete access to standard full-length mocks, previous year solved banks, and subject-wise chapter tests without premium subscriptions.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Broken Up Block 4: Who Is It For */}
+                <div className="space-y-6">
+                  <div className="text-center max-w-xl mx-auto space-y-1.5">
+                    <div className="text-[10px] bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-full px-2.5 py-0.5 font-black uppercase tracking-wider w-fit mx-auto">
+                      👥 STUDENT TARGET AUDIENCE
+                    </div>
+                    <h3 className="text-lg md:text-xl font-black text-text">4. Who is This Platform For?</h3>
+                    <p className="text-xs text-text2">NCBT is carefully calibrated to suit the needs of a wide range of nursing professionals.</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="bg-[#0c121e] border border-border/60 rounded-2xl p-5 hover:border-accent transition-colors flex gap-4">
+                      <span className="text-2xl shrink-0">🎓</span>
+                      <div>
+                        <h4 className="text-xs font-black text-[#388bfd] uppercase tracking-wider">Nursing Freshers & Undergrads</h4>
+                        <p className="text-[11px] text-text2 mt-1 leading-relaxed font-sans">
+                          B.Sc. Nursing and GNM diploma students looking to build their clinical foundation, revise core systems (Anatomy, Physiology, Pharmacology), and start early preparations.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="bg-[#0c121e] border border-border/60 rounded-2xl p-5 hover:border-green transition-colors flex gap-4">
+                      <span className="text-2xl shrink-0">💼</span>
+                      <div>
+                        <h4 className="text-xs font-black text-[#10b981] uppercase tracking-wider">Experienced Staff Nurses</h4>
+                        <p className="text-[11px] text-text2 mt-1 leading-relaxed font-sans">
+                          Working clinicians who want to fast-track their revision, practice high-yield previous year questions, and secure high-pay Level 7 positions in central institutions like AIIMS, ESIC, and RRB.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Broken Up Block 5: FAQ Accordion block */}
+                <InteractiveFAQ title="Platform Frequently Asked Questions" />
+
+                {/* Highly organized Directory Link Boards */}
+                <div className="border-t border-border/40 pt-12 space-y-8">
+                  
+                  {/* Directory 1: Syllabus Links */}
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-black text-text uppercase tracking-widest flex items-center gap-2">
+                      <span className="p-1 rounded bg-amber-500/15 text-amber-500 text-[10px]">📚</span>
+                      COMPREHENSIVE PREP SYLLABUS DIRECTORY
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {[
+                        { label: "Anatomy & Physiology", query: "Anatomy", tab: "subject" },
+                        { label: "Critical Care Pharmacology", query: "Pharmacology", tab: "subject" },
+                        { label: "Fluid & Electrolyte Balance", query: "Fluid", tab: "subject" },
+                        { label: "Maternal Health & Midwifery", query: "Midwifery", tab: "subject" },
+                        { label: "Pediatric Growth Milestones", query: "Pediatric", tab: "subject" },
+                        { label: "Psychiatric Nursing Principles", query: "Psychiatric", tab: "subject" },
+                        { label: "Fundamental Clinical Skills", query: "Foundation", tab: "subject" },
+                        { label: "Community Health Nursing", query: "Community", tab: "subject" },
+                        { label: "Oncology & Chemotherapy Care", query: "Oncology", tab: "subject" },
+                      ].map((lnk, lIdx) => (
+                        <button
+                          key={lIdx}
+                          onClick={() => {
+                            showPage(lnk.tab === "subject" ? "subject_mocks" : "mock_tests");
+                            setHubSearchText(lnk.query);
+                          }}
+                          className="p-3 rounded-2xl bg-surface/40 hover:bg-[#0c121e] border border-border/40 hover:border-accent text-[11px] font-bold text-text2 hover:text-accent text-left transition-all cursor-pointer shadow-sm hover:shadow-md flex items-center justify-between group"
+                        >
+                          <span className="truncate">{lnk.label}</span>
+                          <span className="text-[9px] opacity-0 group-hover:opacity-100 transition-opacity text-accent">→</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Directory 2: PYQ Links */}
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-black text-text uppercase tracking-widest flex items-center gap-2">
+                      <span className="p-1 rounded bg-accent/15 text-accent text-[10px]">📄</span>
+                      FREE SOLVED PREVIOUS YEAR PAPERS (PYQ)
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {[
+                        { label: "AIIMS NORCET Past Papers", query: "NORCET" },
+                        { label: "ESIC Officer Solved Mock", query: "ESIC" },
+                        { label: "RRB Staff Nurse PYQ Solutions", query: "RRB" },
+                        { label: "DSSSB Board Exam Paper Pack", query: "DSSSB" },
+                        { label: "RPSC Staff Nurse Model Solved", query: "RPSC" },
+                        { label: "State PSC Recruitment Drills", query: "State" },
+                        { label: "CHO Entrance Selected PYQs", query: "CHO" },
+                        { label: "JIPMER Staff Nurse Solved Mock", query: "JIPMER" },
+                        { label: "BHU Nursing Officer Papers", query: "BHU" },
+                      ].map((pyqL, pIdx) => (
+                        <button
+                          key={pIdx}
+                          onClick={() => {
+                            showPage("pyq");
+                            setHubSearchText(pyqL.query);
+                          }}
+                          className="p-3 rounded-2xl bg-surface/40 hover:bg-[#0c121e] border border-border/40 hover:border-green text-[11px] font-bold text-text2 hover:text-green text-left transition-all cursor-pointer shadow-sm hover:shadow-md flex items-center justify-between group"
+                        >
+                          <span className="truncate">{pyqL.label}</span>
+                          <span className="text-[9px] opacity-0 group-hover:opacity-100 transition-opacity text-green-400">→</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Directory 3: Academic Guides */}
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-black text-text uppercase tracking-widest flex items-center gap-2">
+                      <span className="p-1 rounded bg-purple-500/15 text-purple-400 text-[10px]">📝</span>
+                      NURSING ACADEMIC GUIDES & CAREER NEWS
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {[
+                        { label: "Central Government level 7 pay scale details", page: "updates" },
+                        { label: "WBHRB Grade II complete syllabus guide", page: "updates" },
+                        { label: "Community Health Officer career path analysis", page: "updates" },
+                        { label: "CBT exam format negative marking strategies", page: "updates" },
+                        { label: "West Bengal Staff Nurse vacancy notification", page: "updates" },
+                        { label: "How to practice high-yield clinical MCQs", page: "updates" },
+                        { label: "About NCBT Academic Core Philosophy", page: "about" },
+                      ].map((acad, aIdx) => (
+                        <button
+                          key={aIdx}
+                          onClick={() => {
+                            showPage(acad.page);
+                          }}
+                          className="p-3 rounded-2xl bg-surface/40 hover:bg-[#0c121e] border border-border/40 hover:border-purple-400 text-[11px] font-bold text-text2 hover:text-purple-400 text-left transition-all cursor-pointer shadow-sm hover:shadow-md flex items-center justify-between group"
+                        >
+                          <span className="truncate">{acad.label}</span>
+                          <span className="text-[9px] opacity-0 group-hover:opacity-100 transition-opacity text-purple-400">→</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
             </div>
 
             {/* PRESTIGE MULTI-COLUMN FOOTER (SCREENSHOT 3 & 4) */}
@@ -3536,110 +3839,97 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start" id="hub-main-layout">
                 
                 {/* LEFT COLUMN: Vertical Target Exam sliding sidebar */}
-                <div className="lg:col-span-3 bg-card border border-border rounded-3xl p-5 shadow-xl space-y-6 sticky top-20" id="hub-exam-vertical-sidebar">
-                  <div className="pb-3 border-b border-border/40">
-                    <h3 className="text-xs font-black text-text uppercase tracking-widest flex items-center gap-2">
-                      <span>🎯</span> TARGET EXAMS NAVIGATOR
-                    </h3>
-                    <p className="text-[10px] text-text3 font-medium mt-1">Select your exam to customize paper practice</p>
+                <div className="lg:col-span-3 bg-card border border-border rounded-3xl p-5 shadow-xl space-y-6 lg:sticky lg:top-20" id="hub-exam-vertical-sidebar">
+                  
+                  {/* Part A: Target Exams Customizer checklist */}
+                  <div className="pb-4 border-b border-border/40 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-black text-text uppercase tracking-widest flex items-center gap-1.5">
+                        <span>🎯</span> CHOOSE TARGET EXAMS
+                      </h3>
+                      <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-accent/10 text-accent rounded-md border border-accent/20">
+                        {activeTargetExamIds.length} Selected
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-text3 leading-relaxed">
+                      Customize which exam preparation modules are loaded below:
+                    </p>
+                    
+                    {/* Checklist of all 6 exams */}
+                    <div className="space-y-1 pt-1.5">
+                      {TARGET_EXAMS.map(exam => {
+                        const isChecked = activeTargetExamIds.includes(exam.id);
+                        return (
+                          <div 
+                            key={exam.id}
+                            onClick={() => toggleActiveTargetExam(exam.id)}
+                            className={`flex items-center justify-between px-3 py-2 rounded-xl border text-[11px] font-bold cursor-pointer transition-all ${
+                              isChecked
+                                ? "bg-accent/5 border-accent/30 text-white"
+                                : "bg-transparent border-transparent text-text3 hover:text-text hover:bg-surface/30"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-sm shrink-0">{exam.icon}</span>
+                              <div className="truncate">
+                                <p className="truncate leading-none text-text">{exam.name}</p>
+                                <p className="text-[8px] text-text3 font-medium uppercase mt-0.5 leading-none">{exam.category}</p>
+                              </div>
+                            </div>
+                            
+                            {/* Checkbox Icon */}
+                            <div className={`w-4 h-4 border rounded flex items-center justify-center transition-all shrink-0 ${
+                              isChecked 
+                                ? "bg-accent border-accent text-slate-900" 
+                                : "border-border text-transparent"
+                            }`}>
+                              <Check className="w-3 h-3 stroke-[3]" />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
-                    {TARGET_EXAMS.map(exam => {
-                      const isSelected = selectedExamId === exam.id;
-                      return (
-                        <div key={exam.id} className="space-y-1.5 transition-all">
-                          {/* Main Domain Selector Button */}
+                  {/* Part B: Active prep center list */}
+                  <div className="space-y-3">
+                    <div>
+                      <h3 className="text-xs font-black text-text uppercase tracking-widest flex items-center gap-1.5">
+                        <span>⚡</span> MY PREP CENTRE
+                      </h3>
+                      <p className="text-[10px] text-text3 mt-1">Focus your active study & exam materials:</p>
+                    </div>
+
+                    <div className="space-y-2 max-h-[30vh] lg:max-h-[40vh] overflow-y-auto pr-1">
+                      {TARGET_EXAMS.filter(exam => activeTargetExamIds.includes(exam.id)).map(exam => {
+                        const isSelected = selectedExamId === exam.id;
+                        return (
                           <button
+                            key={exam.id}
                             onClick={() => {
                               setSelectedExamId(exam.id);
-                              setHubTab("full_mock");
                             }}
-                            className={`w-full text-left px-3.5 py-3 rounded-2xl border text-xs font-black flex items-center justify-between transition-all cursor-pointer ${
+                            className={`w-full text-left px-3 py-2.5 rounded-xl border text-xs font-black flex items-center justify-between transition-all cursor-pointer ${
                               isSelected 
-                                ? "bg-accent/10 border-accent text-accent shadow-md shadow-accent/5" 
+                                ? "bg-accent/15 border-accent text-accent shadow-md shadow-accent/5" 
                                 : "bg-[#070b12] border-border/50 text-text2 hover:border-border/85 hover:bg-surface"
                             }`}
                           >
-                            <div className="flex items-center gap-2.5">
-                              <span className="text-base select-none">{exam.icon}</span>
-                              <div className="min-w-0">
-                                <div className="truncate text-xs font-black">{exam.name}</div>
-                                <div className="text-[9px] text-text3 font-bold uppercase truncate tracking-wide mt-0.5">{exam.category}</div>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-sm shrink-0">{exam.icon}</span>
+                              <div className="min-w-0 ml-2">
+                                <div className="truncate text-xs font-extrabold text-white">{exam.name}</div>
+                                <div className="text-[8px] text-text3 font-medium uppercase truncate mt-0.5">{exam.category}</div>
                               </div>
                             </div>
-                            <span className="text-xs shrink-0 opacity-60">
-                              {isSelected ? "▼" : "▶"}
-                            </span>
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${isSelected ? "bg-accent" : "bg-transparent border border-border"}`}></span>
                           </button>
-
-                          {/* Nested Subpoints Tree List: Visible for selected exam */}
-                          {isSelected && (
-                            <div className="pl-4 pr-1 py-1.5 space-y-1 border-l border-accent/25 ml-4 animate-fade-in" id={`subpoint-tree-${exam.id}`}>
-                              {/* Subpoint 1: Mock Tests */}
-                              <button
-                                onClick={() => setHubTab("full_mock")}
-                                className={`w-full text-left px-3 py-2 rounded-xl text-[11px] font-bold flex items-center justify-between transition-all cursor-pointer ${
-                                  hubTab === "full_mock" 
-                                    ? "bg-accent/15 text-accent font-black border border-accent/20" 
-                                    : "text-text2 hover:text-text hover:bg-surface border border-transparent"
-                                }`}
-                              >
-                                <span className="flex items-center gap-2">📝 Full Mock Tests</span>
-                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-neutral-900 text-text3 border border-border/40 font-mono">
-                                  {mockSubject?.tests.length || 5}
-                                </span>
-                              </button>
-
-                              {/* Subpoint 2: Solved PYQs */}
-                              <button
-                                onClick={() => setHubTab("pyq")}
-                                className={`w-full text-left px-3 py-2 rounded-xl text-[11px] font-bold flex items-center justify-between transition-all cursor-pointer ${
-                                  hubTab === "pyq" 
-                                    ? "bg-accent/15 text-accent font-black border border-accent/20" 
-                                    : "text-text2 hover:text-text hover:bg-surface border border-transparent"
-                                }`}
-                              >
-                                <span className="flex items-center gap-2">📋 Previous Year Papers</span>
-                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-neutral-900 text-text3 border border-border/40 font-mono">
-                                  {PYQ_DATA.filter(p => activePyqTag === "all" || p.tag === activePyqTag).length}
-                                </span>
-                              </button>
-
-                              {/* Subpoint 3: Subjectwise Drills */}
-                              <button
-                                onClick={() => setHubTab("subject")}
-                                className={`w-full text-left px-3 py-2 rounded-xl text-[11px] font-bold flex items-center justify-between transition-all cursor-pointer ${
-                                  hubTab === "subject" 
-                                    ? "bg-accent/15 text-accent font-black border border-accent/20" 
-                                    : "text-text2 hover:text-text hover:bg-surface border border-transparent"
-                                }`}
-                              >
-                                <span className="flex items-center gap-2">📚 Subject-Wise Modules</span>
-                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-neutral-900 text-text3 border border-border/40 font-mono">
-                                  {subjects.filter(s => s.id !== "mock_tests").length}
-                                </span>
-                              </button>
-
-                              {/* Subpoint 4: Speed Sprints */}
-                              <button
-                                onClick={() => setHubTab("short")}
-                                className={`w-full text-left px-3 py-2 rounded-xl text-[11px] font-bold flex items-center justify-between transition-all cursor-pointer ${
-                                  hubTab === "short" 
-                                    ? "bg-accent/15 text-accent font-black border border-accent/20" 
-                                    : "text-text2 hover:text-text hover:bg-surface border border-transparent"
-                                }`}
-                              >
-                                <span className="flex items-center gap-2">⚡ Daily Speed Sprints</span>
-                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-neutral-900 text-text3 border border-border/40 font-mono">
-                                  {CURATED_SPRINTS.length}
-                                </span>
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                      {activeTargetExamIds.length === 0 && (
+                        <p className="text-[10px] text-amber-500 italic">Please select at least one target exam above!</p>
+                      )}
+                    </div>
                   </div>
 
                   {/* Sidebar CBT Advisory Info Card */}
@@ -3648,7 +3938,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       <span>💡</span> High-Yield Exam Guide
                     </div>
                     <p>
-                      Each subpoint tree filters original question vaults specifically tuned for your selected recruitment agency. Mocks maintain identical mark matrices.
+                      Selecting a focused program dynamically filters specialized clinical mocks, solved recall sheets, and daily time sprints tailored for your board syllabus.
                     </p>
                   </div>
                 </div>
@@ -3689,6 +3979,46 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                         onChange={(e) => setHubSearchText(e.target.value)}
                       />
                     </div>
+                  </div>
+
+                  {/* PREMIUM ANIMATED SLIDING SUB-MENU BAR */}
+                  <div className="relative bg-[#070b12]/60 backdrop-blur-md border border-border/85 rounded-2xl p-1.5 flex items-center gap-1 overflow-x-auto scrollbar-none shadow-lg" id="sliding-cbt-options-menu">
+                    {[
+                      { id: "full_mock", label: "Mock Tests", icon: "📝", count: mockSubject?.tests.length || 5 },
+                      { id: "pyq", label: "Solved PYQs", icon: "📋", count: PYQ_DATA.filter(p => activePyqTag === "all" || p.tag === activePyqTag).length },
+                      { id: "subject", label: "Specialty Drills", icon: "📚", count: subjects.filter(s => s.id !== "mock_tests").length },
+                      { id: "short", label: "Speed Sprints", icon: "⚡", count: CURATED_SPRINTS.length }
+                    ].map((tab) => {
+                      const isActive = hubTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => setHubTab(tab.id as any)}
+                          className={`flex-1 min-w-[125px] flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer relative z-10 select-none ${
+                            isActive
+                              ? "text-accent"
+                              : "text-text3 hover:text-text hover:bg-white/5"
+                          }`}
+                        >
+                          {isActive && (
+                            <motion.div
+                              layoutId="activeCbtOptionBackground"
+                              className="absolute inset-0 bg-accent/10 border border-accent/30 rounded-xl"
+                              transition={{ type: "spring", stiffness: 350, damping: 28 }}
+                            />
+                          )}
+                          <span className="text-sm shrink-0">{tab.icon}</span>
+                          <span className="truncate">{tab.label}</span>
+                          <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded-md ${
+                            isActive
+                              ? "bg-accent/20 text-accent font-bold"
+                              : "bg-[#151f30] text-text3"
+                          }`}>
+                            {tab.count}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {/* ACTIVE TAB WORKSPACE RENDER */}
@@ -3985,6 +4315,10 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
                 </div>
 
+              </div>
+
+              <div className="mt-16">
+                <InteractiveFAQ title="Prep Hub Frequently Asked Questions" />
               </div>
 
               <footer className="mt-20 text-center text-[10px] text-text3 pb-12 border-t border-border/50 pt-8">
@@ -4604,6 +4938,10 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   </button>
                 </div>
               ))}
+            </div>
+
+            <div className="mt-16 max-w-4xl mx-auto px-4 md:px-0 pb-12">
+              <InteractiveFAQ title="PYQs Frequently Asked Questions" />
             </div>
 
             <footer>NCBT · India's Nursing CBT Exam Preparation Platform</footer>
@@ -5470,6 +5808,10 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   </div>
                 )}
 
+                <div className="mt-16 max-w-4xl mx-auto px-4 md:px-0">
+                  <InteractiveFAQ title="Nursing Recruitment & Alerts FAQ" />
+                </div>
+
                 <footer className="mt-12 text-center text-slate-400 text-xs border-t border-slate-200/60 pt-6">NCBT · India's Nursing CBT Exam Preparation Platform</footer>
               </div>
             )}
@@ -5652,6 +5994,10 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
                 </div>
               )}
+            </div>
+
+            <div className="mt-12 max-w-4xl mx-auto px-4 md:px-0 pb-8">
+              <InteractiveFAQ title="Performance Tracking & Analytics FAQ" />
             </div>
 
             <footer>NCBT · India's Nursing CBT Exam Preparation Platform</footer>
@@ -6761,6 +7107,10 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   </li>
                 </ul>
               </div>
+
+              <div className="mt-12">
+                <InteractiveFAQ title="About NCBT & Preparation FAQ" />
+              </div>
             </div>
           </div>
         )}
@@ -6863,6 +7213,10 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   💡 <strong>Aspirants Note:</strong> If you are reporting a question error or requesting an answer clarification, please mention the Question Code or Test Name for a quicker response from our senior nursing faculty team!
                 </div>
               </div>
+            </div>
+
+            <div className="mt-16">
+              <InteractiveFAQ title="Inquiries & Helpdesk FAQ" />
             </div>
           </div>
         )}

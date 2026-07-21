@@ -2434,3 +2434,75 @@ footer a {
     display: none;
   }
 }
+
+/* ================= PREMIUM REVISION IMPROVEMENTS ================= */
+
+/* Subtle lighting/shadow behind box borders (Premium low-intensity border glows) */
+.premium-glow-box {
+  background-color: var(--card);
+  border: 1px solid rgba(79, 158, 255, 0.12);
+  box-shadow: 
+    0 4px 20px -2px rgba(0, 0, 0, 0.45), 
+    0 0 10px 1px rgba(79, 158, 255, 0.03);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.premium-glow-box:hover {
+  border-color: rgba(79, 158, 255, 0.3);
+  box-shadow: 
+    0 8px 30px -2px rgba(0, 0, 0, 0.6), 
+    0 0 16px 3px rgba(79, 158, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+/* Vertical reviews marquee sliding card stack */
+.vertical-slider-container {
+  position: relative;
+  height: 520px;
+  overflow: hidden;
+}
+
+.vertical-slider-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(to bottom, #080c12 0%, transparent 100%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.vertical-slider-container::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(to top, #080c12 0%, transparent 100%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+@keyframes scroll-vertical {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(calc(-33.333% - 1rem));
+  }
+}
+
+.vertical-slider-track {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  animation: scroll-vertical 24s linear infinite;
+}
+
+.vertical-slider-track:hover {
+  animation-play-state: paused;
+}
+
