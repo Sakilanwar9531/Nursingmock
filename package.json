@@ -2,7 +2,7 @@
   "name": "ncbt",
   "private": true,
   "version": "1.0.0",
-  "description": "NCBT – India's Nursing CBT Exam Preparation Platform with full-featured high-yield blog and mock series",
+  "description": "NCBT – National CBT: India's Trusted Platform for Nursing, Pharmacist & Paramedical Government Exam Preparation",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",

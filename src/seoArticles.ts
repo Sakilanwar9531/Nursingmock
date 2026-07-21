@@ -7,9 +7,9 @@ export interface SeoArticle {
 
 export const SEO_ARTICLES: Record<string, SeoArticle> = {
   homepage: {
-    title: "About NCBT — India's Premier Nursing Officer CBT Exam Preparation Platform",
+    title: "About NCBT — India's Trusted Platform for Nursing, Pharmacist & Paramedical Government Exam Preparation",
     subtitle: "What is NCBT, how it works, its immense benefits, and how it prepares you to top competitive examinations",
-    keywords: ["what is NCBT", "how to prepare for nursing exams", "free CBT mock test nurse", "nursing online coaching portal", "nursing practice papers with answers"],
+    keywords: ["what is NCBT", "National CBT", "nursing exam preparation", "pharmacist exam practice", "paramedical exam mock test", "free CBT mock test", "government exam practice papers"],
     contentHtml: `
       <div class="prose max-w-none text-[#c9d1d9] font-sans space-y-8">
         <section class="space-y-4">
@@ -17,10 +17,10 @@ export const SEO_ARTICLES: Record<string, SeoArticle> = {
             1. What is NCBT.in & What Does It Do?
           </h2>
           <p class="text-sm text-[#8b949e] leading-relaxed">
-            <strong>NCBT.in (Nursing Computer Based Test)</strong> is a cutting-edge, comprehensive exam preparation portal designed specifically for nursing professionals in India. We bridge the gap between academic theory and practical exam execution. Our platform simulates the <strong>actual Computer Based Test (CBT) environment</strong> used by major recruitment boards including AIIMS, ESIC, RRB, and State health departments.
+            <strong>NCBT.in (National CBT)</strong> is a cutting-edge, comprehensive exam preparation portal designed specifically for Nursing, Pharmacist, and Paramedical recruitment aspirants in India. We bridge the gap between academic theory and practical exam execution. Our platform simulates the <strong>actual Computer Based Test (CBT) environment</strong> used by major recruitment boards including AIIMS, ESIC, RRB, NHM, and State health departments.
           </p>
           <p class="text-sm text-[#8b949e] leading-relaxed">
-            By providing an authentic testing engine, structured subject tests, and real previous year solved papers (PYQs), NCBT empowers aspirants to transform their raw medical knowledge into rapid, accurate clinical decision-making on exam day.
+            By providing an authentic testing engine, structured subject tests, exam-wise practice sets, and real previous year solved papers (PYQs), NCBT empowers aspirants to transform their knowledge into rapid, accurate decision-making on exam day.
           </p>
         </section>
 

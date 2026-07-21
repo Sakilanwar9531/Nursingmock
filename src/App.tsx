@@ -33,7 +33,11 @@ import {
   Moon,
   Bell,
   Megaphone,
-  Newspaper
+  Newspaper,
+  Home,
+  Stethoscope,
+  Pill,
+  Zap
 } from "lucide-react";
 import { SUBJECTS, PYQ_DATA, TARGET_EXAMS } from "./data";
 import { InteractiveFAQ } from "./components/InteractiveFAQ";
@@ -1555,45 +1559,45 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
   // Client-Side Dynamic SEO Head & Meta tags updater
   useEffect(() => {
-    let title = "NCBT - India's Nursing CBT Exam Preparation Platform";
-    let desc = "Ace central nursing officer exams (AIIMS NORCET, ESIC, RRB, Staff Nurse) with free simulated computer-based mock tests, detailed rationales, and past solved papers.";
+    let title = "NCBT – Mock Tests & PYQs for Nursing, Pharmacist & Paramedical Govt Exams";
+    let desc = "Prepare smarter with NCBT. Practice free and premium Mock Tests, Previous Year Questions (PYQs), exam-wise practice sets and performance analytics for Nursing, Pharmacist and Paramedical Government Exams including WBHRB, AIIMS NORCET, ESIC, RRB, NHM, DSSSB and more.";
     
     if (activePage === "landing") {
-      title = "NCBT - India's Nursing CBT Exam Prep | AIIMS NORCET, ESIC, RRB Mocks";
-      desc = "Free high-yield CBT computer-based test platform for nursing recruitment officers in India. Practice AIIMS NORCET, ESIC, RRB, and state PSC past papers with expert clinical rationales.";
+      title = "NCBT – Mock Tests & PYQs for Nursing, Pharmacist & Paramedical Govt Exams";
+      desc = "Prepare smarter with NCBT. Practice free and premium Mock Tests, Previous Year Questions (PYQs), exam-wise practice sets and performance analytics for Nursing, Pharmacist and Paramedical Government Exams including WBHRB, AIIMS NORCET, ESIC, RRB, NHM, DSSSB and more.";
     } else if (activePage === "exam_landing" || activePage === "hub") {
       if (hubTab === "pyq") {
-        title = "Nursing Officer Past Papers & PYQs (AIIMS NORCET, ESIC, RRB) | NCBT.in";
-        desc = "Solve official solved previous year question papers from central government recruitment campaigns. Real-time timer and performance percentile breakdown.";
+        title = "Previous Year Solved Papers & PYQs | NCBT";
+        desc = "Solve official solved previous year question papers for Nursing, Pharmacist & Paramedical recruitment exams. Real-time timer and performance percentile breakdown.";
       } else if (hubTab === "full_mock") {
-        title = "Board-Level Nursing CBT Full Mock Series (NORCET Pattern) | NCBT.in";
-        desc = "Attempt free 50 MCQ computer-based test series matching Indian Staff Nurse recruitment standards with negative marking (0.25) and detailed diagnostic reports.";
+        title = "Full CBT Mock Test Series (Nursing, Pharmacist, Paramedical) | NCBT";
+        desc = "Attempt computer-based test series matching recruitment standards with negative marking (0.25) and detailed diagnostic performance reports.";
       } else if (hubTab === "subject") {
-        title = "Subject-Wise Nursing Mocks & Unit-Wise Diagnostic Tests | NCBT.in";
-        desc = "Target specific exam domains like Medical-Surgical nursing, Pharmacology, Pediatrics, Psychiatric, Anatomy & Physiology, and Community Health.";
+        title = "Subject-Wise & Unit-Wise Diagnostic Tests | NCBT";
+        desc = "Target specific exam subjects and clinical domains across Nursing, Pharmacist, and Paramedical exam syllabi.";
       } else if (hubTab === "short") {
-        title = "Rapid Speed Sprints (10 MCQ Practice Checkpoints) | NCBT.in";
-        desc = "Time crunch? Boost your active recall with rapid-fire 10-question nursing practice sprints. Dynamically shuffled clinical questions with smart feedback.";
+        title = "Daily Speed Practice Sprints (10 MCQ Checkpoints) | NCBT";
+        desc = "Boost your active recall with rapid-fire 10-question practice sprints. Dynamically shuffled questions with smart feedback.";
       }
     } else if (activePage === "about") {
-      title = "About NCBT - India's Dedicated Nursing Officer Exam CBT Platform";
-      desc = "Learn about NCBT's mission to empower nursing aspirants with real-time CBT mock tests, clinical rationales, and recruitment guidance.";
+      title = "About NCBT - National CBT Exam Preparation Platform";
+      desc = "Learn about NCBT (National CBT) - India's trusted platform for Nursing, Pharmacist & Paramedical government exam preparation.";
     } else if (activePage === "contact") {
-      title = "Contact & Helpdesk - NCBT Nursing Preparation Portal";
+      title = "Contact & Helpdesk - NCBT Portal";
       desc = "Get in touch with NCBT team for support, candidate assistance, feedback, or test series queries.";
     } else if (activePage === "updates") {
       if (selectedUpdate) {
-        title = `${selectedUpdate.title} | High-Yield Nursing Officer Guide | NCBT.in`;
+        title = `${selectedUpdate.title} | NCBT Updates`;
         desc = selectedUpdate.summary;
       } else {
-        title = "Nursing Recruitment Jobs, Vacancy Notifications & Syllabus Updates | NCBT.in";
-        desc = "Latest announcements for Staff Nurse vacancies in AIIMS, ESIC, RRB, JIPMER, and central government health systems. Includes high-yield PDF nursing study notes.";
+        title = "Government Exam Jobs, Notifications & Syllabus Updates | NCBT";
+        desc = "Latest announcements for Nursing, Pharmacist, and Paramedical recruitment vacancies in AIIMS, ESIC, RRB, NHM, and state health departments.";
       }
     } else if (activePage === "analytics") {
-      title = "Nursing CBT Exam Performance Analytics & Detailed Reports | NCBT.in";
-      desc = "Review your detailed diagnostic logs, subject-wise accuracy mapping, active recall streaks, and CBT percentiles to unlock NORCET success.";
+      title = "CBT Exam Performance Analytics & Detailed Reports | NCBT";
+      desc = "Review your detailed diagnostic logs, subject-wise accuracy mapping, active recall streaks, and CBT percentiles to unlock government exam success.";
     } else if (activePage === "test" && activeTest) {
-      title = `Attend CBT Test: ${activeTest.title} | NCBT.in`;
+      title = `Attend CBT Test: ${activeTest.title} | NCBT`;
       desc = `Practice this high-yield computer-based test with digital countdown, real-time question marking, review flags, and negative scoring.`;
     }
 
@@ -2940,34 +2944,46 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
         <div className="nav-links" id="nav-links">
           <button 
-            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && hubTab === "subject" ? "active" : ""}`} 
-            onClick={() => showPage("subject_mocks")}
+            className={`nav-link flex items-center gap-1.5 ${activePage === "landing" ? "active" : ""}`} 
+            onClick={() => { showPage("landing"); setHubSearchText(""); }}
           >
-            <BookOpen className="w-4 h-4" /> Test Centre
+            <Home className="w-4 h-4" /> Home
           </button>
           <button 
-            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && hubTab === "full_mock" ? "active" : ""}`} 
-            onClick={() => showPage("mock_tests")}
+            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && hubSearchText === "Nursing" ? "active" : ""}`} 
+            onClick={() => { showPage("mock_tests"); setHubSearchText("Nursing"); }}
           >
-            <Flame className="w-4 h-4 text-[#ff9e22]" /> Mock Tests
+            <Stethoscope className="w-4 h-4 text-emerald-400" /> Nursing
           </button>
           <button 
-            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && hubTab === "pyq" ? "active" : ""}`} 
-            onClick={() => showPage("pyq")}
+            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && hubSearchText === "Pharmacist" ? "active" : ""}`} 
+            onClick={() => { showPage("mock_tests"); setHubSearchText("Pharmacist"); }}
           >
-            <FileText className="w-4 h-4" /> PYQ
+            <Pill className="w-4 h-4 text-amber-400" /> Pharmacist
+          </button>
+          <button 
+            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && hubSearchText === "Paramedical" ? "active" : ""}`} 
+            onClick={() => { showPage("mock_tests"); setHubSearchText("Paramedical"); }}
+          >
+            <Activity className="w-4 h-4 text-cyan-400" /> Paramedical
+          </button>
+          <button 
+            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && hubTab === "short" ? "active" : ""}`} 
+            onClick={() => { showPage("short_sprints"); setHubSearchText(""); }}
+          >
+            <Zap className="w-4 h-4 text-purple-400" /> Current Affairs
           </button>
           <button 
             className={`nav-link flex items-center gap-1.5 ${activePage === "updates" ? "active" : ""}`} 
             onClick={() => showPage("updates")}
           >
-            <Newspaper className="w-4 h-4 text-emerald-400" /> Blog
+            <Newspaper className="w-4 h-4 text-blue-400" /> Blog
           </button>
           <button 
-            className={`nav-link flex items-center gap-1.5 ${activePage === "analytics" ? "active" : ""}`} 
-            onClick={() => showPage("analytics")}
+            className={`nav-link flex items-center gap-1.5 ${activePage === "about" ? "active" : ""}`} 
+            onClick={() => showPage("about")}
           >
-            <Award className="w-4 h-4" /> Analytics
+            <HelpCircle className="w-4 h-4 text-indigo-400" /> About
           </button>
 
           {currentUser && currentUser.isAdmin && (
@@ -3113,18 +3129,15 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
                     </span>
-                    India's #1 Nursing CBT Prep Platform
+                    National CBT | NCBT
                   </div>
 
-                  <h1 className="text-4xl md:text-6xl font-black text-text tracking-tight leading-tight">
-                    Crack any exam with <br />
-                    <span className="bg-gradient-to-r from-accent via-amber-500 to-green bg-clip-text text-transparent">
-                      Smarter Practice. Better Scores.
-                    </span>
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-black text-text tracking-tight leading-tight">
+                    India's Trusted Platform for Nursing, Pharmacist &amp; Paramedical Government Exam Preparation
                   </h1>
 
                   <p className="text-sm md:text-base text-text2 leading-relaxed font-sans max-w-xl">
-                    NCBT is India's most flexible and robust Nursing CBT & Mock Test Series platform — built specifically for AIIMS NORCET, ESIC, RRB, and State PSC staff nurse aspirants to achieve perfect ranks.
+                    Practice with high-quality Mock Tests, Previous Year Questions (PYQs), Exam-wise Practice Sets and Detailed Performance Analysis for top Nursing, Pharmacist and Paramedical Government Recruitment Exams.
                   </p>
 
                   <div className="flex items-center gap-3 flex-wrap pt-2">
@@ -3176,7 +3189,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       <span className="w-8 h-8 rounded-full border-2 border-border bg-pink-500 flex items-center justify-center text-[10px] font-black text-white">M</span>
                     </div>
                     <p className="text-xs text-text2">
-                      Trusted by <strong className="text-text">50,000+ Nursing Officers</strong> across India • <span className="text-amber-500 font-bold">⭐ 4.9 Rating</span>
+                      Trusted by <strong className="text-text">50,000+ Government Exam Aspirants</strong> across India • <span className="text-amber-500 font-bold">⭐ 4.9 Rating</span>
                     </p>
                   </div>
                 </div>
@@ -3389,7 +3402,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     India's Best Exams Coverage
                   </h2>
                   <p className="text-xs md:text-sm text-text2 leading-relaxed">
-                    India's most-practiced, highly optimized exam preparation and CBT mock test series for top competitive nursing officer recruitment exams.
+                    India's most-practiced, highly optimized exam preparation and CBT mock test series for top Nursing, Pharmacist, and Paramedical government recruitment exams.
                   </p>
                 </div>
 
@@ -3499,7 +3512,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     What Our Toppers Say
                   </h2>
                   <p className="text-xs md:text-sm text-text2 leading-relaxed">
-                    Success stories from central government nursing officers who prepared with NCBT and topped recruitments. Hover over cards to pause scrolling!
+                    Success stories from toppers who prepared with NCBT and cleared competitive government recruitments. Hover over cards to pause scrolling!
                   </p>
                 </div>
 
@@ -3916,7 +3929,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     </div>
                   </div>
                   <p className="text-xs text-text2 leading-relaxed font-sans">
-                    India's most flexible and high-yield Computer Based Test (CBT) & mock prep platform. Built for nursing officer aspirants to master clinical concepts, track parameters, and secure dream ranks.
+                    India's most flexible and high-yield Computer Based Test (CBT) & mock prep platform. Built for Nursing, Pharmacist & Paramedical aspirants to master concepts, track performance, and secure top ranks.
                   </p>
                   
                   {/* Social Icons (Screenshot 4 Style) */}
@@ -3971,7 +3984,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
               {/* Bottom Copyright bar */}
               <div className="max-w-7xl mx-auto px-4 md:px-8 mt-12 pt-8 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text3">
-                <span>© 2026 NCBT.in — India's Premier Nursing Officer CBT Exam Platform. All rights reserved.</span>
+                <span>© 2026 NCBT.in — National CBT: India's Trusted Platform for Nursing, Pharmacist &amp; Paramedical Govt Exams. All rights reserved.</span>
                 <div className="flex items-center gap-4">
                   <button onClick={() => showPage("contact")} className="hover:underline">Privacy Policy</button>
                   <span>•</span>
@@ -6209,7 +6222,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
               <InteractiveFAQ title="Performance Tracking & Analytics FAQ" />
             </div>
 
-            <footer>NCBT · India's Nursing CBT Exam Preparation Platform</footer>
+            <footer>NCBT · National CBT · India's Trusted Platform for Nursing, Pharmacist &amp; Paramedical Govt Exams</footer>
           </div>
         )}
 
@@ -6222,7 +6235,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   <span className="text-3xl font-extrabold tracking-tight text-white"><span className="text-amber-500">N</span>CBT</span>
                   <span className="text-2xl font-black text-[#7ee8a2]">.in</span>
                 </div>
-                <div className="auth-tagline font-sans font-medium text-xs text-[#8b949e] mt-1 text-center">India's Nursing CBT Exam Preparation Platform</div>
+                <div className="auth-tagline font-sans font-medium text-xs text-[#8b949e] mt-1 text-center">NCBT – National CBT | Government Exam Preparation Portal</div>
                 
                 <div className="auth-tabs">
                   <button 
@@ -7237,9 +7250,9 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         {activePage === "about" && (
           <div className="page active p-4 md:p-8 max-w-4xl mx-auto text-white animate-fade-in" id="page-about">
             <div className="mb-8">
-              <h2 className="text-2xl sm:text-3xl font-black font-syne tracking-tight text-white m-0">🩺 About NCBT</h2>
+              <h2 className="text-2xl sm:text-3xl font-black font-syne tracking-tight text-white m-0">About NCBT</h2>
               <p className="text-xs text-[#8b949e] mt-1.5 leading-relaxed">
-                India's Premier Nursing CBT Exam Preparation Platform
+                NCBT (National CBT) — India's Trusted Platform for Nursing, Pharmacist &amp; Paramedical Government Exam Preparation
               </p>
             </div>
 
@@ -7249,23 +7262,23 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
                 <h3 className="font-syne text-sm font-extrabold text-white uppercase tracking-wider mb-3">Our Core Mission</h3>
                 <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                  At <strong className="text-emerald-400">NCBT.in</strong>, we aim to revolutionize how Nursing Officers prepare for India's most prestigious computer-based recruitments. We bridge the gap between heavy academic nursing textbooks and modern board-level dynamic assessments by offering clinical simulated tests with top-tier professional rationales.
+                  At <strong className="text-emerald-400">NCBT (National CBT)</strong>, we aim to revolutionize how candidates prepare for India's top Nursing, Pharmacist, and Paramedical government computer-based recruitments. We bridge the gap between extensive academic textbooks and dynamic board-level assessments by offering simulated tests with high-yield rationales and detailed performance analytics.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                   <div className="bg-white/5 border border-white/5 p-3.5 rounded-xl">
                     <span className="text-lg">🎯</span>
-                    <h4 className="text-xs font-bold text-white mt-1.5 mb-1 font-syne">NORCET Benchmarks</h4>
-                    <p className="text-[10px] text-slate-400 leading-normal">Simulations designed to exactly match the latest AIIMS NORCET difficulty and negative-marking system.</p>
+                    <h4 className="text-xs font-bold text-white mt-1.5 mb-1 font-syne">Recruitment Benchmarks</h4>
+                    <p className="text-[10px] text-slate-400 leading-normal">Simulations designed to match exact recruitment standards and negative-marking rules across Nursing, Pharmacist, and Paramedical exams.</p>
                   </div>
                   <div className="bg-white/5 border border-white/5 p-3.5 rounded-xl">
                     <span className="text-lg">🔬</span>
-                    <h4 className="text-xs font-bold text-white mt-1.5 mb-1 font-syne">Clinical Rationales</h4>
-                    <p className="text-[10px] text-slate-400 leading-normal">Deep medical-surgical, obgyn, and psychiatric rationales referenced directly from senior nursing syllabus standards.</p>
+                    <h4 className="text-xs font-bold text-white mt-1.5 mb-1 font-syne">Detailed Rationales</h4>
+                    <p className="text-[10px] text-slate-400 leading-normal">Comprehensive domain rationales referenced directly from official syllabus guidelines and textbooks.</p>
                   </div>
                   <div className="bg-white/5 border border-white/5 p-3.5 rounded-xl">
                     <span className="text-lg">⚡</span>
-                    <h4 className="text-xs font-bold text-white mt-1.5 mb-1 font-syne">Active Recall</h4>
-                    <p className="text-[10px] text-slate-400 leading-normal">Dynamic rapid-fire daily speed sprints designed to build solid diagnostic intuition in under 10 minutes.</p>
+                    <h4 className="text-xs font-bold text-white mt-1.5 mb-1 font-syne">Active Practice</h4>
+                    <p className="text-[10px] text-slate-400 leading-normal">Dynamic practice sets, PYQs, and daily speed sprints designed to build fast, accurate problem-solving skills.</p>
                   </div>
                 </div>
               </div>
@@ -7312,7 +7325,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-emerald-400">✔</span>
-                    <span><strong>100% Reliable Syllabus</strong>: Rest easy knowing our mock tests align exactly with Indian staff nurse recruitment curriculum expectations.</span>
+                    <span><strong>100% Reliable Syllabus</strong>: Rest easy knowing our mock tests align exactly with Nursing, Pharmacist, and Paramedical recruitment curriculum expectations.</span>
                   </li>
                 </ul>
               </div>

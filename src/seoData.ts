@@ -108,8 +108,8 @@ export function getSeoMetadata(urlPath: string): SeoMeta {
 
   // DEFAULT (LANDING PAGE "/")
   return {
-    title: "NCBT - India's Nursing CBT Exam Preparation Platform | AIIMS NORCET, ESIC, RRB Mocks",
-    description: "Prepare smarter for central government Staff Nurse & Nursing Officer exams. Real-time simulated CBT portal featuring top rationales, PYQs, and daily pulse.",
+    title: "NCBT – Mock Tests & PYQs for Nursing, Pharmacist & Paramedical Govt Exams",
+    description: "Prepare smarter with NCBT. Practice free and premium Mock Tests, Previous Year Questions (PYQs), exam-wise practice sets and performance analytics for Nursing, Pharmacist and Paramedical Government Exams including WBHRB, AIIMS NORCET, ESIC, RRB, NHM, DSSSB and more.",
     jsonLd: JSON.stringify([
       {
         "@context": "https://schema.org",
@@ -131,7 +131,7 @@ export function getSeoMetadata(urlPath: string): SeoMeta {
             "name": "What exams does NCBT help prepare for?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "NCBT provides computer-based testing (CBT) preparation for all major Indian nurse officer exams including AIIMS NORCET, ESIC, RRB Staff Nurse, DSSSB, JIPMER, CHO, and state PSC exams."
+              "text": "NCBT (National CBT) provides computer-based testing preparation for top Nursing, Pharmacist, and Paramedical Government Recruitment Exams including WBHRB, AIIMS NORCET, ESIC, RRB, NHM, DSSSB, and state PSC exams."
             }
           },
           {
@@ -139,15 +139,15 @@ export function getSeoMetadata(urlPath: string): SeoMeta {
             "name": "Is there negative marking in NCBT simulated tests?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Yes, our CBT exam mode accurately replicates the standard 0.25 negative marking penalty for incorrect selections, giving you a true assessment of your test-taking skills."
+              "text": "Yes, our CBT exam mode accurately replicates the standard negative marking penalties (e.g. 0.25) for incorrect selections, giving you a true assessment of your test-taking skills."
             }
           },
           {
             "@type": "Question",
-            "name": "Are clinical explanations and rationales provided?",
+            "name": "Are explanations and rationales provided?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Yes, every question on NCBT features comprehensive expert-curated clinical rationales, enhanced by our Gemini AI tutor for real-time clarification."
+              "text": "Yes, every question on NCBT features comprehensive expert-curated rationales, enhanced by our AI tutor for real-time clarification."
             }
           }
         ]
@@ -307,9 +307,9 @@ export function getPreRenderedContent(urlPath: string): string {
   // DEFAULT (LANDING PAGE "/")
   return `
     <div class="hero">
-      <div class="hero-eyebrow">NCBT | Nursing CBT Exam Preparation</div>
-      <h1>Stop Cramming. Start Understanding.</h1>
-      <p class="hero-sub">Subject-wise MCQs from real exams — AIIMS, RRB, ESIC, DSSSB, RPSC — with instant organized rationale, and zero distractions.</p>
+      <div class="hero-eyebrow">National CBT | NCBT</div>
+      <h1>India's Trusted Platform for Nursing, Pharmacist & Paramedical Government Exam Preparation</h1>
+      <p class="hero-sub">Practice with high-quality Mock Tests, Previous Year Questions (PYQs), Exam-wise Practice Sets and Detailed Performance Analysis for top Nursing, Pharmacist and Paramedical Government Recruitment Exams.</p>
       <div class="hero-ctas">
         <a href="/mock-tests" class="btn-hero-primary">Start Practising Free</a>
       </div>
@@ -328,11 +328,11 @@ export function getPreRenderedContent(urlPath: string): string {
     <div class="exam-section pb-4">
       <div class="section-eyebrow">WHY NCBT.IN</div>
       <h2>Built different. On purpose.</h2>
-      <p>NCBT provides clean, focused, high-yield computer-based test simulations designed specifically for central government Staff Nurse and Nursing Officer exams in India.</p>
+      <p>NCBT provides clean, focused, high-yield computer-based test simulations designed specifically for Nursing, Pharmacist, and Paramedical government recruitment exams in India.</p>
     </div>
     <div class="cta-banner">
       <h2>Ready to ace your exam?</h2>
-      <p>Join thousands of nursing students preparing smarter, not harder.</p>
+      <p>Join thousands of government exam aspirants preparing smarter, not harder.</p>
       <div class="flex gap-3 justify-center flex-wrap">
         <a href="/mock-tests" class="btn-hero-primary">Browse Tests</a>
       </div>
@@ -341,25 +341,19 @@ export function getPreRenderedContent(urlPath: string): string {
       <div class="section-eyebrow">Coverage</div>
       <h2>Every major exam. One platform.</h2>
       <div class="exam-bands mt-6">
-        <span>AIIMS Nursing Officer</span>
-        <span>RRB Staff Nurse</span>
-        <span>ESIC Staff Nurse</span>
+        <span>AIIMS NORCET</span>
+        <span>WBHRB Staff Nurse</span>
+        <span>Pharmacist Govt Recruitment</span>
+        <span>Paramedical Staff Exams</span>
+        <span>RRB Railway Staff Nurse</span>
+        <span>ESIC Nursing Officer</span>
         <span>DSSSB Staff Nurse</span>
-        <span>RPSC Staff Nurse</span>
-        <span>JIPMER</span>
-        <span>BHU Nursing Officer</span>
-        <span>RUHS Nursing Entrance</span>
-        <span>BSF Staff Nurse</span>
-        <span>IGNOU Post B.Sc Nursing</span>
-        <span>State PSC Nursing</span>
-        <span>CHO Recruitment</span>
+        <span>CHO NHM Recruitment</span>
+        <span>State PSC Exams</span>
       </div>
     </div>
     <footer>
-      NCBT · India's Nursing CBT Exam Preparation Platform · 
-      <a href="/subject-mocks">Tests</a> · 
-      <a href="/pyq">PYQ</a> · 
-      <a href="/analytics">Analytics</a> · For educational use only
+      NCBT · National CBT · India's Trusted Platform for Nursing, Pharmacist & Paramedical Govt Exams
     </footer>
   `;
 }

@@ -1,6 +1,6 @@
 {
   "name": "NCBT",
-  "description": "NCBT – Nursing Computer Based Tests: India's Nursing CBT Exam Preparation Platform. Providing high-quality CBT-based mock tests, previous year questions, quizzes, study materials and exam preparation resources for Indian nursing aspirants preparing for Government Nursing recruitment examinations.",
+  "description": "NCBT – National CBT: India's Trusted Platform for Nursing, Pharmacist & Paramedical Government Exam Preparation. Practice with high-quality Mock Tests, Previous Year Questions (PYQs), Exam-wise Practice Sets and Detailed Performance Analysis for top Nursing, Pharmacist and Paramedical Government Recruitment Exams.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
