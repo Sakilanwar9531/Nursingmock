@@ -208,6 +208,367 @@ export const SUBJECTS: Subject[] = [
   { id: 'mhn-drugs', icon: '💊', title: 'Psychopharmacology', desc: 'Antipsychotics, antidepressants, anxiolytics, mood stabilizers.', questions: 0, mins: 0, ready: false, data: [] }
  ]},
  { id: 'fundamentals', icon: '📚', name: 'Fundamentals of Nursing', tests: [
+    {
+      id: 'wbhrb-2026',
+      icon: '📋',
+      title: 'WBHRB Staff Nurse Grade II 2026',
+      desc: 'Official previous year question paper from the West Bengal Health Recruitment Board (WBHRB) Staff Nurse Grade II Exam.',
+      questions: 50,
+      mins: 60,
+      ready: true,
+      data: [
+        {
+          q: "What is the location of the prostate gland?",
+          opts: ["Just below the epididymis", "Just below the seminal vesicles", "Just below the urinary bladder", "Just below the bulbourethral glands"],
+          ans: 2,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "The prostate gland is situated immediately below the bladder neck and surrounds the prostatic portion of the urethra."
+        },
+        {
+          q: "Which of the following hormone levels is the highest during the follicular phase of the menstrual cycle?",
+          opts: ["Progesterone", "Testosterone", "Estradiol", "Luteinizing hormone"],
+          ans: 2,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "During the follicular phase, estrogen (specifically estradiol) is the dominant hormone, peaking just prior to the LH surge."
+        },
+        {
+          q: "Which process is responsible for the exchange of gases between the alveoli and pulmonary capillaries?",
+          opts: ["Active transport", "Osmosis", "Diffusion", "Ultrafiltration"],
+          ans: 2,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Passive simple diffusion across the thin respiratory membrane allows rapid exchange of oxygen and carbon dioxide gases between alveoli and capillaries."
+        },
+        {
+          q: "What is the mean arterial pressure if blood pressure is 110/70 mmHg?",
+          opts: ["180.3 mmHg", "90 mmHg", "40 mmHg", "83.3 mmHg"],
+          ans: 3,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "MAP = Diastolic BP + 1/3 (Systolic BP - Diastolic BP). Here, 70 + (110-70)/3 = 70 + 13.3 = 83.3 mmHg."
+        },
+        {
+          q: "Which of the following bones is classified as woven bone?",
+          opts: ["Newly formed bones", "Mature bones", "Lamellar bones", "Canaliculi bones"],
+          ans: 0,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Woven bone is immature, temporary bone tissue with randomly arranged collagen fibers. It is typical of newly formed bone (embryonic skeleton or early fracture callus)."
+        },
+        {
+          q: "Which of the following microorganisms cause whooping cough?",
+          opts: ["Pseudomonas Aeruginosa", "Bacillus Anthracis", "Brucella Abortus", "Bordetella Pertussis"],
+          ans: 3,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Whooping cough (pertussis) is a highly infectious respiratory infection caused by the Gram-negative bacterium Bordetella pertussis."
+        },
+        {
+          q: "According to the Biomedical Waste Management (BMW) rules, a nurse should discard the removed urinary catheter and the urine bag in which of the following colour-coded bags?",
+          opts: ["Red bag", "Green bag", "Yellow bag", "Blue bag"],
+          ans: 0,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Under BMW rules, recyclable plastic waste such as catheters, tubings, and urine bags should be disposed of in Red bags for autoclaving or microwaving."
+        },
+        {
+          q: "What is the standard recommended site and route for administering the Pentavalent vaccine in an infant aged 6 weeks to 6 months?",
+          opts: ["Intramuscular injection into the dorsogluteal muscle", "Intradermal injection into the skin of the forearm", "Subcutaneous injection into the posterior deltoid muscle", "Intramuscular injection into the vastus lateralis muscle"],
+          ans: 3,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "In infants under 1 year, the anterolateral aspect of the mid-thigh (vastus lateralis) is the standard recommended site for intramuscular (IM) injections to prevent damage to the sciatic nerve."
+        },
+        {
+          q: "Which of the following vitamins is also known as Pantothenic acid?",
+          opts: ["Vitamin C", "Vitamin B5", "Vitamin B12", "Vitamin K"],
+          ans: 1,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Vitamin B5 is pantothenic acid, an essential nutrient needed to synthesize coenzyme A."
+        },
+        {
+          q: "What is the recommended percentage range for daily calorie intake derived from Protein in a balanced diet for most healthy, non-athletic adults?",
+          opts: ["10-35%", "45-55%", "60-75%", "75-80%"],
+          ans: 0,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "The Acceptable Macronutrient Distribution Range (AMDR) for protein is 10% to 35% of total daily energy intake."
+        },
+        {
+          q: "Which vitamin deficiency is MOST commonly seen among strict vegetarians (vegans) due to the absence of natural sources in plant-based foods?",
+          opts: ["Vitamin A", "Vitamin C", "Vitamin B12", "Vitamin K"],
+          ans: 2,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Vitamin B12 is produced exclusively by microbes and is found almost solely in animal-source foods. Strict vegans require daily supplements or fortified products to prevent deficiency."
+        },
+        {
+          q: "In a person with a suspected fracture of the right leg, which action by the first aider specifically indicates that circulation is being checked?",
+          opts: ["Observe for swelling and compare limb size with uninjured leg", "Palpate the injured area to check for localised tenderness", "Assess skin colour and feel for numbness/tingling beyond the break", "Ask the person to move toes distal to the injury of the affected leg"],
+          ans: 2,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Circulation is evaluated by checking color, temperature, distal pulses, capillary refill, and assessing for distal sensations such as numbness or tingling."
+        },
+        {
+          q: "A nurse is preparing a small first aid kit. According to the Indian Red Cross recommendations in the Indian First Aid Manual, which of the following items should NOT be included in a small first aid box?",
+          opts: ["Oral Rehydration Solution sachets", "Package of sterilized absorbent cotton", "Inflatable arm and leg splints", "Tube of silver sulfadiazine skin ointment"],
+          ans: 2,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Inflatable splints are advanced immobilizing equipment. Small, basic first aid boxes should contain basic bandages, sterilised cotton, ORS, and ointments for immediate minor injury care."
+        },
+        {
+          q: "Which of the following structures is mainly involved in the Golfer's Elbow?",
+          opts: ["The lateral epicondyle of the humerus", "The olecranon process of the ulna", "The medial epicondyle of the humerus", "The glenoid process of the shoulder joint"],
+          ans: 2,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Golfer's elbow is medial epicondylitis, which involves inflammation of the flexor tendon insertion on the medial epicondyle of the humerus."
+        },
+        {
+          q: "Which is the MOST important role a nurse performs when helping a hesitant patient voice their rights and concerns to the surgical team?",
+          opts: ["Caregiver", "Administrator", "Coordinator", "Advocate"],
+          ans: 3,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "The nurse acts as an advocate to ensure that the patient's rights, concerns, and choices are heard, respected, and addressed by the healthcare team."
+        },
+        {
+          q: "Which nursing intervention BEST promotes normal bowel elimination in a hospitalized patient?",
+          opts: ["Encouraging high-fiber diet and adequate fluids", "Limiting oral intake", "Administering antidiarrheal drugs routinely", "Keeping patient in supine position after meals"],
+          ans: 0,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "A diet rich in high-fiber foods along with sufficient hydration is the most effective natural intervention to promote gut motility and prevent constipation."
+        },
+        {
+          q: "Which of the following category of drugs is used to reduce fever?",
+          opts: ["Analgesics", "Antibiotics", "Diuretics", "Antipyretics"],
+          ans: 3,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Antipyretics are medications specifically designed to reduce fever by lowering body temperature back to the normal hypothalamic setpoint."
+        },
+        {
+          q: "Read the given assertion (A) and reason (R) and select the correct option based on the analysis of these statements.\nAssertion (A): Weakly acidic drugs, like aspirin, are primarily absorbed from the stomach, which has a low pH environment.\nReason (R): At the stomach's low pH, a larger fraction of the acidic drug exists in its non-ionised (uncharged), lipid-soluble form, which can easily cross the lipid cell membranes via passive diffusion.",
+          opts: ["Both A and R are true, and R is the correct explanation of A.", "Both A and R are true, but R is not the correct explanation of A.", "A is true, but R is false.", "A is false, but R is true."],
+          ans: 0,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Weak acids remain un-ionized in an acidic environment (like the stomach), which increases their lipid solubility and allows rapid passive absorption across the gastric mucosa."
+        },
+        {
+          q: "Which of the following normal breath sounds is described as soft and low-pitched, like the rustling of leaves?",
+          opts: ["Bronchial", "Vesicular", "Bronchovesicular", "Tracheal"],
+          ans: 1,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Vesicular breath sounds are soft, low-pitched, rustling sounds heard over the peripheral lung fields, with a longer inspiratory phase."
+        },
+        {
+          q: "Which nursing action is the most important before applying a topical drug?",
+          opts: ["Massage vigorously for absorption", "Apply over soiled skin", "Clean and dry the area thoroughly", "Mix with lotion for smooth application"],
+          ans: 2,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "To prevent contamination and ensure standard absorption, the target skin area must be cleaned and dried thoroughly before any topical drug application."
+        },
+        {
+          q: "When should sterile equipment be opened before surgery to maintain asepsis?",
+          opts: ["Long before surgery", "Just before surgery using sterile technique", "After surgery starts", "During patient preparation"],
+          ans: 1,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Sterile supplies must be opened immediately prior to the surgical procedure using careful sterile technique to minimize exposure to potential airborne contaminants."
+        },
+        {
+          q: "A patient was brought to the emergency department by relatives. During the examination, following abnormalities were detected. BP - Not recordable, Pulse - Not palpable, ECG - Shows ventricular fibrillation. What is the most appropriate triage category for this patient?",
+          opts: ["Yellow", "Green", "Red", "Black"],
+          ans: 2,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Ventricular fibrillation is a cardiac arrest rhythm requiring immediate, life-saving resuscitation (CPR/defibrillation). This falls under the Red/Immediate triage classification."
+        },
+        {
+          q: "Which of the following cellular adaptations occurs in chronic smokers, where the normal ciliated columnar epithelium of the respiratory tract is replaced by stratified squamous epithelium to better resist smoke exposure?",
+          opts: ["Atrophy", "Hyperplasia", "Dysplasia", "Metaplasia"],
+          ans: 3,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Metaplasia is a reversible cellular adaptation where one mature cell type is replaced by another. In smokers, ciliated columnar airway cells are replaced by tougher stratified squamous cells."
+        },
+        {
+          q: "Which blood test is used to measure the number of different types of white blood cells?",
+          opts: ["Hemoglobin test", "Complete blood count (CBC) with differential", "ESR test", "Blood glucose test"],
+          ans: 1,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "A CBC with differential calculates the total concentration of white blood cells and identifies the percentage/count of individual cell types."
+        },
+        {
+          q: "Which of the following is the primary extracellular electrolyte?",
+          opts: ["Potassium", "Sodium", "Calcium", "Magnesium"],
+          ans: 1,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Sodium is the primary extracellular cation, while potassium is the primary intracellular cation."
+        },
+        {
+          q: "Which device is most useful for maintaining airway patency in an unconscious patient without a gag reflex?",
+          opts: ["Nasal cannula", "Oropharyngeal airway", "Simple face mask", "Endotracheal tube"],
+          ans: 1,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "An oropharyngeal airway keeps the tongue forward in an unconscious patient. It is only used when the gag reflex is absent to avoid vomiting."
+        },
+        {
+          q: "What is the precise anatomical location of Erb's Point used during cardiac auscultation?",
+          opts: ["Third intercostal space, at the left sternal border", "Fifth intercostal space, mid-clavicular line", "Fourth intercostal space, right sternal border", "Second intercostal space, right sternal border"],
+          ans: 0,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Erb's point is situated at the left third intercostal space at the sternal border, where S2 and specific murmurs are clearly heard."
+        },
+        {
+          q: "Which type of infection mainly causes a significant increase in procalcitonin levels?",
+          opts: ["Viral infections", "Fungal infections", "Autoimmune disorders", "Bacterial infections"],
+          ans: 3,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Procalcitonin levels rise rapidly in response to systemic bacterial infections and sepsis, helping differentiate them from viral or non-infectious inflammation."
+        },
+        {
+          q: "What is the main purpose of the Bispectral Index (BIS) monitor in an operating theatre?",
+          opts: ["To measure a patient's blood pressure during surgery", "To assess the depth of anaesthesia and sedation", "To monitor the patient's heart rate during surgery", "To detect pain in verbal patients after surgery"],
+          ans: 1,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "BIS monitoring processes EEG waves to quantify brain activity, assessing the depth of general anesthesia to prevent awareness."
+        },
+        {
+          q: "What is the primary goal of atraumatic care in pediatric nursing?",
+          opts: ["To quickly administer medical treatments and perform surgical interventions without any delay", "To minimise psychological and physical distress for children and families during healthcare", "To make the hospital environment more like a sterile laboratory and avoid visitors as far as possible", "To ensure parents stay outside the room during procedures and enforce strict isolation practices"],
+          ans: 1,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Atraumatic care focuses on minimizing physical and emotional pain for children and families using child-friendly healthcare practices."
+        },
+        {
+          q: "According to NFHS-5 (2019-21), which of the following statements is correct?",
+          opts: ["The under-five mortality rate (U5MR) in India is lower than the infant mortality rate (IMR).", "Both IMR and U5MR are higher in urban areas than rural areas.", "IMR is 35 per 1,000 live births, and U5MR is 42 per 1,000 live births.", "NFHS-5 does not report state-wise variations in IMR."],
+          ans: 2,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "According to India's National Family Health Survey 5 (NFHS-5), the Infant Mortality Rate is 35 per 1,000 live births and the Under-Five Mortality Rate is 42 per 1,000 live births."
+        },
+        {
+          q: "Which test is used primarily to confirm the definitive diagnosis of Mpox (Monkeypox) in a paediatric patient?",
+          opts: ["Viral culture of whole blood in a specialised laboratory", "Negative Tzanck smear test for herpes simplex virus", "A complete blood count (CBC) showing a marked lymphocytosis", "PCR testing of lesion material (swab from fluid or crust)"],
+          ans: 3,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Definitive diagnosis of Mpox is confirmed through real-time polymerase chain reaction (PCR) of lesion fluids, crusts, or tissue."
+        },
+        {
+          q: "What is the primary characteristic behaviour that defines Rumination Disorder of Infancy?",
+          opts: ["Ingestion of non-food items or non-edible items for a period of at least one month", "A persistent aversion to all solid food textures and a refusal to eat solid foods", "Self-induced vomiting immediately following every meal for at least one month", "Repeated regurgitation, re-chewing or re-swallowing of previously eaten food"],
+          ans: 3,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Rumination disorder is the voluntary, repeated regurgitation of food that is re-chewed, re-swallowed, or spit out, persisting for at least 1 month."
+        },
+        {
+          q: "When a nurse uses psychotherapeutic and behavioural approaches to manage patients in the community as per the National Mental Health Programme, she is primarily functioning in which of the following roles?",
+          opts: ["Consultative role", "Researcher role", "Educator role", "Therapeutic role"],
+          ans: 3,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Providing counseling, behavioral therapies, and psychological management constitutes the nurse's therapeutic or clinical role."
+        },
+        {
+          q: "Which of the following is NOT one of the primary cognitive domains assessed by the Mini-Mental State Examination (MMSE)?",
+          opts: ["Orientation to time and place", "Attention and Calculation", "Remote Memory (e.g., historical events)", "Language and Visual-spatial skills"],
+          ans: 2,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "The MMSE evaluates immediate recall and short-term memory, but does not test remote memory of historical events."
+        },
+        {
+          q: "What is the ICD-11 code for a patient diagnosed with Schizophrenia, Multiple Episodes, currently in full remission?",
+          opts: ["6A20.12", "5A24.31", "7B40.02", "8B40.21"],
+          ans: 0,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Under ICD-11, 6A20 is Schizophrenia, and 6A20.12 represents multiple episodes in full remission."
+        },
+        {
+          q: "Emil Kraepelin is best known for:",
+          opts: ["Establishing psychoanalysis", "Classifying mental disorders", "Advocating for deinstitutionalization", "Introducing electroconvulsive therapy"],
+          ans: 1,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Emil Kraepelin is famed for establishing modern scientific psychiatry and classifying major mental disorders."
+        },
+        {
+          q: "Which of the following is NOT an essential quality needed by a community health nurse to effectively address the dynamic and often unpredictable needs of individuals and families in their homes and community settings?",
+          opts: ["Resourcefulness", "Collaboration", "Autocratism", "Flexibility"],
+          ans: 2,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Community nursing relies on therapeutic partnership and flexible care. Autocratic control (autocratism) is counterproductive and harmful."
+        },
+        {
+          q: "Which of the following drugs is mainly contraindicated in pregnant women and infants for malaria treatment under the National antimalaria program (NAMP) due to the risk of hemolysis in G6PD-deficient individuals?",
+          opts: ["Chloroquine", "Quinine", "Primaquine", "Artemether"],
+          ans: 2,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Primaquine is contraindicated in pregnant women and infants because it can cross the placenta or enter milk and trigger severe hemolytic crises."
+        },
+        {
+          q: "Which action is strictly prohibited during proper bag technique?",
+          opts: ["Placing the bag on a clean, dry surface", "Removing required supplies and placing them on a clean barrier", "Cleaning equipment that had direct patient contact", "Re-entering the bag while wearing gloves"],
+          ans: 3,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "To prevent introducing pathogens into the clean bag, re-entering the bag with gloved hands after patient care has begun is strictly forbidden."
+        },
+        {
+          q: "Which of the following constitutes a standard clinical recommendation for the management of minor disorder, heartburn during pregnancy?",
+          opts: ["Advise to avoid eating spicy, fatty, or acidic foods", "Encourage to lie down in the bed for 30 minutes after eating", "Start Intravenous Ringer lactate solution of 500 ml", "Refer woman to the 24 hour Primary Health Centre"],
+          ans: 0,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Gestational heartburn is best managed by dietary modifications, such as avoiding fatty, spicy, or acidic foods, and eating small frequent meals."
+        },
+        {
+          q: "A nurse in a postnatal care unit is counselling a mother. She asks how often she should breastfeed her 5-day-old newborn. What is the most appropriate response by the nurse?",
+          opts: ["Every 4 hours on a strict schedule, to allow her breasts time to refill, typically 6 times in 24 hours", "Every 5 hours on a strict schedule to allow her breasts time to refill, typically 5 times in 24 hours", "On demand, whenever the baby shows early feeding cues, typically 8 to 12 times in 24 hours", "Only when the baby cries vigorously, as crying is the primary sign of hunger, 4 to 6 times in 24 hours"],
+          ans: 2,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Breastfeeding should be on-demand, typically 8-12 times in 24 hours, triggered by early signs of hunger (rooting, lip smacking) rather than scheduled hours."
+        },
+        {
+          q: "The ductus arteriosus serve as a shunt between which two major vessels in the fetal circulation?",
+          opts: ["The pulmonary artery and the aorta", "The pulmonary artery and the left atrium", "The superior vena cava and the inferior vena cava", "The right atrium and the left atrium"],
+          ans: 0,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "The ductus arteriosus bypasses the non-inflated fetal lungs by shunting blood from the pulmonary trunk directly to the aorta."
+        },
+        {
+          q: "Which of the following infant's reflexes help the infant to locate the nipple when the cheek or mouth is touched during breastfeeding?",
+          opts: ["Moro reflex", "Grasp reflex", "Gag reflex", "Rooting reflex"],
+          ans: 3,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "The rooting reflex causes an infant to turn their head towards a cheek stimulus, facilitating latching."
+        },
+        {
+          q: "Where is the umbilical cord inserted in a battledore placenta?",
+          opts: ["In the centre of the placenta", "Into the fetal membranes, away from the placental edge", "At the margin or edge of the placenta", "Into an accessory lobe"],
+          ans: 2,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "A battledore placenta is characterized by the insertion of the umbilical cord at the marginal border of the placenta."
+        },
+        {
+          q: "How is the Homan's Sign performed during a physical examination for a mother during puerperium?",
+          opts: ["By applying pressure to the calf while the knee is flexed at 90 degrees at the patella level.", "By passively and abruptly dorsiflexing the patient's foot while the knee is extended.", "By measuring the circumference difference between both calves of the lower extremity.", "By asking the patient to walk and observing their gait while closing their eyes with a shawl."],
+          ans: 1,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Homan's sign is checked by maintaining the knee in extension while passively and firmly dorsiflexing the foot, checking for pain in the calf."
+        },
+        {
+          q: "The optimal time for inserting an intrauterine device (IUD) to ensure both effectiveness and minimal complications is:",
+          opts: ["2 weeks before menstruation", "1 week before menstruation", "During menstruation", "2 weeks after menstruation"],
+          ans: 2,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Insertion during menstruation ensures easy dilatation, less pain, and guarantees the absence of an active pregnancy."
+        },
+        {
+          q: "Which of the following is a contraindication for conducting a trial of labour in a patient with cephalopelvic disproportion (CPD)?",
+          opts: ["Minor degree of inlet contraction", "Moderate degree of cephalopelvic disproportion (CPD)", "Associated mid-pelvic and outlet contraction", "Borderline degree of cephalopelvic disproportion (CPD)"],
+          ans: 2,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Trial of labor is contraindicated if both mid-pelvic and outlet contractions are present, making spontaneous delivery impossible."
+        },
+        {
+          q: "Which economic model, emphasising the relationship between investment and national income, formed the basis of India’s First Five-Year Plan?",
+          opts: ["Nehru-Gandhi Model", "Mahalanobis Model", "Harrod-Domar Model", "Solow Growth Model"],
+          ans: 2,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "The Harrod-Domar formulation formed the basis of India's First Five-Year Plan (1951-1956)."
+        },
+        {
+          q: "Within the hospital equipment management cycle, commissioning of new equipment primarily involves which of the following activities?",
+          opts: ["Installation, testing, and validation before clinical use", "Disposal of obsolete equipment", "Procurement and tendering of equipment", "Routine preventive maintenance of equipment"],
+          ans: 0,
+          source: "WBHRB Staff Nurse Grade II 2026",
+          explain: "Commissioning represents the installation, rigorous testing, and validation of new equipment to ensure quality and clinical compliance prior to deployment."
+        }
+      ]
+    },
   { id: 'fun-vitals', icon: '🌡️', title: 'Vital Signs & Assessment', desc: 'Temperature, pulse, respiration, BP — measurement, normal values.', questions: 0, mins: 0, ready: false, data: [] },
   { id: 'fun-infection', icon: '🦠', title: 'Infection Control', desc: 'Asepsis, sterilization, disinfection, PPE, standard precautions.', questions: 0, mins: 0, ready: false, data: [] },
   { id: 'fun-procedures', icon: '🩺', title: 'Nursing Procedures', desc: 'IV therapy, wound care, catheterization, NG tube, oxygen therapy.', questions: 0, mins: 0, ready: false, data: [] },
@@ -1001,6 +1362,8 @@ export const SUBJECTS: Subject[] = [
 ];
 
 export const PYQ_DATA: PyqCard[] = [
+ { exam: 'WBHRB Staff Nurse Grade II', tag: 'wbhrb', year: '2026', count: 50, color: 'var(--red)' },
+ { exam: 'WBHRB CHO', tag: 'wbhrb', year: '2025', count: 40, color: 'var(--red)' },
  { exam: 'AIIMS NORCET 7', tag: 'aiims', year: '2024', count: 80, color: 'var(--accent)' },
  { exam: 'AIIMS Nursing Officer', tag: 'aiims', year: '2019', count: 18, color: 'var(--accent)' },
  { exam: 'AIIMS Nursing Officer', tag: 'aiims', year: '2018', count: 24, color: 'var(--accent)' },

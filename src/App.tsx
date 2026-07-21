@@ -3059,6 +3059,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
                 {hubTab === "pyq" && [
                   { id: "all", label: "All Exams" },
+                  { id: "wbhrb", label: "WBHRB" },
                   { id: "aiims", label: "AIIMS" },
                   { id: "rrb", label: "RRB" },
                   { id: "esic", label: "ESIC" },
@@ -3914,7 +3915,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
               <p>Filter by exam and year to practise real questions that appeared in past nursing competitive exams.</p>
               
               <div className="pyq-filters">
-                {["all", "aiims", "rrb", "esic", "dsssb", "rpsc"].map(filterVal => (
+                {["all", "wbhrb", "aiims", "rrb", "esic", "dsssb", "rpsc"].map(filterVal => (
                   <button 
                     key={filterVal}
                     className={`pyq-filter ${pyqFilter === filterVal ? "active" : ""}`}
@@ -3936,7 +3937,15 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   </div>
                   <button 
                     className="pyq-btn w-full"
-                    onClick={() => triggerToast(`The ${p.year} ${p.exam} PYQ set is coming in next app update! 🔜`, "ok")}
+                    onClick={() => {
+                      const qs = getQuestionsForPyq(p.exam, p.year, p.count);
+                      const actualMatching = qs.filter(q => (q.source || "").toLowerCase().includes(p.exam.toLowerCase()));
+                      if (actualMatching.length > 0) {
+                        startPyqTest(p);
+                      } else {
+                        triggerToast(`The ${p.year} ${p.exam} PYQ set is coming in next app update! 🔜`, "ok");
+                      }
+                    }}
                   >
                     Practice This Set →
                   </button>
