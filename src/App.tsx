@@ -360,6 +360,7 @@ const generateMockTests = (): Test[] => {
     let initialTab: "full_mock" | "pyq" | "subject" | "short" = "full_mock";
     let initialSubjId: string | null = null;
     let initialTestId: string | null = null;
+    let initialExamId: string = "aiims-norcet";
     let foundTest: Test | null = null;
     let foundUpdateOnLoad: any = null;
 
@@ -390,6 +391,16 @@ const generateMockTests = (): Test[] => {
       initialPage = "auth";
     } else if (cleanPath === "/admin") {
       initialPage = "admin";
+    } else if (cleanPath.startsWith("/exam/")) {
+      initialPage = "exam_landing";
+      const parts = path.split("/");
+      const eId = parts[2] ? parts[2].toLowerCase() : "aiims-norcet";
+      const foundE = TARGET_EXAMS.find(e => e.id.toLowerCase() === eId);
+      if (foundE) {
+        initialExamId = foundE.id;
+      } else {
+        initialExamId = "aiims-norcet";
+      }
     } else if (cleanPath.startsWith("/test/")) {
       const parts = path.split("/");
       if (parts.length >= 4) {
@@ -454,6 +465,7 @@ const generateMockTests = (): Test[] => {
       tab: initialTab,
       subjectId: initialSubjId,
       testId: initialTestId,
+      examId: initialExamId,
       test: foundTest,
       update: foundUpdateOnLoad
     };
@@ -1091,8 +1103,10 @@ export default function App() {
   useEffect(() => {
     if (theme === "light") {
       document.body.classList.add("light");
+      document.documentElement.classList.add("light");
     } else {
       document.body.classList.remove("light");
+      document.documentElement.classList.remove("light");
     }
     localStorage.setItem("theme", theme);
   }, [theme]);
@@ -2607,23 +2621,23 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 26, stiffness: 220 }}
-              className="fixed top-0 left-0 bottom-0 w-[290px] max-w-[85vw] bg-[#0c121e] border-r border-[#1e2d45] z-[1000] shadow-2xl flex flex-col justify-between font-syne"
+              className="fixed top-0 left-0 bottom-0 w-[290px] max-w-[85vw] bg-[var(--surface)] border-r border-[var(--border)] z-[1000] shadow-2xl flex flex-col justify-between font-syne"
             >
               <div className="flex-1 overflow-y-auto py-6 px-6 scrollbar-thin">
                 {/* Header */}
-                <div className="flex items-center justify-between border-b border-[#1e2d45]/50 pb-4 mb-6">
+                <div className="flex items-center justify-between border-b border-[var(--border)]/50 pb-4 mb-6">
                   <div 
                     className="flex items-baseline cursor-pointer group" 
                     onClick={() => { showPage("landing"); setIsDrawerOpen(false); }}
                   >
-                    <span className="text-xl font-extrabold tracking-tight text-white group-hover:text-[#4f9eff] transition-colors">
+                    <span className="text-xl font-extrabold tracking-tight text-[var(--text)] group-hover:text-[#4f9eff] transition-colors">
                       <span className="text-amber-500">N</span>CBT
                     </span>
                     <span className="text-xl font-black text-[#7ee8a2]">.in</span>
                   </div>
                   <button
                     onClick={() => setIsDrawerOpen(false)}
-                    className="p-1.5 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors cursor-pointer border border-[#1e2d45]/20"
+                    className="p-1.5 hover:bg-white/5 dark:hover:bg-white/5 light:hover:bg-slate-900/10 rounded-lg text-gray-400 dark:text-gray-400 light:text-slate-600 hover:text-[var(--text)] transition-colors cursor-pointer border border-[var(--border)]/20"
                     title="Close Sidebar"
                   >
                     <X className="w-4 h-4" />
@@ -2759,11 +2773,31 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     <MessageSquare className="w-4 h-4 text-rose-400 shrink-0" />
                     <span>Contact Us</span>
                   </button>
+
+                  {/* Aesthetic Theme Preference */}
+                  <div className="pt-4 mt-4 border-t border-[var(--border)]/40 space-y-2">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-3 select-none">Aesthetic Theme</p>
+                    <button
+                      onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+                      className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-black transition-all border border-[var(--border)]/35 bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--border)]/15 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3">
+                        {theme === "light" ? (
+                          <Sun className="w-4 h-4 text-amber-500 shrink-0" />
+                        ) : (
+                          <Moon className="w-4 h-4 text-purple-400 shrink-0" />
+                        )}
+                        <span>{theme === "light" ? "Light Mode Active" : "Dark Mode Active"}</span>
+                      </div>
+                      <span className="text-[9px] bg-[#4f9eff]/15 text-[#4f9eff] border border-[#4f9eff]/20 px-2 py-0.5 rounded uppercase font-black tracking-wider shrink-0">Switch</span>
+                    </button>
+                  </div>
+
                 </div>
               </div>
 
               {/* Drawer Bottom Profile block */}
-              <div className="p-6 border-t border-[#1e2d45]/40 bg-[#080d15] select-none">
+              <div className="p-6 border-t border-[var(--border)]/40 bg-[var(--bg)] select-none">
                 {currentUser ? (
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-3">
@@ -2771,7 +2805,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                         {currentUser.name.charAt(0).toUpperCase()}
                       </div>
                       <div className="truncate flex-1">
-                        <p className="text-xs font-extrabold text-white truncate leading-tight">{currentUser.name}</p>
+                        <p className="text-xs font-extrabold text-[var(--text)] truncate leading-tight">{currentUser.name}</p>
                         <p className="text-[10px] text-gray-500 truncate leading-tight">{currentUser.email}</p>
                       </div>
                     </div>
@@ -2869,7 +2903,38 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           )}
         </div>
 
-        <div className="nav-right"></div>
+        <div className="nav-right flex items-center gap-2">
+          {/* Theme Toggle Button */}
+          <button
+            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+            className="p-1.5 hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-slate-900/10 rounded-xl transition-all cursor-pointer flex items-center justify-center text-[var(--text)] border border-[var(--border)] bg-[var(--surface)]/50 shadow-sm"
+            title={theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
+            aria-label="Toggle Theme"
+          >
+            {theme === "light" ? (
+              <Moon className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            ) : (
+              <Sun className="w-4 h-4 text-amber-500" />
+            )}
+          </button>
+
+          {currentUser ? (
+            <button 
+              className="nav-avatar flex items-center justify-center text-xs font-bold font-sans"
+              onClick={() => showPage("analytics")}
+              title={currentUser.name}
+            >
+              {currentUser.name.charAt(0).toUpperCase()}
+            </button>
+          ) : (
+            <button 
+              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-all border border-indigo-500/20 cursor-pointer"
+              onClick={() => showPage("auth")}
+            >
+              Login
+            </button>
+          )}
+        </div>
 
         {/* Navigate dropdown has been removed per design specifications */}
       </nav>
@@ -2889,24 +2954,69 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   <span className="animate-pulse">🟢</span> Live Quizzes
                 </div>
                 {[
-                  { name: "AIIMS NORCET Series", query: "NORCET", tab: "full_mock" },
-                  { name: "ESIC Officer Special", query: "ESIC", tab: "full_mock" },
-                  { name: "RRB Staff Nurse", query: "RRB", tab: "full_mock" },
-                  { name: "State PSC Nursing", query: "State", tab: "full_mock" },
-                  { name: "CHO Recruitment", query: "CHO", tab: "full_mock" },
+                  { name: "AIIMS NORCET Series", examId: "aiims-norcet" },
+                  { name: "ESIC Officer Special", examId: "esic-officer" },
+                  { name: "RRB Staff Nurse", examId: "rrb-officer" },
+                  { name: "State PSC Nursing", examId: "dsssb-officer" },
+                  { name: "CHO Recruitment", examId: "cho-recruitment" },
                   { name: "Anatomy & Physiology", query: "Anatomy", tab: "subject" },
                   { name: "Pharmacology & Antidotes", query: "Pharmacology", tab: "subject" },
                   { name: "Midwifery Special", query: "Midwifery", tab: "subject" },
                   { name: "Community Health Care", query: "Community", tab: "subject" },
                   { name: "Previous Year Papers", query: "", tab: "pyq" },
                 ].map((cat, idx) => (
-                  <span
+                  <button
                     key={idx}
-                    className="px-3.5 py-1.5 rounded-xl bg-card border border-border/70 text-xs font-bold text-text2 shadow-sm select-none"
+                    onClick={() => {
+                      if (cat.examId) {
+                        setSelectedExamId(cat.examId);
+                        showPage("exam_landing");
+                      } else if (cat.tab) {
+                        setHubTab(cat.tab);
+                        if (cat.query) setHubSearchText(cat.query);
+                        showPage(cat.tab === "pyq" ? "pyq" : cat.tab === "subject" ? "subject_mocks" : "mock_tests");
+                      }
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-card hover:bg-card2 border border-border/70 hover:border-accent text-xs font-bold text-text2 hover:text-accent shadow-sm cursor-pointer select-none transition-all"
                   >
                     {cat.name}
-                  </span>
+                  </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Sliding Exams Banner (From right to left continuously) */}
+            <div className="w-full bg-[#090d16] border-b border-amber-500/20 py-3 overflow-hidden select-none shadow-md">
+              <div className="marquee-container">
+                <div className="marquee-track flex gap-8 items-center text-[11px] md:text-xs font-black uppercase tracking-wider text-amber-400">
+                  {/* Repeated twice for infinite scroll */}
+                  {[...Array(2)].map((_, rIdx) => (
+                    <div key={rIdx} className="flex gap-8 shrink-0 items-center animate-marquee-horizontal">
+                      <span className="flex items-center gap-1">🏥 AIIMS NORCET</span>
+                      <span className="text-slate-600 font-normal">•</span>
+                      <span className="flex items-center gap-1 text-teal-400">🩺 WBHRB Staff Nurse Grade II</span>
+                      <span className="text-slate-600 font-normal">•</span>
+                      <span className="flex items-center gap-1">💊 ESIC Staff Nurse Officer</span>
+                      <span className="text-slate-600 font-normal">•</span>
+                      <span className="flex items-center gap-1 text-emerald-400">🚆 RRB Railway Staff Nurse</span>
+                      <span className="text-slate-600 font-normal">•</span>
+                      <span className="flex items-center gap-1">🏘️ CHO NHM Recruitment</span>
+                      <span className="text-slate-600 font-normal">•</span>
+                      <span className="flex items-center gap-1 text-cyan-400">🏛️ DSSSB Staff Nurse Selection</span>
+                      <span className="text-slate-600 font-normal">•</span>
+                      <span className="flex items-center gap-1">🎓 UP CNET Entrance</span>
+                      <span className="text-slate-600 font-normal">•</span>
+                      <span className="flex items-center gap-1 text-rose-400">🧪 AIIMS BSc Nursing Series</span>
+                      <span className="text-slate-600 font-normal">•</span>
+                      <span className="flex items-center gap-1">🏥 EMRS Staff Nurse Mock</span>
+                      <span className="text-slate-600 font-normal">•</span>
+                      <span className="flex items-center gap-1 text-indigo-400">👮 CRPF Paramedical Staff Prep</span>
+                      <span className="text-slate-600 font-normal">•</span>
+                      <span className="flex items-center gap-1">📝 UPSSSC ANM Test Series</span>
+                      <span className="text-slate-600 font-normal">•</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -2945,13 +3055,29 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       className="px-6 py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-black text-xs md:text-sm font-black shadow-xl shadow-amber-500/25 transition-all cursor-pointer transform hover:-translate-y-0.5 active:scale-95"
                       onClick={() => showPage("hub")}
                     >
-                      🚀 Download Free App / Start Prep
+                      🎯 Try Free Live Tests / Start Prep
                     </button>
                     <button 
                       className="px-6 py-3.5 rounded-2xl bg-surface hover:bg-card text-text text-xs md:text-sm font-bold border border-border hover:border-text2 transition-all cursor-pointer transform hover:-translate-y-0.5"
                       onClick={() => showPage("subject_mocks")}
                     >
                       🔍 Find Course / Subject Mocks →
+                    </button>
+                    <button 
+                      className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-purple-500/10 to-indigo-500/10 hover:from-purple-500/20 hover:to-indigo-500/20 text-[var(--text)] text-xs md:text-sm font-bold border border-purple-500/30 transition-all cursor-pointer transform hover:-translate-y-0.5 flex items-center gap-2 shadow-sm"
+                      onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+                    >
+                      {theme === "light" ? (
+                        <>
+                          <Moon className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                          <span>Switch to Dark Theme 🌙</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sun className="w-4 h-4 text-amber-500" />
+                          <span>Switch to Light Theme ☀️</span>
+                        </>
+                      )}
                     </button>
                   </div>
 
@@ -3087,8 +3213,20 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                         <div
                           key={cIdx}
                           onClick={() => {
-                            showPage("mock_tests");
-                            setHubSearchText(mockCourse.query);
+                            const mapping: Record<string, string> = {
+                              "AIIMS": "aiims-norcet",
+                              "ESIC": "esic-officer",
+                              "RRB": "rrb-officer",
+                              "CHO": "cho-recruitment"
+                            };
+                            const examId = mapping[mockCourse.tag];
+                            if (examId) {
+                              setSelectedExamId(examId);
+                              showPage("exam_landing");
+                            } else {
+                              showPage("mock_tests");
+                              setHubSearchText(mockCourse.query);
+                            }
                           }}
                           className="p-3.5 bg-surface hover:bg-card2 border border-border hover:border-accent rounded-2xl transition-all duration-200 cursor-pointer flex items-center justify-between group"
                         >
@@ -3179,7 +3317,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       transition={{ duration: 0.5 }}
                       onClick={() => {
                         setSelectedExamId(exam.id);
-                        showPage("hub");
+                        showPage("exam_landing");
                       }}
                       className="premium-glow-box rounded-3xl p-6 flex flex-col justify-between group relative overflow-hidden cursor-pointer"
                     >
@@ -3713,7 +3851,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     <li><button onClick={() => showPage("updates")} className="hover:text-accent text-left transition-colors cursor-pointer">📝 Blog & News</button></li>
                     <li><button onClick={() => showPage("about")} className="hover:text-accent text-left transition-colors cursor-pointer">✨ About Us</button></li>
                     <li><button onClick={() => showPage("contact")} className="hover:text-accent text-left transition-colors cursor-pointer">📞 Contact Us</button></li>
-                    <li><button onClick={() => showPage("hub")} className="hover:text-accent text-left transition-colors cursor-pointer">📲 Download App</button></li>
+                    <li><button onClick={() => showPage("hub")} className="hover:text-accent text-left transition-colors cursor-pointer">📲 Practice Now</button></li>
                     <li><button onClick={() => showPage("analytics")} className="hover:text-accent text-left transition-colors cursor-pointer">🏆 Dashboard Analytics</button></li>
                   </ul>
                 </div>
