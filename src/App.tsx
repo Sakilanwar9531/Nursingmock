@@ -354,7 +354,10 @@ const generateMockTests = (): Test[] => {
   // --- SYNCHRONOUS DEEP-LINK INITIALIZATION HELPER ---
   const getInitialRoute = () => {
     const path = typeof window !== "undefined" ? window.location.pathname : "/";
-    const cleanPath = path.toLowerCase();
+    let cleanPath = path.toLowerCase();
+    if (cleanPath.length > 1 && cleanPath.endsWith("/")) {
+      cleanPath = cleanPath.slice(0, -1);
+    }
     
     let initialPage = "landing";
     let initialTab: "full_mock" | "pyq" | "subject" | "short" = "full_mock";
@@ -376,6 +379,10 @@ const generateMockTests = (): Test[] => {
     } else if (cleanPath === "/short-sprints") {
       initialPage = "exam_landing";
       initialTab = "short";
+    } else if (cleanPath === "/about") {
+      initialPage = "about";
+    } else if (cleanPath === "/contact") {
+      initialPage = "contact";
     } else if (cleanPath.startsWith("/updates/")) {
       initialPage = "updates";
       const uId = path.split("/")[2];
@@ -453,11 +460,7 @@ const generateMockTests = (): Test[] => {
         }
       }
     } else {
-      const localUser = typeof window !== "undefined" ? localStorage.getItem("np_user") : null;
-      if (localUser) {
-        initialPage = "exam_landing";
-        initialTab = "full_mock";
-      }
+      initialPage = "landing";
     }
 
     return {
@@ -1045,7 +1048,7 @@ export default function App() {
     const saved = localStorage.getItem("np_active_exams");
     return saved ? JSON.parse(saved) : ["aiims-norcet", "wbhrb-grade2", "esic-officer"];
   });
-  const [selectedExamId, setSelectedExamId] = useState<string>("aiims-norcet");
+  const [selectedExamId, setSelectedExamId] = useState<string>(initialRoute.examId);
   const [viewExamArenaId, setViewExamArenaId] = useState<string | null>(null);
 
   const toggleActiveTargetExam = (id: string) => {
@@ -1558,7 +1561,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     if (activePage === "landing") {
       title = "NCBT - India's Nursing CBT Exam Prep | AIIMS NORCET, ESIC, RRB Mocks";
       desc = "Free high-yield CBT computer-based test platform for nursing recruitment officers in India. Practice AIIMS NORCET, ESIC, RRB, and state PSC past papers with expert clinical rationales.";
-    } else if (activePage === "hub") {
+    } else if (activePage === "exam_landing" || activePage === "hub") {
       if (hubTab === "pyq") {
         title = "Nursing Officer Past Papers & PYQs (AIIMS NORCET, ESIC, RRB) | NCBT.in";
         desc = "Solve official solved previous year question papers from central government recruitment campaigns. Real-time timer and performance percentile breakdown.";
@@ -1572,6 +1575,12 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         title = "Rapid Speed Sprints (10 MCQ Practice Checkpoints) | NCBT.in";
         desc = "Time crunch? Boost your active recall with rapid-fire 10-question nursing practice sprints. Dynamically shuffled clinical questions with smart feedback.";
       }
+    } else if (activePage === "about") {
+      title = "About NCBT - India's Dedicated Nursing Officer Exam CBT Platform";
+      desc = "Learn about NCBT's mission to empower nursing aspirants with real-time CBT mock tests, clinical rationales, and recruitment guidance.";
+    } else if (activePage === "contact") {
+      title = "Contact & Helpdesk - NCBT Nursing Preparation Portal";
+      desc = "Get in touch with NCBT team for support, candidate assistance, feedback, or test series queries.";
     } else if (activePage === "updates") {
       if (selectedUpdate) {
         title = `${selectedUpdate.title} | High-Yield Nursing Officer Guide | NCBT.in`;
@@ -2126,6 +2135,8 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     if (pageId === "analytics") return "/analytics";
     if (pageId === "auth") return "/auth";
     if (pageId === "admin") return "/admin";
+    if (pageId === "about") return "/about";
+    if (pageId === "contact") return "/contact";
     if (pageId === "test" && subjId && testId) {
       return `/test/${subjId}/${testId}`;
     }
