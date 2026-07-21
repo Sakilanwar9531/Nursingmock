@@ -1,4 +1,4 @@
-import { Subject, PyqCard } from "./types";
+import { Subject, PyqCard, ExamDef } from "./types";
 import { MOCK_1_DATA, MOCK_2_DATA, MOCK_3_DATA, MOCK_4_DATA, MOCK_5_DATA } from "./blood_data";
 
 export const SUBJECTS: Subject[] = [
@@ -1378,3 +1378,67 @@ export const PYQ_DATA: PyqCard[] = [
  { exam: 'BSF Staff Nurse', tag: 'esic', year: '2015', count: 11, color: 'var(--purple)' },
  { exam: 'IGNOU Post B.Sc Nursing', tag: 'rrb', year: '2019', count: 9, color: 'var(--green)' }
 ];
+
+export const TARGET_EXAMS: ExamDef[] = [
+  {
+    id: "aiims-norcet",
+    name: "AIIMS NORCET",
+    fullName: "AIIMS NORCET Complete Preparation",
+    badge: "HOT",
+    category: "Central Govt",
+    desc: "Prepare for AIIMS Nursing Officer Recruitment Common Eligibility Test with high-yield clinical and scenario-based mock series.",
+    icon: "🏥",
+    color: "#388bfd"
+  },
+  {
+    id: "wbhrb-grade2",
+    name: "WBHRB Staff Nurse",
+    fullName: "WBHRB Staff Nurse Grade II Complete Prep",
+    badge: "Trending",
+    category: "West Bengal Govt",
+    desc: "Targeted West Bengal Health Recruitment Board Grade II and CHO practice exams, with localized syllabus, and interview guidelines.",
+    icon: "🩺",
+    color: "#10b981"
+  },
+  {
+    id: "esic-officer",
+    name: "ESIC Staff Nurse",
+    fullName: "ESIC Nursing Officer Complete Preparation",
+    badge: "HOT",
+    category: "Central Govt",
+    desc: "Employees' State Insurance Corporation Exam drills balancing core clinical topics and general aptitude with real-time countdowns.",
+    icon: "💊",
+    color: "#8b5cf6"
+  },
+  {
+    id: "rrb-officer",
+    name: "RRB Staff Nurse",
+    fullName: "RRB Staff Nurse Complete Prep (CBT 1 + CBT 2)",
+    badge: "HOT",
+    category: "Railway Exams",
+    desc: "Railway Recruitment Board nursing practice including general science, arithmetic aptitude, and general awareness sections.",
+    icon: "🚆",
+    color: "#f59e0b"
+  },
+  {
+    id: "cho-recruitment",
+    name: "CHO Recruitment",
+    fullName: "CHO Recruitment Complete Course",
+    badge: "Popular",
+    category: "State NHM",
+    desc: "Community Health Officer exams covering maternal & child health care, primary healthcare models, and rural health policies.",
+    icon: "🏘️",
+    color: "#ec4899"
+  },
+  {
+    id: "dsssb-officer",
+    name: "DSSSB Staff Nurse",
+    fullName: "DSSSB Selection POST Complete Course",
+    badge: "HOT",
+    category: "Delhi Govt",
+    desc: "Delhi Subordinate Services Selection Board nurse officers preparation papers matching official patterns and question weightage.",
+    icon: "🏛️",
+    color: "#06b6d4"
+  }
+];
+

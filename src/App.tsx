@@ -35,7 +35,7 @@ import {
   Megaphone,
   Newspaper
 } from "lucide-react";
-import { SUBJECTS, PYQ_DATA } from "./data";
+import { SUBJECTS, PYQ_DATA, TARGET_EXAMS } from "./data";
 import { STATIC_NURSING_UPDATES } from "./updatesData";
 import { BLOG_TRANSLATIONS } from "./blogTranslations";
 import { Subject, Test, Question, PyqCard, User as UserType, Attempt, StreakData, NursingUpdate } from "./types";
@@ -60,7 +60,7 @@ import {
   clearClientGeminiKey, 
   generateContentDirect 
 } from "./services/geminiClient";
-import { SEO_ARTICLES, getArticleForTest } from "./seoArticles";
+import { SEO_ARTICLES, getArticleForTest, getArticleForExam } from "./seoArticles";
 
 // Dynamically enriches standard explanations with high-yield clinical pointers
 const getDetailedExplain = (q: Question): string => {
@@ -1028,6 +1028,7 @@ export default function App() {
 
   // Navigation & Page State
   const [activePage, setActivePage] = useState<string>(initialRoute.page);
+  const [selectedExamId, setSelectedExamId] = useState<string>("aiims-norcet");
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [blogLanguage, setBlogLanguage] = useState<"en" | "hi" | "bn">("en");
@@ -2651,7 +2652,33 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     <span>Daily Speed Sprints</span>
                   </button>
 
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-3 pt-5 mb-2 select-none">Updates & Insights</p>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-3 pt-5 mb-2 select-none">Target Exams</p>
+                  
+                  <div className="grid grid-cols-2 gap-1.5 px-1 pb-2">
+                    {TARGET_EXAMS.map(exam => {
+                      const isSelected = selectedExamId === exam.id && activePage === "hub";
+                      return (
+                        <button
+                          key={exam.id}
+                          onClick={() => {
+                            setSelectedExamId(exam.id);
+                            showPage("hub");
+                            setIsDrawerOpen(false);
+                          }}
+                          className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-[9px] font-bold text-center transition-all cursor-pointer ${
+                            isSelected
+                              ? "bg-amber-500/10 border-amber-500 text-amber-500 shadow-sm"
+                              : "bg-[#070b12] border-[#1e2d45]/50 text-slate-300 hover:border-[#1e2d45] hover:text-white"
+                          }`}
+                        >
+                          <span className="text-sm mb-1">{exam.icon}</span>
+                          <span className="truncate w-full">{exam.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-3 pt-4 mb-2 select-none">Updates & Insights</p>
 
                   <button
                     onClick={() => { showPage("updates"); setIsDrawerOpen(false); }}
@@ -3039,6 +3066,72 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 <span className="flex items-center gap-1.5"><span className="text-green-400 font-bold">✓</span> Trusted by Toppers</span>
               </div>
 
+              {/* EXAMS COVERED SECTION (TazaQuiz / Testbook Style) */}
+              <div className="mt-24 space-y-12 relative z-10">
+                <div className="text-center max-w-2xl mx-auto space-y-2">
+                  <div className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full">
+                    🔥 POPULAR MOCK TEST SERIES
+                  </div>
+                  <h2 className="text-2xl md:text-4xl font-black text-text tracking-tight">
+                    India's Best Exams Coverage
+                  </h2>
+                  <p className="text-xs md:text-sm text-text2 leading-relaxed">
+                    India's most-practiced, highly optimized exam preparation and CBT mock test series for top competitive nursing officer recruitment exams.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {TARGET_EXAMS.map((exam) => (
+                    <motion.div
+                      key={exam.id}
+                      initial={{ opacity: 0, y: 35 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true, margin: "-50px" }}
+                      transition={{ duration: 0.5 }}
+                      onClick={() => {
+                        setSelectedExamId(exam.id);
+                        showPage("hub");
+                      }}
+                      className="bg-card border border-border hover:border-accent/40 rounded-3xl p-6 shadow-xl transition-all duration-300 hover:-translate-y-1.5 cursor-pointer flex flex-col justify-between group relative overflow-hidden"
+                    >
+                      {/* Decorative corner glow */}
+                      <div className="absolute -right-8 -bottom-8 w-24 h-24 bg-accent/5 rounded-full filter blur-xl group-hover:bg-accent/10 transition-colors"></div>
+                      
+                      <div className="space-y-4 relative z-10">
+                        <div className="flex items-center justify-between">
+                          <span className="text-2xl w-12 h-12 rounded-2xl bg-[#0c121e] border border-[#1e2d45] flex items-center justify-center">
+                            {exam.icon}
+                          </span>
+                          <span className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 bg-amber-500/10 text-amber-500 rounded-full border border-amber-500/20">
+                            {exam.badge}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-accent font-black uppercase tracking-widest">
+                            {exam.category}
+                          </span>
+                          <h3 className="text-base font-extrabold text-text mt-1 group-hover:text-accent transition-colors leading-tight">
+                            {exam.fullName}
+                          </h3>
+                          <p className="text-xs text-text2 leading-relaxed mt-2 font-sans line-clamp-3">
+                            {exam.desc}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="pt-5 border-t border-border/30 mt-6 flex items-center justify-between relative z-10">
+                        <span className="text-[11px] font-black text-text3 group-hover:text-accent transition-colors">
+                          Start Practice →
+                        </span>
+                        <span className="text-[10px] text-green-400 font-bold flex items-center gap-1">
+                          <span>✔</span> 100% Free
+                        </span>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+
               {/* WHY STUDENTS LOVE NCBT (SCREENSHOT 6 FEATURE GRID) with POPUP SCROLL ANIMATION */}
               <div className="mt-24 space-y-12">
                 <div className="text-center max-w-2xl mx-auto space-y-2">
@@ -3366,6 +3459,24 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         {/* =============== HUB (TESTS) PAGE =============== */}
         {activePage === "hub" && (() => {
           const mockSubject = subjects.find(s => s.id === "mock_tests");
+          
+          // Find the active target exam
+          const activeExam = TARGET_EXAMS.find(e => e.id === selectedExamId) || TARGET_EXAMS[0];
+          
+          // Map exam ID to PYQ tag
+          const getPyqTagForExam = (examId: string) => {
+            if (examId === "aiims-norcet") return "aiims";
+            if (examId === "wbhrb-nurse") return "wbhrb";
+            if (examId === "esic-officer") return "esic";
+            if (examId === "rrb-officer") return "rrb";
+            if (examId === "cho-recruitment") return "cho";
+            if (examId === "dsssb-officer") return "dsssb";
+            return "all";
+          };
+
+          const activePyqTag = getPyqTagForExam(selectedExamId);
+
+          // 1. Filtered Mocks: Shareable across posts but custom-labeled
           const filteredMocks = mockSubject ? mockSubject.tests.filter(t => {
             if (hubSearchText) {
               const query = hubSearchText.toLowerCase();
@@ -3373,506 +3484,512 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 return false;
               }
             }
-            if (searchQuery === "all" || searchQuery === "ready") return true;
-            if (searchQuery === "community" && t.id === "mt-1") return true;
-            if (searchQuery === "med-surg" && t.id === "mt-2") return true;
-            if (searchQuery === "maternity" && t.id === "mt-3") return true;
-            if (searchQuery === "pediatrics" && t.id === "mt-4") return true;
-            if (searchQuery === "pharmacology" && t.id === "mt-5") return true;
-            return false;
+            return true;
           }) : [];
+
+          // 2. Filtered PYQs: Exam-specific past papers
+          const filteredPyqs = PYQ_DATA.filter(p => {
+            const matchesExam = activePyqTag === "all" || p.tag === activePyqTag;
+            const matchesSearch = !hubSearchText || p.exam.toLowerCase().includes(hubSearchText.toLowerCase()) || p.year.includes(hubSearchText);
+            return matchesExam && matchesSearch;
+          });
+
+          // 3. Filtered Subject Tests
+          const allSubjectTests: { subj: Subject; test: Test }[] = [];
+          subjects.filter(s => s.id !== "mock_tests").forEach(subj => {
+            subj.tests.forEach(t => {
+              if (hubSearchText) {
+                const query = hubSearchText.toLowerCase();
+                if (!t.title.toLowerCase().includes(query) && !t.desc.toLowerCase().includes(query)) {
+                  return;
+                }
+              }
+              allSubjectTests.push({ subj, test: t });
+            });
+          });
+
+          // 4. Curated Sprints
+          const filteredSprints = CURATED_SPRINTS.filter(t => {
+            if (hubSearchText) {
+              const query = hubSearchText.toLowerCase();
+              return t.title.toLowerCase().includes(query) || t.desc.toLowerCase().includes(query);
+            }
+            return true;
+          });
+
+          // Get the dynamic SEO article based on selected exam ID
+          const currentArticle = getArticleForExam(selectedExamId);
+
+          // Get human-readable tab name
+          const getTabLabel = () => {
+            if (hubTab === "full_mock") return "Full Mock Tests";
+            if (hubTab === "pyq") return "Solved Previous Year Papers (PYQ)";
+            if (hubTab === "subject") return "Subject-Wise Modules";
+            if (hubTab === "short") return "Daily Speed Sprints";
+            return "Mock Tests";
+          };
 
           return (
             <div className="page active" id="page-hub">
-              {/* Premium Search Bar */}
-              <div className="relative w-full max-w-xl mx-auto mb-6" id="hub-search-container">
-                <Search className="w-4 h-4 text-neutral-500 absolute left-4 top-1/2 -translate-y-1/2" />
-                <input 
-                  type="text" 
-                  placeholder="Search tests..." 
-                  className="bg-[#0c1322] border border-[#1e293b] rounded-2xl pl-11 pr-4 py-3 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-[#388bfd]/80 w-full transition-all shadow-inner font-medium"
-                  value={hubSearchText}
-                  onChange={(e) => setHubSearchText(e.target.value)}
-                />
-              </div>
+              
+              {/* Layout: Vertical Exam Sidebar + Main Workspace */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start" id="hub-main-layout">
+                
+                {/* LEFT COLUMN: Vertical Target Exam sliding sidebar */}
+                <div className="lg:col-span-3 bg-card border border-border rounded-3xl p-5 shadow-xl space-y-6 sticky top-20" id="hub-exam-vertical-sidebar">
+                  <div className="pb-3 border-b border-border/40">
+                    <h3 className="text-xs font-black text-text uppercase tracking-widest flex items-center gap-2">
+                      <span>🎯</span> TARGET EXAMS NAVIGATOR
+                    </h3>
+                    <p className="text-[10px] text-text3 font-medium mt-1">Select your exam to customize paper practice</p>
+                  </div>
 
-              {/* 4-Column Tab Boxes Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6" id="hub-tabs-row">
-                {/* Box 1: Mock Tests */}
-                <div 
-                  className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-300 cursor-pointer h-24 ${
-                    hubTab === "full_mock" 
-                      ? "bg-[#111726] border-[#388bfd]/80 shadow-md shadow-[#388bfd]/5" 
-                      : "bg-[#0c1322] border-[#1e293b] hover:border-neutral-700"
-                  }`}
-                  onClick={() => {
-                    showPage("mock_tests");
-                    setSearchQuery("all");
-                  }}
-                >
-                  <span className="absolute top-1.5 right-1.5 w-5 h-5 bg-[#172f54] text-[#58a6ff] border border-[#388bfd]/30 text-[9px] font-bold rounded-full flex items-center justify-center">
-                    {mockSubject?.tests.length || 6}
-                  </span>
-                  <div className="text-2xl mb-1 select-none">📝</div>
-                  <span className="text-[11px] sm:text-xs font-bold text-neutral-300">Mock Tests</span>
+                  <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
+                    {TARGET_EXAMS.map(exam => {
+                      const isSelected = selectedExamId === exam.id;
+                      return (
+                        <div key={exam.id} className="space-y-1.5 transition-all">
+                          {/* Main Domain Selector Button */}
+                          <button
+                            onClick={() => {
+                              setSelectedExamId(exam.id);
+                              setHubTab("full_mock");
+                            }}
+                            className={`w-full text-left px-3.5 py-3 rounded-2xl border text-xs font-black flex items-center justify-between transition-all cursor-pointer ${
+                              isSelected 
+                                ? "bg-accent/10 border-accent text-accent shadow-md shadow-accent/5" 
+                                : "bg-[#070b12] border-border/50 text-text2 hover:border-border/85 hover:bg-surface"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <span className="text-base select-none">{exam.icon}</span>
+                              <div className="min-w-0">
+                                <div className="truncate text-xs font-black">{exam.name}</div>
+                                <div className="text-[9px] text-text3 font-bold uppercase truncate tracking-wide mt-0.5">{exam.category}</div>
+                              </div>
+                            </div>
+                            <span className="text-xs shrink-0 opacity-60">
+                              {isSelected ? "▼" : "▶"}
+                            </span>
+                          </button>
+
+                          {/* Nested Subpoints Tree List: Visible for selected exam */}
+                          {isSelected && (
+                            <div className="pl-4 pr-1 py-1.5 space-y-1 border-l border-accent/25 ml-4 animate-fade-in" id={`subpoint-tree-${exam.id}`}>
+                              {/* Subpoint 1: Mock Tests */}
+                              <button
+                                onClick={() => setHubTab("full_mock")}
+                                className={`w-full text-left px-3 py-2 rounded-xl text-[11px] font-bold flex items-center justify-between transition-all cursor-pointer ${
+                                  hubTab === "full_mock" 
+                                    ? "bg-accent/15 text-accent font-black border border-accent/20" 
+                                    : "text-text2 hover:text-text hover:bg-surface border border-transparent"
+                                }`}
+                              >
+                                <span className="flex items-center gap-2">📝 Full Mock Tests</span>
+                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-neutral-900 text-text3 border border-border/40 font-mono">
+                                  {mockSubject?.tests.length || 5}
+                                </span>
+                              </button>
+
+                              {/* Subpoint 2: Solved PYQs */}
+                              <button
+                                onClick={() => setHubTab("pyq")}
+                                className={`w-full text-left px-3 py-2 rounded-xl text-[11px] font-bold flex items-center justify-between transition-all cursor-pointer ${
+                                  hubTab === "pyq" 
+                                    ? "bg-accent/15 text-accent font-black border border-accent/20" 
+                                    : "text-text2 hover:text-text hover:bg-surface border border-transparent"
+                                }`}
+                              >
+                                <span className="flex items-center gap-2">📋 Previous Year Papers</span>
+                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-neutral-900 text-text3 border border-border/40 font-mono">
+                                  {PYQ_DATA.filter(p => activePyqTag === "all" || p.tag === activePyqTag).length}
+                                </span>
+                              </button>
+
+                              {/* Subpoint 3: Subjectwise Drills */}
+                              <button
+                                onClick={() => setHubTab("subject")}
+                                className={`w-full text-left px-3 py-2 rounded-xl text-[11px] font-bold flex items-center justify-between transition-all cursor-pointer ${
+                                  hubTab === "subject" 
+                                    ? "bg-accent/15 text-accent font-black border border-accent/20" 
+                                    : "text-text2 hover:text-text hover:bg-surface border border-transparent"
+                                }`}
+                              >
+                                <span className="flex items-center gap-2">📚 Subject-Wise Modules</span>
+                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-neutral-900 text-text3 border border-border/40 font-mono">
+                                  {subjects.filter(s => s.id !== "mock_tests").length}
+                                </span>
+                              </button>
+
+                              {/* Subpoint 4: Speed Sprints */}
+                              <button
+                                onClick={() => setHubTab("short")}
+                                className={`w-full text-left px-3 py-2 rounded-xl text-[11px] font-bold flex items-center justify-between transition-all cursor-pointer ${
+                                  hubTab === "short" 
+                                    ? "bg-accent/15 text-accent font-black border border-accent/20" 
+                                    : "text-text2 hover:text-text hover:bg-surface border border-transparent"
+                                }`}
+                              >
+                                <span className="flex items-center gap-2">⚡ Daily Speed Sprints</span>
+                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-neutral-900 text-text3 border border-border/40 font-mono">
+                                  {CURATED_SPRINTS.length}
+                                </span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Sidebar CBT Advisory Info Card */}
+                  <div className="bg-[#070b12] border border-border/40 rounded-2xl p-4 text-[10px] text-text2 space-y-2 leading-relaxed font-sans">
+                    <div className="font-extrabold text-text flex items-center gap-1.5">
+                      <span>💡</span> High-Yield Exam Guide
+                    </div>
+                    <p>
+                      Each subpoint tree filters original question vaults specifically tuned for your selected recruitment agency. Mocks maintain identical mark matrices.
+                    </p>
+                  </div>
+                </div>
+
+                {/* RIGHT COLUMN: Interactive Workspaces */}
+                <div className="lg:col-span-9 space-y-6" id="hub-tests-workspace">
+                  
+                  {/* Premium Exam Header Block */}
+                  <div className="bg-card border border-border rounded-3xl p-6 shadow-xl relative overflow-hidden" id="hub-workspace-title-box">
+                    {/* Glowing effect inside */}
+                    <div className="absolute -top-10 -right-10 w-44 h-44 rounded-full bg-accent/5 filter blur-3xl" />
+                    
+                    {/* Breadcrumbs */}
+                    <div className="flex items-center gap-2 text-[10px] font-black text-accent uppercase tracking-widest mb-2.5">
+                      <span>🎯 Test Centre</span>
+                      <span className="text-text3 text-[8px]">▶</span>
+                      <span>{activeExam.name}</span>
+                      <span className="text-text3 text-[8px]">▶</span>
+                      <span className="text-text">{getTabLabel()}</span>
+                    </div>
+
+                    <h1 className="text-xl md:text-2xl font-black text-white tracking-tight flex items-baseline gap-2 leading-tight">
+                      <span>{activeExam.icon}</span>
+                      <span>{activeExam.fullName}</span>
+                    </h1>
+                    <p className="text-xs text-text2 font-sans mt-2 max-w-2xl leading-relaxed">
+                      {activeExam.desc}
+                    </p>
+
+                    {/* Integrated Search Bar inside Workspace */}
+                    <div className="relative w-full max-w-md mt-5" id="workspace-search">
+                      <Search className="w-3.5 h-3.5 text-text3 absolute left-4 top-1/2 -translate-y-1/2" />
+                      <input 
+                        type="text" 
+                        placeholder={`Search ${getTabLabel().toLowerCase()}...`} 
+                        className="bg-[#070b12] border border-border rounded-xl pl-10 pr-4 py-2 text-xs text-text placeholder-text3 focus:outline-none focus:border-accent w-full transition-all shadow-inner font-bold"
+                        value={hubSearchText}
+                        onChange={(e) => setHubSearchText(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* ACTIVE TAB WORKSPACE RENDER */}
+
+                  {/* 1. Full Mock Tests Tab */}
                   {hubTab === "full_mock" && (
-                    <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-[#388bfd] rounded-t-full"></div>
-                  )}
-                </div>
-
-                {/* Box 2: PYQ Bank */}
-                <div 
-                  className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-300 cursor-pointer h-24 ${
-                    hubTab === "pyq" 
-                      ? "bg-[#111726] border-[#8b5cf6]/80 shadow-md shadow-[#8b5cf6]/5" 
-                      : "bg-[#0c1322] border-[#1e293b] hover:border-neutral-700"
-                  }`}
-                  onClick={() => {
-                    showPage("pyq");
-                    setPyqFilter("all");
-                  }}
-                >
-                  <span className="absolute top-1.5 right-1.5 w-5 h-5 bg-[#251b40] text-[#a78bfa] border border-[#8b5cf6]/30 text-[9px] font-bold rounded-full flex items-center justify-center">
-                    {PYQ_DATA.length || 12}
-                  </span>
-                  <div className="text-2xl mb-1 select-none">📋</div>
-                  <span className="text-[11px] sm:text-xs font-bold text-neutral-300">PYQ Bank</span>
-                  {hubTab === "pyq" && (
-                    <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-[#8b5cf6] rounded-t-full"></div>
-                  )}
-                </div>
-
-                {/* Box 3: Subject-wise */}
-                <div 
-                  className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-300 cursor-pointer h-24 ${
-                    hubTab === "subject" 
-                      ? "bg-[#111726] border-[#388bfd]/80 shadow-md shadow-[#388bfd]/5" 
-                      : "bg-[#0c1322] border-[#1e293b] hover:border-neutral-700"
-                  }`}
-                  onClick={() => {
-                    showPage("subject_mocks");
-                    setSearchQuery("all");
-                  }}
-                >
-                  <span className="absolute top-1.5 right-1.5 w-5 h-5 bg-[#172f54] text-[#58a6ff] border border-[#388bfd]/30 text-[9px] font-bold rounded-full flex items-center justify-center">
-                    {subjects.filter(s => s.id !== "mock_tests").length || 8}
-                  </span>
-                  <div className="text-2xl mb-1 select-none">📚</div>
-                  <span className="text-[11px] sm:text-xs font-bold text-neutral-300">Subject-wise</span>
-                  {hubTab === "subject" && (
-                    <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-[#388bfd] rounded-t-full"></div>
-                  )}
-                </div>
-
-                {/* Box 4: Speed Sprints */}
-                <div 
-                  className={`relative flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-300 cursor-pointer h-24 ${
-                    hubTab === "short" 
-                      ? "bg-[#111726] border-purple-500/80 shadow-md shadow-purple-500/5" 
-                      : "bg-[#0c1322] border-[#1e293b] hover:border-neutral-700"
-                  }`}
-                  onClick={() => {
-                    showPage("short_sprints");
-                    setSearchQuery("all");
-                  }}
-                >
-                  <span className="absolute top-1.5 right-1.5 w-5 h-5 bg-[#2a1b40] text-purple-400 border border-purple-500/30 text-[9px] font-bold rounded-full flex items-center justify-center">
-                    {CURATED_SPRINTS.length}
-                  </span>
-                  <div className="text-2xl mb-1 select-none">⚡</div>
-                  <span className="text-[11px] sm:text-xs font-bold text-neutral-300">Speed Sprints</span>
-                  {hubTab === "short" && (
-                    <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-purple-500 rounded-t-full"></div>
-                  )}
-                </div>
-              </div>
-
-              {/* Horizontal Filter Row */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-4 pt-1 mb-6 scrollbar-none" id="hub-filter-scroll">
-                {hubTab === "full_mock" && [
-                  { id: "all", label: "All Mocks" },
-                  { id: "community", label: "Community Health" },
-                  { id: "med-surg", label: "Medical-Surgical" },
-                  { id: "maternity", label: "Midwifery & Gynae" },
-                  { id: "pediatrics", label: "Pediatric & Psychiatric" },
-                  { id: "pharmacology", label: "Pharmacology & Anatomy" }
-                ].map(pill => {
-                  const isActive = searchQuery === pill.id;
-                  return (
-                    <button 
-                      key={pill.id}
-                      className={`shrink-0 flex items-center px-4 py-1.5 rounded-full border text-[11px] font-bold transition-all cursor-pointer ${
-                        isActive 
-                          ? "bg-[#1d4ed8]/10 border-[#388bfd] text-[#58a6ff]" 
-                          : "bg-[#0c1322] border-[#1e293b] text-neutral-400 hover:border-neutral-700"
-                      }`}
-                      onClick={() => setSearchQuery(pill.id)}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full mr-1.5 inline-block ${isActive ? "bg-[#388bfd]" : "bg-neutral-600"}`}></span>
-                      {pill.label}
-                    </button>
-                  );
-                })}
-
-                {hubTab === "pyq" && [
-                  { id: "all", label: "All Exams" },
-                  { id: "wbhrb", label: "WBHRB" },
-                  { id: "aiims", label: "AIIMS" },
-                  { id: "rrb", label: "RRB" },
-                  { id: "esic", label: "ESIC" },
-                  { id: "dsssb", label: "DSSSB" },
-                  { id: "rpsc", label: "RPSC" }
-                ].map(pill => {
-                  const isActive = pyqFilter === pill.id;
-                  return (
-                    <button 
-                      key={pill.id}
-                      className={`shrink-0 flex items-center px-4 py-1.5 rounded-full border text-[11px] font-bold transition-all cursor-pointer ${
-                        isActive 
-                          ? "bg-[#1d4ed8]/10 border-[#388bfd] text-[#58a6ff]" 
-                          : "bg-[#0c1322] border-[#1e293b] text-neutral-400 hover:border-neutral-700"
-                      }`}
-                      onClick={() => setPyqFilter(pill.id)}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full mr-1.5 inline-block ${isActive ? "bg-[#388bfd]" : "bg-neutral-600"}`}></span>
-                      {pill.label}
-                    </button>
-                  );
-                })}
-
-                {hubTab === "subject" && [
-                  { id: "all", label: "All Subjects" },
-                  { id: "anatomy", label: "Anatomy & Physiology" },
-                  { id: "community", label: "Community Health" },
-                  { id: "med-surg", label: "Medical-Surgical" },
-                  { id: "maternal", label: "Midwifery & Gynae" },
-                  { id: "pediatric", label: "Pediatric Nursing" },
-                  { id: "mhn", label: "Mental Health" },
-                  { id: "pharmacology", label: "Pharmacology" }
-                ].map(pill => {
-                  const isActive = searchQuery === pill.id;
-                  return (
-                    <button 
-                      key={pill.id}
-                      className={`shrink-0 flex items-center px-4 py-1.5 rounded-full border text-[11px] font-bold transition-all cursor-pointer ${
-                        isActive 
-                          ? "bg-[#1d4ed8]/10 border-[#388bfd] text-[#58a6ff]" 
-                          : "bg-[#0c1322] border-[#1e293b] text-neutral-400 hover:border-neutral-700"
-                      }`}
-                      onClick={() => setSearchQuery(pill.id)}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full mr-1.5 inline-block ${isActive ? "bg-[#388bfd]" : "bg-neutral-600"}`}></span>
-                      {pill.label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* TAB CONTENTS */}
-
-              {/* 1. Full Mock Tests Tab */}
-              {hubTab === "full_mock" && (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center px-1 py-1 border-b border-[#1e293b] mb-4">
-                    <span className="text-[10px] font-black tracking-widest text-[#8b949e] uppercase">AVAILABLE NOW</span>
-                    <span className="text-[11px] font-bold text-[#8b949e]">{filteredMocks.length} tests</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredMocks.map(t => (
-                      <div 
-                        key={t.id} 
-                        className="bg-[#0f1520] hover:bg-[#121c2c] border border-[#1e293b] hover:border-[#388bfd]/50 rounded-2xl p-4 transition-all duration-300 flex items-start gap-4 group relative cursor-pointer shadow-lg"
-                        onClick={() => triggerTestInit("mock_tests", t.id)}
-                      >
-                        {/* Double Ring Icon */}
-                        <div className="w-11 h-11 shrink-0 bg-[#0d1322] border border-[#1e293b] rounded-full flex items-center justify-center relative">
-                          <div className="absolute inset-1 rounded-full border border-amber-500/30 flex items-center justify-center text-lg">
-                            🔬
-                          </div>
-                        </div>
-
-                        {/* Card Contents */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-center gap-1.5 mb-1">
-                            <span className="bg-[#21262d] text-[#c9d1d9] text-[9px] font-bold px-2 py-0.5 rounded border border-[#30363d] flex items-center gap-1">
-                              ⏱️ {t.mins} min
-                            </span>
-                            <span className="bg-amber-500/10 text-amber-500 text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded border border-amber-500/20">
-                              NEW
-                            </span>
-                          </div>
-
-                          <h3 className="text-sm font-bold text-white group-hover:text-[#58a6ff] transition-colors truncate">
-                            {t.title}
-                          </h3>
-                          <p className="text-[11px] text-[#8b949e] font-sans line-clamp-2 leading-relaxed mt-1 mb-2">
-                            {t.desc}
-                          </p>
-
-                          <div className="flex items-center justify-between border-t border-[#1e293b]/50 pt-2.5 mt-2">
-                            <div className="flex items-center gap-3 text-[10px] text-neutral-400">
-                              <span>🗒️ {t.questions} Qs</span>
-                              <span className="text-amber-400/90 font-medium bg-amber-400/5 px-1.5 py-0.2 rounded">Medium</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#58a6ff] group-hover:text-blue-300 transition-colors">
-                              <span>Start Test</span>
-                              <div className="w-7 h-7 rounded-lg bg-[#111c2e] hover:bg-[#1d2d44] border border-[#1e293b] flex items-center justify-center text-[#58a6ff] text-xs font-bold shrink-0">
-                                →
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                    <div className="space-y-4 animate-fade-in">
+                      <div className="flex justify-between items-center px-1 py-1 border-b border-border/40">
+                        <span className="text-[10px] font-black tracking-widest text-text3 uppercase">RECOMMENDED ASSESSMENTS</span>
+                        <span className="text-[11px] font-bold text-text2">{filteredMocks.length} mock tests available</span>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
-              {/* 2. Previous Year Papers (PYQ) Tab */}
-              {hubTab === "pyq" && (() => {
-                const filteredPyq = PYQ_DATA.filter(p => {
-                  const matchesFilter = pyqFilter === "all" || p.tag === pyqFilter;
-                  const matchesSearch = !hubSearchText || p.exam.toLowerCase().includes(hubSearchText.toLowerCase()) || p.year.includes(hubSearchText);
-                  return matchesFilter && matchesSearch;
-                });
-                return (
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center px-1 py-1 border-b border-[#1e293b] mb-4">
-                      <span className="text-[10px] font-black tracking-widest text-[#8b949e] uppercase">PREVIOUS YEAR QUESTIONS</span>
-                      <span className="text-[11px] font-bold text-[#8b949e]">{filteredPyq.length} sets</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {filteredPyq.map((p, idx) => (
-                        <div 
-                          key={idx} 
-                          className="bg-[#0f1520] hover:bg-[#121c2c] border border-[#1e293b] hover:border-[#8b5cf6]/50 rounded-2xl p-4 transition-all duration-300 flex items-start gap-4 group relative cursor-pointer shadow-lg"
-                          onClick={() => startPyqTest(p)}
-                        >
-                          {/* Double Ring Icon */}
-                          <div className="w-11 h-11 shrink-0 bg-[#0d1322] border border-[#1e293b] rounded-full flex items-center justify-center relative">
-                            <div className="absolute inset-1 rounded-full border border-purple-500/30 flex items-center justify-center text-lg">
-                              📋
-                            </div>
-                          </div>
-
-                          {/* Card Contents */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-center gap-1.5 mb-1">
-                              <span className="bg-[#8b5cf6]/10 text-[#a78bfa] text-[9px] font-bold px-2 py-0.5 rounded border border-[#8b5cf6]/20 flex items-center gap-1">
-                                📅 {p.year}
-                              </span>
-                              <span className="bg-[#8b5cf6]/10 text-[#a78bfa] text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded border border-[#8b5cf6]/20">
-                                PYQ
-                              </span>
-                            </div>
-
-                            <h3 className="text-sm font-bold text-white group-hover:text-[#a78bfa] transition-colors truncate">
-                              {p.exam}
-                            </h3>
-                            <p className="text-[11px] text-[#8b949e] font-sans line-clamp-2 leading-relaxed mt-1 mb-2">
-                              Original question paper from the {p.year} nationwide recruitment cycle. Includes clinical rationales.
-                            </p>
-
-                            <div className="flex items-center justify-between border-t border-[#1e293b]/50 pt-2.5 mt-2">
-                              <div className="flex items-center gap-3 text-[10px] text-neutral-400">
-                                <span>📋 {p.count} Past MCQs</span>
-                                <span className="text-purple-400/90 font-medium bg-[#8b5cf6]/5 px-1.5 py-0.2 rounded uppercase text-[9px] tracking-wide">{p.tag} Series</span>
+                      {filteredMocks.length === 0 ? (
+                        <div className="bg-card border border-dashed border-border rounded-2xl py-12 text-center text-text2 text-xs font-bold">
+                          No mock tests matching your search query. Try another term!
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {filteredMocks.map(t => (
+                            <div 
+                              key={t.id} 
+                              className="bg-card hover:bg-surface border border-border hover:border-accent/45 rounded-2xl p-4 transition-all duration-300 flex items-start gap-4 group relative cursor-pointer shadow-lg hover:scale-[1.01]"
+                              onClick={() => triggerTestInit("mock_tests", t.id)}
+                            >
+                              <div className="w-10 h-10 shrink-0 bg-[#070b12] border border-border rounded-full flex items-center justify-center relative">
+                                <div className="absolute inset-1 rounded-full border border-amber-500/20 flex items-center justify-center text-lg">
+                                  📝
+                                </div>
                               </div>
-                              <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#a78bfa] group-hover:text-purple-300 transition-colors">
-                                <span>Start Test</span>
-                                <div className="w-7 h-7 rounded-lg bg-[#141224] hover:bg-[#201d3a] border border-[#1e293b] flex items-center justify-center text-[#a78bfa] text-xs font-bold shrink-0">
-                                  →
+
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-center gap-1.5 mb-1.5">
+                                  <span className="bg-neutral-900 border border-border text-text2 text-[9px] font-black px-2 py-0.5 rounded-lg flex items-center gap-1">
+                                    ⏱️ {t.mins} min
+                                  </span>
+                                  <span className="bg-accent/10 text-accent text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded border border-accent/25">
+                                    CBT Mode
+                                  </span>
+                                </div>
+
+                                <h3 className="text-sm font-bold text-white group-hover:text-accent transition-colors truncate">
+                                  {t.title}
+                                </h3>
+                                <p className="text-[11px] text-text2 font-sans line-clamp-2 leading-relaxed mt-1 mb-2">
+                                  {t.desc}
+                                </p>
+
+                                <div className="flex items-center justify-between border-t border-border/30 pt-2.5 mt-2.5">
+                                  <div className="flex items-center gap-3 text-[10px] text-text3 font-medium">
+                                    <span>🗒️ {t.questions} Questions</span>
+                                    <span className="text-emerald-400 font-bold bg-emerald-500/5 px-1.5 py-0.2 rounded border border-emerald-500/10">Free Access</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 text-xs font-black text-accent group-hover:text-white transition-colors">
+                                    <span>Solve</span>
+                                    <span className="w-6 h-6 rounded-lg bg-[#070b12] hover:bg-accent border border-border group-hover:border-accent group-hover:bg-accent group-hover:text-black flex items-center justify-center text-accent text-xs font-black shrink-0 transition-all">
+                                      →
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  </div>
-                );
-              })()}
+                  )}
 
-              {/* 3. Subject-Wise Mocks Tab */}
-              {hubTab === "subject" && (() => {
-                const activeSubjects = subjects.filter(subj => {
-                  if (subj.id === "mock_tests") return false;
-                  if (searchQuery === "all") return true;
-                  return subj.id === searchQuery;
-                });
+                  {/* 2. Previous Year Papers (PYQ) Tab */}
+                  {hubTab === "pyq" && (
+                    <div className="space-y-4 animate-fade-in">
+                      <div className="flex justify-between items-center px-1 py-1 border-b border-border/40">
+                        <span className="text-[10px] font-black tracking-widest text-text3 uppercase">EXAM ORIGINAL SOLVED PAPERS</span>
+                        <span className="text-[11px] font-bold text-text2">{filteredPyqs.length} original papers</span>
+                      </div>
 
-                const allSubjectTests: { subj: Subject; test: Test }[] = [];
-                activeSubjects.forEach(subj => {
-                  subj.tests.forEach(t => {
-                    if (hubSearchText) {
-                      const query = hubSearchText.toLowerCase();
-                      if (!t.title.toLowerCase().includes(query) && !t.desc.toLowerCase().includes(query)) {
-                        return;
-                      }
-                    }
-                    allSubjectTests.push({ subj, test: t });
-                  });
-                });
+                      {filteredPyqs.length === 0 ? (
+                        <div className="bg-card border border-dashed border-border rounded-2xl py-12 text-center text-text2 text-xs font-bold space-y-2">
+                          <p>No dedicated PYQ papers loaded for {activeExam.name} matching your search.</p>
+                          <p className="text-[10px] text-text3 font-medium max-w-sm mx-auto leading-relaxed">
+                            But don't worry! Nursing curriculums overlap. Click on the other exams in the navigator tree to try their papers!
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {filteredPyqs.map((p, idx) => (
+                            <div 
+                              key={idx} 
+                              className="bg-card hover:bg-surface border border-border hover:border-accent/45 rounded-2xl p-4 transition-all duration-300 flex items-start gap-4 group relative cursor-pointer shadow-lg hover:scale-[1.01]"
+                              onClick={() => startPyqTest(p)}
+                            >
+                              <div className="w-10 h-10 shrink-0 bg-[#070b12] border border-border rounded-full flex items-center justify-center relative">
+                                <div className="absolute inset-1 rounded-full border border-purple-500/20 flex items-center justify-center text-lg">
+                                  📋
+                                </div>
+                              </div>
 
-                return (
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center px-1 py-1 border-b border-[#1e293b] mb-4">
-                      <span className="text-[10px] font-black tracking-widest text-[#8b949e] uppercase">AVAILABLE NOW</span>
-                      <span className="text-[11px] font-bold text-[#8b949e]">{allSubjectTests.length} modules</span>
-                    </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-center gap-1.5 mb-1.5">
+                                  <span className="bg-neutral-900 border border-border text-text2 text-[9px] font-black px-2 py-0.5 rounded-lg flex items-center gap-1">
+                                    📅 {p.year} Exam Cycle
+                                  </span>
+                                  <span className="bg-purple-500/10 text-purple-400 text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded border border-purple-500/20">
+                                    Official PYQ
+                                  </span>
+                                </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {allSubjectTests.map(({ subj, test: t }) => (
-                        <div 
-                          key={t.id} 
-                          className={`bg-[#0f1520] hover:bg-[#121c2c] border rounded-2xl p-4 transition-all duration-300 flex items-start gap-4 group relative cursor-pointer shadow-lg ${
-                            t.ready 
-                              ? "border-[#1e293b] hover:border-[#388bfd]/50" 
-                              : "border-dashed border-neutral-800 opacity-60 hover:border-neutral-700"
-                          }`}
-                          onClick={() => t.ready && triggerTestInit(subj.id, t.id)}
-                        >
-                          {/* Double Ring Icon */}
-                          <div className="w-11 h-11 shrink-0 bg-[#0d1322] border border-[#1e293b] rounded-full flex items-center justify-center relative">
-                            <div className={`absolute inset-1 rounded-full border ${t.ready ? "border-blue-500/30" : "border-neutral-700/30"} flex items-center justify-center text-lg`}>
-                              {t.icon || subj.icon}
+                                <h3 className="text-sm font-bold text-white group-hover:text-accent transition-colors truncate">
+                                  {p.exam}
+                                </h3>
+                                <p className="text-[11px] text-text2 font-sans line-clamp-2 leading-relaxed mt-1 mb-2">
+                                  Original solved question paper with clinical rationales, compiled from memory & official recruitment answer keys.
+                                </p>
+
+                                <div className="flex items-center justify-between border-t border-border/30 pt-2.5 mt-2.5">
+                                  <div className="flex items-center gap-3 text-[10px] text-text3 font-medium">
+                                    <span>🗒️ {p.count} past MCQs</span>
+                                    <span className="text-purple-400 uppercase font-bold text-[9px]">{p.tag} Series</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 text-xs font-black text-accent group-hover:text-white transition-colors">
+                                    <span>Practice</span>
+                                    <span className="w-6 h-6 rounded-lg bg-[#070b12] hover:bg-accent border border-border group-hover:border-accent group-hover:bg-accent group-hover:text-black flex items-center justify-center text-accent text-xs font-black shrink-0 transition-all">
+                                      →
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
-                          </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                          {/* Card Contents */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-center gap-1.5 mb-1">
-                              <span className="bg-[#21262d] text-[#c9d1d9] text-[9px] font-bold px-2 py-0.5 rounded border border-[#30363d] flex items-center gap-1">
-                                ⏱️ {t.ready ? `${t.mins} min` : "Soon"}
-                              </span>
-                              <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded border ${
+                  {/* 3. Subject-Wise Mocks Tab */}
+                  {hubTab === "subject" && (
+                    <div className="space-y-4 animate-fade-in">
+                      <div className="flex justify-between items-center px-1 py-1 border-b border-border/40">
+                        <span className="text-[10px] font-black tracking-widest text-text3 uppercase">CHAPTER-WISE MODULES</span>
+                        <span className="text-[11px] font-bold text-text2">{allSubjectTests.length} modules loaded</span>
+                      </div>
+
+                      {allSubjectTests.length === 0 ? (
+                        <div className="bg-card border border-dashed border-border rounded-2xl py-12 text-center text-text2 text-xs font-bold">
+                          No subject tests matching your search criteria.
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {allSubjectTests.map(({ subj, test: t }) => (
+                            <div 
+                              key={t.id} 
+                              className={`bg-card hover:bg-surface border rounded-2xl p-4 transition-all duration-300 flex items-start gap-4 group relative cursor-pointer shadow-lg hover:scale-[1.01] ${
                                 t.ready 
-                                  ? "bg-blue-500/10 text-blue-400 border-blue-500/20" 
-                                  : "bg-neutral-800 text-neutral-400 border-neutral-700/50"
-                              }`}>
-                                {t.ready ? "NEW" : "SOON"}
-                              </span>
-                            </div>
-
-                            <h3 className="text-sm font-bold text-white group-hover:text-[#58a6ff] transition-colors truncate">
-                              {t.title}
-                            </h3>
-                            <p className="text-[11px] text-[#8b949e] font-sans line-clamp-2 leading-relaxed mt-1 mb-2">
-                              {t.ready ? t.desc : `High-yield diagnostic module covering ${t.title} topics. Releasing soon!`}
-                            </p>
-
-                            <div className="flex items-center justify-between border-t border-[#1e293b]/50 pt-2.5 mt-2">
-                              <div className="flex items-center gap-3 text-[10px] text-neutral-400">
-                                <span>🗒️ {t.ready ? `${t.questions} Qs` : "In preparation"}</span>
-                                {t.ready && (
-                                  <span className="text-blue-400/90 font-medium bg-blue-400/5 px-1.5 py-0.2 rounded">Medium</span>
-                                )}
+                                  ? "border-border hover:border-accent/45" 
+                                  : "border-dashed border-border/60 opacity-60"
+                              }`}
+                              onClick={() => t.ready && triggerTestInit(subj.id, t.id)}
+                            >
+                              <div className="w-10 h-10 shrink-0 bg-[#070b12] border border-border rounded-full flex items-center justify-center relative">
+                                <div className={`absolute inset-1 rounded-full border ${t.ready ? "border-indigo-500/20" : "border-neutral-800"} flex items-center justify-center text-lg`}>
+                                  {t.icon || subj.icon}
+                                </div>
                               </div>
-                              {t.ready ? (
-                                <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#58a6ff] group-hover:text-blue-300 transition-colors">
-                                  <span>Start Test</span>
-                                  <div className="w-7 h-7 rounded-lg bg-[#111c2e] hover:bg-[#1d2d44] border border-[#1e293b] flex items-center justify-center text-[#58a6ff] text-xs font-bold shrink-0">
-                                    →
+
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-center gap-1.5 mb-1.5">
+                                  <span className="bg-neutral-900 border border-border text-text2 text-[9px] font-black px-2 py-0.5 rounded-lg flex items-center gap-1">
+                                    {t.ready ? `⏱️ ${t.mins} min` : "Preparing"}
+                                  </span>
+                                  <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded border ${
+                                    t.ready 
+                                      ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/25" 
+                                      : "bg-neutral-800 text-neutral-500 border-neutral-700/50"
+                                  }`}>
+                                    {t.ready ? "Subjectwise" : "Coming Soon"}
+                                  </span>
+                                </div>
+
+                                <h3 className="text-sm font-bold text-white group-hover:text-accent transition-colors truncate">
+                                  {t.title}
+                                </h3>
+                                <p className="text-[11px] text-text2 font-sans line-clamp-2 leading-relaxed mt-1 mb-2">
+                                  {t.ready ? t.desc : `High-yield chapter-wise practice drill covering standard INC syllabus domains. Releasing soon.`}
+                                </p>
+
+                                <div className="flex items-center justify-between border-t border-border/30 pt-2.5 mt-2.5">
+                                  <div className="flex items-center gap-3 text-[10px] text-text3 font-medium">
+                                    <span>🗒️ {t.ready ? `${t.questions} Qs` : "Pending"}</span>
+                                    {t.ready && (
+                                      <span className="text-indigo-400 font-bold bg-indigo-500/5 px-1.5 py-0.2 rounded border border-indigo-500/10">{subj.name}</span>
+                                    )}
+                                  </div>
+                                  {t.ready ? (
+                                    <div className="flex items-center gap-1.5 text-xs font-black text-accent group-hover:text-white transition-colors">
+                                      <span>Practice</span>
+                                      <span className="w-6 h-6 rounded-lg bg-[#070b12] hover:bg-accent border border-border group-hover:border-accent group-hover:bg-accent group-hover:text-black flex items-center justify-center text-accent text-xs font-black shrink-0 transition-all">
+                                        →
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <div className="text-[10px] font-bold text-text3">Queued</div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 4. Daily Speed Sprints Tab */}
+                  {hubTab === "short" && (
+                    <div className="space-y-4 animate-fade-in">
+                      <div className="flex justify-between items-center px-1 py-1 border-b border-border/40">
+                        <span className="text-[10px] font-black tracking-widest text-purple-400 uppercase">⚡ RAPID FIRE SPRINT SESSIONS</span>
+                        <span className="text-[11px] font-bold text-text2">{filteredSprints.length} sprints available</span>
+                      </div>
+
+                      {filteredSprints.length === 0 ? (
+                        <div className="bg-card border border-dashed border-border rounded-2xl py-12 text-center text-text2 text-xs font-bold">
+                          No sprints matching your query.
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {filteredSprints.map(t => (
+                            <div 
+                              key={t.id} 
+                              className="bg-card hover:bg-surface border border-border hover:border-accent/45 rounded-2xl p-4 transition-all duration-300 flex items-start gap-4 group relative cursor-pointer shadow-lg hover:scale-[1.01]"
+                              onClick={() => startCuratedSprint(t.id)}
+                            >
+                              <div className="w-10 h-10 shrink-0 bg-[#070b12] border border-border rounded-full flex items-center justify-center relative">
+                                <div className="absolute inset-1 rounded-full border border-purple-500/20 flex items-center justify-center text-lg">
+                                  ⚡
+                                </div>
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-center gap-1.5 mb-1.5">
+                                  <span className="bg-neutral-900 border border-border text-text2 text-[9px] font-black px-2 py-0.5 rounded-lg flex items-center gap-1">
+                                    ⏱️ {t.mins} min
+                                  </span>
+                                  <span className="bg-purple-500/10 text-purple-400 text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded border border-purple-500/25">
+                                    Rapid Fire
+                                  </span>
+                                </div>
+
+                                <h3 className="text-sm font-bold text-white group-hover:text-accent transition-colors truncate">
+                                  {t.title}
+                                </h3>
+                                <p className="text-[11px] text-text2 font-sans line-clamp-2 leading-relaxed mt-1 mb-2">
+                                  {t.desc}
+                                </p>
+
+                                <div className="flex items-center justify-between border-t border-border/30 pt-2.5 mt-2.5">
+                                  <div className="flex items-center gap-3 text-[10px] text-text3 font-medium">
+                                    <span>🗒️ {t.questions} Qs</span>
+                                    <span className="text-purple-400 font-bold bg-purple-500/5 px-1.5 py-0.2 rounded border border-purple-500/10">Quick revision</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 text-xs font-black text-accent group-hover:text-white transition-colors">
+                                    <span>Sprint</span>
+                                    <span className="w-6 h-6 rounded-lg bg-[#070b12] hover:bg-accent border border-border group-hover:border-accent group-hover:bg-accent group-hover:text-black flex items-center justify-center text-accent text-xs font-black shrink-0 transition-all">
+                                      →
+                                    </span>
                                   </div>
                                 </div>
-                              ) : (
-                                <div className="flex items-center gap-1.5 text-[11px] font-bold text-neutral-500">
-                                  <span>Soon</span>
-                                  <div className="w-7 h-7 rounded-lg bg-neutral-800 text-neutral-600 border border-neutral-700/50 flex items-center justify-center text-xs font-bold shrink-0">
-                                    →
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* 4. Daily Speed Sprints Tab */}
-              {hubTab === "short" && (() => {
-                return (
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center px-1 py-1 border-b border-[#1e293b] mb-4">
-                      <span className="text-[10px] font-black tracking-widest text-purple-400 uppercase">⚡ DAILY SPEED SPRINTS</span>
-                      <span className="text-[11px] font-bold text-[#8b949e]">{CURATED_SPRINTS.length} premium sets</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {CURATED_SPRINTS.map(t => (
-                        <div 
-                          key={t.id} 
-                          className="bg-[#0f1520] hover:bg-[#121c2c] border border-[#1e293b] hover:border-purple-500/50 rounded-2xl p-4 transition-all duration-300 flex items-start gap-4 group relative cursor-pointer shadow-lg"
-                          onClick={() => startCuratedSprint(t.id)}
-                        >
-                          {/* Circle Icon */}
-                          <div className="w-11 h-11 shrink-0 bg-[#0d1322] border border-[#1e293b] rounded-full flex items-center justify-center relative">
-                            <div className="absolute inset-1 rounded-full border border-purple-500/30 flex items-center justify-center text-lg">
-                              ⚡
-                            </div>
-                          </div>
-
-                          {/* Card Contents */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-center gap-1.5 mb-1">
-                              <span className="bg-[#21262d] text-[#c9d1d9] text-[9px] font-bold px-2 py-0.5 rounded border border-[#30363d] flex items-center gap-1">
-                                ⏱️ {t.mins} min
-                              </span>
-                              <span className="bg-purple-500/10 text-purple-400 text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded border border-purple-500/20">
-                                SPRINT
-                              </span>
-                            </div>
-
-                            <h3 className="text-sm font-bold text-white group-hover:text-purple-400 transition-colors truncate">
-                              {t.title}
-                            </h3>
-                            <p className="text-[11px] text-[#8b949e] font-sans line-clamp-2 leading-relaxed mt-1 mb-2">
-                              {t.desc}
-                            </p>
-
-                            <div className="flex items-center justify-between border-t border-[#1e293b]/50 pt-2.5 mt-2">
-                              <div className="flex items-center gap-3 text-[10px] text-neutral-400">
-                                <span>🗒️ {t.questions} Qs</span>
-                                <span className="text-purple-400/90 font-medium bg-purple-400/5 px-1.5 py-0.2 rounded">Rapid Fire</span>
-                              </div>
-                              <div className="flex items-center gap-1.5 text-[11px] font-bold text-purple-400 group-hover:text-purple-300 transition-colors">
-                                <span>Start Sprint</span>
-                                <div className="w-7 h-7 rounded-lg bg-[#111c2e] hover:bg-[#1d2d44] border border-[#1e293b] flex items-center justify-center text-purple-400 text-xs font-bold shrink-0">
-                                  →
-                                </div>
                               </div>
                             </div>
-                          </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
+                    </div>
+                  )}
+
+                  {/* CONTEXT-AWARE HIGH-YIELD SEO BLOG SECTION */}
+                  <div className="mt-16 border-t border-border/50 pt-12 max-w-4xl mx-auto px-1" id="hub-context-aware-blog">
+                    <div className="flex items-center gap-2 mb-4 bg-accent/10 text-accent text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-accent/20 w-fit select-none">
+                      <span>📚</span> NCBT Professional Companion & Syllabus Blueprint
+                    </div>
+                    
+                    <h2 className="text-2xl font-extrabold text-white tracking-tight leading-tight mb-2">
+                      {currentArticle.title}
+                    </h2>
+                    <p className="text-xs text-text3 font-sans italic leading-relaxed mb-6">
+                      {currentArticle.subtitle}
+                    </p>
+
+                    <div className="bg-surface border border-border rounded-3xl p-6 shadow-md prose max-w-none text-text2 select-text" id="dynamic-seo-rich-content">
+                      <div 
+                        className="space-y-6 text-xs sm:text-sm leading-relaxed"
+                        dangerouslySetInnerHTML={{ __html: currentArticle.contentHtml }}
+                      />
                     </div>
                   </div>
-                );
-              })()}
 
-              {/* Homepage Long SEO Academic Guide */}
-              <div className="mt-16 border-t border-[#1e293b] pt-12 max-w-4xl mx-auto px-4" id="home-seo-academic-blog">
-                <div className="flex items-center gap-2 mb-4 bg-[#58a6ff]/10 text-[#58a6ff] text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-[#58a6ff]/20 w-fit">
-                  <span>📚</span> NCBT Academic Guide & Career Blueprint
                 </div>
-                <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight leading-tight mb-2">
-                  {SEO_ARTICLES.homepage.title}
-                </h1>
-                <p className="text-sm text-[#8b949e] font-sans italic leading-relaxed mb-8">
-                  {SEO_ARTICLES.homepage.subtitle}
-                </p>
-                <div 
-                  className="prose max-w-none text-neutral-300 space-y-6"
-                  dangerouslySetInnerHTML={{ __html: SEO_ARTICLES.homepage.contentHtml }}
-                />
+
               </div>
 
-              <footer className="mt-16 text-center text-xs text-[#8b949e] pb-12 border-t border-[#1e293b]/50 pt-8">NCBT · India's Nursing CBT Exam Preparation Platform</footer>
+              <footer className="mt-20 text-center text-[10px] text-text3 pb-12 border-t border-border/50 pt-8">
+                NCBT.in · India's Advanced Nursing CBT Simulation Workspace & Academic Registry
+              </footer>
             </div>
           );
         })()}
@@ -3924,218 +4041,280 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
             {/* Statistics Bar at test progression */}
             {!isTestFinished && (
-              <>
-                <div className="stats-bar">
-                  <div className="stat">
-                    <div className="stat-val">{activeTest.data.length}</div>
-                    <div className="stat-lbl">Questions</div>
-                  </div>
-                  <div className="stat">
-                    <div className="stat-val">
-                      {selectedOptions.filter(o => o !== null).length}
+              <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" id="test-main-grid">
+                
+                {/* Left Side: Question content area */}
+                <div className="lg:col-span-8 space-y-6">
+                  {/* Progress bar state */}
+                  <div className="progress-wrap bg-card border border-border rounded-2xl p-4 shadow-sm">
+                    <div className="prog-info flex justify-between text-xs font-bold mb-2">
+                      <span>Question {currentQuestionIndex + 1} of {activeTest.data.length}</span>
+                      <span className="text-accent">
+                        {Math.round((selectedOptions.filter(o => o !== null).length / activeTest.data.length) * 100)}% Complete
+                      </span>
                     </div>
-                    <div className="stat-lbl">Answered</div>
-                  </div>
-                  <div className="stat">
-                    <div className="stat-val">
-                      {reviewedQuestions.filter(Boolean).length}
+                    <div className="prog-bar w-full h-2 bg-[#0c121e] rounded-full overflow-hidden">
+                      <div 
+                        className="prog-fill h-full bg-accent transition-all duration-300" 
+                        style={{ 
+                          width: `${Math.round((selectedOptions.filter(o => o !== null).length / activeTest.data.length) * 100)}%` 
+                        }}
+                      ></div>
                     </div>
-                    <div className="stat-lbl">Review</div>
                   </div>
-                  <div className="stat">
-                    <div className="stat-val">
-                      {activeTest.data.length - selectedOptions.filter(o => o !== null).length}
-                    </div>
-                    <div className="stat-lbl">Left</div>
-                  </div>
-                </div>
 
-                {/* Progress bar state */}
-                <div className="progress-wrap">
-                  <div className="prog-info">
-                    <span>Q {currentQuestionIndex + 1}</span>
-                    <span>
-                      {Math.round((selectedOptions.filter(o => o !== null).length / activeTest.data.length) * 100)}%
-                    </span>
-                  </div>
-                  <div className="prog-bar">
-                    <div 
-                      className="prog-fill" 
-                      style={{ 
-                        width: `${Math.round((selectedOptions.filter(o => o !== null).length / activeTest.data.length) * 100)}%` 
-                      }}
-                    ></div>
-                  </div>
-                </div>
-
-                {/* Question dots visual navigation helper */}
-                <div className="dot-nav">
-                  {activeTest.data.map((_, i) => {
-                    let dClass = "dot";
-                    if (currentQuestionIndex === i) {
-                      dClass += " cur";
-                    } else if (reviewedQuestions[i]) {
-                      dClass += " review";
-                    } else if (selectedOptions[i] !== null) {
-                      if (examMode) {
-                        dClass += " done-e";
-                      } else {
-                        dClass += questionAnswers[i] === 1 ? " done-c" : " done-w";
-                      }
-                    }
-                    return (
-                      <button 
-                        key={i} 
-                        className={dClass}
-                        onClick={() => setCurrentQuestionIndex(i)}
+                  {/* Test quiz screen */}
+                  <div id="quiz-wrap" className="overflow-hidden relative bg-card border border-border rounded-3xl p-6 shadow-xl">
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={currentQuestionIndex}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.2 }}
+                        className="q-card active space-y-6"
                       >
-                        {i + 1}
-                      </button>
-                    );
-                  })}
-                </div>
+                        <div className="q-meta flex justify-between items-center text-xs pb-3 border-b border-border/40">
+                          <span className="q-num font-black text-accent uppercase tracking-wider">Question {currentQuestionIndex + 1} / {activeTest.data.length}</span>
+                          <span className="q-src font-mono text-text3 px-2 py-0.5 bg-surface border border-border rounded-md">{activeTest.data[currentQuestionIndex].source}</span>
+                        </div>
 
-                {/* Test quiz screen */}
-                <div id="quiz-wrap" className="mt-4 overflow-hidden relative">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={currentQuestionIndex}
-                      initial={{ opacity: 0, x: 24 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -24 }}
-                      transition={{ duration: 0.2, ease: "easeInOut" }}
-                      className="q-card active"
-                    >
-                      <div className="q-meta">
-                        <span className="q-num">Q {currentQuestionIndex + 1} / {activeTest.data.length}</span>
-                        <span className="q-src">{activeTest.data[currentQuestionIndex].source}</span>
-                      </div>
+                        <p className="q-text text-base md:text-lg font-bold text-text leading-relaxed select-none">
+                          {activeTest.data[currentQuestionIndex].q}
+                        </p>
 
-                      <p className="q-text">
-                        {activeTest.data[currentQuestionIndex].q}
-                      </p>
+                        <div className="opts space-y-3">
+                          {activeTest.data[currentQuestionIndex].opts.map((option, idx) => {
+                            let optClass = "w-full flex items-center gap-3 p-4 rounded-2xl border text-left text-xs sm:text-sm font-bold transition-all cursor-pointer relative overflow-hidden ";
+                            const isSelected = selectedOptions[currentQuestionIndex] === idx;
+                            const isAnswered = questionAnswers[currentQuestionIndex] !== null;
 
-                      <div className="opts">
-                        {activeTest.data[currentQuestionIndex].opts.map((option, idx) => {
-                          let optClass = "opt";
-                          const isSelected = selectedOptions[currentQuestionIndex] === idx;
-                          const isAnswered = questionAnswers[currentQuestionIndex] !== null;
-
-                          if (!examMode) {
-                            if (isAnswered) {
-                              optClass += " locked";
-                              if (idx === activeTest.data[currentQuestionIndex].ans) {
-                                optClass += " correct";
+                            if (!examMode) {
+                              if (isAnswered) {
+                                if (idx === activeTest.data[currentQuestionIndex].ans) {
+                                  optClass += "bg-emerald-500/10 border-emerald-500 text-emerald-400";
+                                } else if (isSelected) {
+                                  optClass += "bg-rose-500/10 border-rose-500 text-rose-400";
+                                } else {
+                                  optClass += "bg-[#070b12] border-border/40 text-text3 opacity-60";
+                                }
                               } else if (isSelected) {
-                                optClass += " wrong";
+                                optClass += "bg-accent/10 border-accent text-accent shadow-md";
+                              } else {
+                                optClass += "bg-[#070b12] border-border/50 text-text2 hover:border-border hover:bg-surface";
                               }
-                            } else if (isSelected) {
-                              optClass += " sel";
+                            } else {
+                              if (isSelected) {
+                                optClass += "bg-accent/10 border-accent text-accent shadow-md";
+                              } else {
+                                optClass += "bg-[#070b12] border-border/50 text-text2 hover:border-border hover:bg-surface";
+                              }
                             }
-                          } else {
-                            if (isSelected) {
-                              optClass += " exam-sel";
-                            }
-                          }
 
-                          const L = ["A", "B", "C", "D"];
+                            const L = ["A", "B", "C", "D"];
 
-                          return (
-                            <button 
-                              key={idx} 
-                              className={optClass}
-                              onClick={() => handleOptionSelect(idx)}
-                            >
-                              <span className="opt-letter">{L[idx]}</span>
-                              <span>{option}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {/* Feedback wrapper in practice mode */}
-                      {!examMode && questionAnswers[currentQuestionIndex] !== null && (() => {
-                        const q = activeTest.data[currentQuestionIndex];
-                        const aiState = aiRationales[q.q];
-                        return (
-                          <div className="mt-4 animate-fade-in space-y-3">
-                            <div className={`fb show ${questionAnswers[currentQuestionIndex] === 1 ? "fb-ok" : "fb-no"}`}>
-                              {questionAnswers[currentQuestionIndex] === 1 ? "✅ Correct! " : `❌ Wrong. Correct Answer: ${q.opts[q.ans]}. `}
-                              <span style={{ whiteSpace: "pre-line" }}>{getDetailedExplain(q)}</span>
-                            </div>
-
-                            {/* AI Rationale Button & Panel */}
-                            <div className="bg-slate-900/60 border border-indigo-500/25 rounded-xl p-4 text-left">
-                              <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-                                <span className="text-xs font-bold text-indigo-400 flex items-center gap-1.5">
-                                  ✨ AI Exam Assistant (Gemini Powered)
+                            return (
+                              <button 
+                                key={idx} 
+                                className={optClass}
+                                onClick={() => handleOptionSelect(idx)}
+                              >
+                                <span className={`w-7 h-7 rounded-lg font-black flex items-center justify-center shrink-0 border text-xs ${
+                                  isSelected 
+                                    ? "bg-accent border-accent text-black" 
+                                    : "bg-[#070b12] border-border/40 text-text2"
+                                }`}>
+                                  {L[idx]}
                                 </span>
-                                {!aiState?.text && !aiState?.loading && (
-                                  <button
-                                    onClick={() => generateAiRationale(q.q, q.opts, q.ans)}
-                                    className="bg-indigo-650 hover:bg-indigo-750 active:scale-95 text-white font-extrabold text-[10px] px-3 py-1 rounded-lg transition-all cursor-pointer shadow-md border border-indigo-500/30"
-                                  >
-                                    Generate Expert Clinical Rationale
-                                  </button>
-                                )}
+                                <span className="flex-1 font-semibold">{option}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Feedback wrapper in practice mode */}
+                        {!examMode && questionAnswers[currentQuestionIndex] !== null && (() => {
+                          const q = activeTest.data[currentQuestionIndex];
+                          const aiState = aiRationales[q.q];
+                          return (
+                            <div className="mt-4 animate-fade-in space-y-4 pt-4 border-t border-border/40">
+                              <div className={`p-4 rounded-2xl border text-xs sm:text-sm font-semibold leading-relaxed ${
+                                questionAnswers[currentQuestionIndex] === 1 
+                                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
+                                  : "bg-rose-500/10 border-rose-500/30 text-rose-400"
+                              }`}>
+                                <div className="font-black text-sm mb-1">
+                                  {questionAnswers[currentQuestionIndex] === 1 ? "✔ Correct Answer!" : "✘ Incorrect Attempt"}
+                                </div>
+                                <span style={{ whiteSpace: "pre-line" }}>{getDetailedExplain(q)}</span>
                               </div>
 
-                              {aiState?.loading && (
-                                <div className="py-4 flex flex-col items-center justify-center gap-2">
-                                  <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                                  <span className="text-[10px] text-slate-400 animate-pulse font-medium">Analyzing diagnostic criteria, Indian Nursing Council guidelines, & nursing protocols...</span>
+                              {/* AI Rationale Button & Panel */}
+                              <div className="bg-[#0c121e] border border-[#1e2d45] rounded-2xl p-4 text-left">
+                                <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                                  <span className="text-xs font-bold text-accent flex items-center gap-1.5">
+                                    ✨ AI Clinical Expert (Gemini Flash)
+                                  </span>
+                                  {!aiState?.text && !aiState?.loading && (
+                                    <button
+                                      onClick={() => generateAiRationale(q.q, q.opts, q.ans)}
+                                      className="bg-accent/10 hover:bg-accent/20 active:scale-95 text-accent font-extrabold text-[10px] px-3 py-1 rounded-lg transition-all cursor-pointer shadow-md border border-accent/20"
+                                    >
+                                      Generate Expert Clinical Rationale
+                                    </button>
+                                  )}
                                 </div>
-                              )}
 
-                              {aiState?.error && (
-                                <p className="text-xs text-rose-400 mt-1">⚠️ {aiState.error}. Server running in high-yield local mode.</p>
-                              )}
-
-                              {aiState?.text && (
-                                <div className="text-xs text-slate-300 leading-relaxed space-y-2 mt-2 bg-slate-950/40 p-3 rounded-lg border border-slate-850/50 select-text">
-                                  <div className="prose-slate max-w-none text-slate-300" style={{ whiteSpace: "pre-wrap" }}>
-                                    {aiState.text}
+                                {aiState?.loading && (
+                                  <div className="py-4 flex flex-col items-center justify-center gap-2">
+                                    <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
+                                    <span className="text-[10px] text-text3 animate-pulse font-medium">Analyzing parameters, Indian Nursing Council guidelines, & nursing protocols...</span>
                                   </div>
-                                </div>
-                              )}
+                                )}
+
+                                {aiState?.error && (
+                                  <p className="text-xs text-rose-400 mt-1">⚠️ {aiState.error}. Offline high-yield fallback enabled.</p>
+                                )}
+
+                                {aiState?.text && (
+                                  <div className="text-xs text-text2 leading-relaxed space-y-2 mt-2 bg-black/30 p-3 rounded-xl border border-border/40 select-text">
+                                    <div className="prose-slate max-w-none text-neutral-300" style={{ whiteSpace: "pre-wrap" }}>
+                                      {aiState.text}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })()}
+                          );
+                        })()}
 
-                      {/* Navigation control footer */}
-                      <div className="nav-row">
-                        <button 
-                          className="btn-prev" 
-                          disabled={currentQuestionIndex === 0}
-                          onClick={handlePrevQuestion}
-                        >
-                          ← Prev
-                        </button>
-                        
-                        <button 
-                          className={`font-bold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5 ${
-                            reviewedQuestions[currentQuestionIndex] 
-                              ? "bg-purple-600 hover:bg-purple-700 text-white border border-purple-500" 
-                              : "bg-[#21262d] hover:bg-[#30363d] border border-[#30363d] text-[#c9d1d9]"
-                          }`}
-                          onClick={() => toggleMarkForReview(currentQuestionIndex)}
-                          style={{ minHeight: "40px" }}
-                        >
-                          {reviewedQuestions[currentQuestionIndex] ? "🔖 Marked for Review" : "🔖 Mark for Review"}
-                        </button>
+                        {/* Navigation control footer */}
+                        <div className="flex items-center justify-between gap-4 pt-6 border-t border-border/40">
+                          <button 
+                            className="px-4 py-2.5 rounded-xl border border-border text-xs font-black text-text2 hover:text-text hover:bg-surface disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed transition-all"
+                            disabled={currentQuestionIndex === 0}
+                            onClick={handlePrevQuestion}
+                          >
+                            ← Prev
+                          </button>
+                          
+                          <button 
+                            className={`font-black text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer border flex items-center gap-1.5 ${
+                              reviewedQuestions[currentQuestionIndex] 
+                                ? "bg-purple-500/10 border-purple-500 text-purple-400" 
+                                : "bg-card hover:bg-surface border-border text-text"
+                            }`}
+                            onClick={() => toggleMarkForReview(currentQuestionIndex)}
+                          >
+                            {reviewedQuestions[currentQuestionIndex] ? "🔖 Marked" : "🔖 Mark Review"}
+                          </button>
 
-                        <button 
-                          className="btn-next"
-                          onClick={handleNextQuestion}
-                        >
-                          {currentQuestionIndex === activeTest.data.length - 1 ? "Next → (Q1)" : "Next →"}
-                        </button>
-                      </div>
-                    </motion.div>
-                  </AnimatePresence>
+                          <button 
+                            className="px-5 py-2.5 rounded-xl bg-accent hover:bg-accent/90 text-black font-black text-xs cursor-pointer shadow-md hover:scale-[1.02] active:scale-95 transition-all"
+                            onClick={handleNextQuestion}
+                          >
+                            {currentQuestionIndex === activeTest.data.length - 1 ? "Next (Q1) →" : "Next →"}
+                          </button>
+                        </div>
+                      </motion.div>
+                    </AnimatePresence>
+                  </div>
                 </div>
-              </>
+
+                {/* Right Side: Professional CBT Question Palette Panel */}
+                <div className="lg:col-span-4 bg-card border border-border rounded-3xl p-5 shadow-xl space-y-6 lg:sticky lg:top-20" id="cbt-palette-sidebar">
+                  {/* Candidate Profile block */}
+                  <div className="flex items-center gap-3 pb-4 border-b border-border/40">
+                    <div className="w-10 h-10 rounded-xl bg-[#0c121e] border border-[#1e2d45] text-text flex items-center justify-center text-lg font-bold">
+                      👤
+                    </div>
+                    <div>
+                      <div className="text-xs font-black text-text">Nursing Officer Candidate</div>
+                      <div className="text-[10px] text-text3 font-medium font-mono">Exam Code: {activeTest.id.toUpperCase()}</div>
+                    </div>
+                  </div>
+
+                  {/* Palette Question Indicator Stats (Legend) */}
+                  <div className="space-y-3">
+                    <div className="text-xs font-black text-text uppercase tracking-widest">Question Palette</div>
+                    <div className="grid grid-cols-2 gap-2 text-[10px]">
+                      <div className="flex items-center gap-1.5 bg-[#0a1811] text-emerald-400 border border-emerald-500/15 p-2 rounded-xl">
+                        <span className="w-4 h-4 rounded-md bg-emerald-500 flex items-center justify-center text-[9px] font-black text-black">
+                          {selectedOptions.filter((o, idx) => o !== null && !reviewedQuestions[idx]).length}
+                        </span>
+                        <span className="font-bold">Answered</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 bg-[#1b0d0d] text-rose-400 border border-rose-500/15 p-2 rounded-xl">
+                        <span className="w-4 h-4 rounded-md bg-rose-500 flex items-center justify-center text-[9px] font-black text-white">
+                          {selectedOptions.filter((o, idx) => o === null && !reviewedQuestions[idx] && idx <= currentQuestionIndex).length}
+                        </span>
+                        <span className="font-bold font-sans">Not Ans</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 bg-purple-950/20 text-purple-400 border border-purple-900/15 p-2 rounded-xl">
+                        <span className="w-4 h-4 rounded-md bg-purple-500 flex items-center justify-center text-[9px] font-black text-white">
+                          {reviewedQuestions.filter(Boolean).length}
+                        </span>
+                        <span className="font-bold">Marked</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 bg-surface text-text3 border border-border/40 p-2 rounded-xl">
+                        <span className="w-4 h-4 rounded-md bg-neutral-800 border border-neutral-700 flex items-center justify-center text-[9px] font-black text-text3">
+                          {activeTest.data.length - (currentQuestionIndex + 1)}
+                        </span>
+                        <span className="font-bold font-sans">Not Visited</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Palette Grid buttons */}
+                  <div className="space-y-2">
+                    <div className="text-[10px] text-text3 font-bold uppercase tracking-wider flex justify-between">
+                      <span>Select Question:</span>
+                      <span>Total: {activeTest.data.length}</span>
+                    </div>
+                    <div className="grid grid-cols-5 sm:grid-cols-6 lg:grid-cols-5 gap-1.5 max-h-56 overflow-y-auto pr-1">
+                      {activeTest.data.map((_, i) => {
+                        let btnClass = "w-full h-9 rounded-xl border font-bold text-xs flex items-center justify-center transition-all cursor-pointer hover:scale-[1.05] ";
+                        const isCurrent = currentQuestionIndex === i;
+                        const isReviewed = reviewedQuestions[i];
+                        const isAnswered = selectedOptions[i] !== null;
+
+                        if (isCurrent) {
+                          btnClass += "bg-accent border-accent text-black font-black ring-2 ring-accent/30";
+                        } else if (isReviewed) {
+                          btnClass += "bg-purple-600 border-purple-500 text-white shadow-sm shadow-purple-500/10";
+                        } else if (isAnswered) {
+                          btnClass += "bg-emerald-600 border-emerald-500 text-white shadow-sm shadow-emerald-500/10";
+                        } else if (i <= currentQuestionIndex) {
+                          btnClass += "bg-rose-600 border-rose-500 text-white";
+                        } else {
+                          btnClass += "bg-[#070b12] border-border/40 text-text3";
+                        }
+
+                        return (
+                          <button 
+                            key={i} 
+                            className={btnClass}
+                            onClick={() => setCurrentQuestionIndex(i)}
+                            title={`Go to Question ${i + 1}`}
+                          >
+                            {i + 1}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* CBT Quick instructions panel */}
+                  <div className="bg-[#070b12] border border-[#1e2d45]/50 rounded-2xl p-4 text-[10px] text-text2 space-y-2 leading-relaxed">
+                    <div className="font-extrabold text-text flex items-center gap-1">
+                      <span>💡</span> CBT Navigator Instructions
+                    </div>
+                    <p className="font-sans text-[10px]">
+                      Navigate anytime by clicking on a question number from the palette grid. Save answers by selecting an option.
+                    </p>
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* Custom Modal Confirmation for finishing the test */}

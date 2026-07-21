@@ -69,3 +69,15 @@ export interface NursingUpdate {
   pdfUrl?: string;
   officialLink?: string;
 }
+
+export interface ExamDef {
+  id: string;
+  name: string;
+  fullName: string;
+  badge: string;
+  category: string;
+  desc: string;
+  icon: string;
+  color: string;
+}
+
