@@ -43,11 +43,22 @@ Sitemap: https://ncbt.in/sitemap.xml`);
 
   // SEO Optimization: sitemap.xml Endpoint
   app.get('/sitemap.xml', (req, res) => {
+    try {
+      const sitemapPath = path.join(process.cwd(), 'sitemap.xml');
+      if (fs.existsSync(sitemapPath)) {
+        const xml = fs.readFileSync(sitemapPath, 'utf8');
+        res.header('Content-Type', 'application/xml');
+        return res.send(xml);
+      }
+    } catch (e) {
+      console.error("Error reading sitemap.xml from disk:", e);
+    }
+
     const updatesUrls = STATIC_NURSING_UPDATES.map(u => `  <url>
     <loc>https://ncbt.in/updates/${u.id}</loc>
-    <lastmod>2026-07-19</lastmod>
+    <lastmod>2026-07-22</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.8</priority>
   </url>`).join("\n");
 
     res.header('Content-Type', 'application/xml');
@@ -55,47 +66,107 @@ Sitemap: https://ncbt.in/sitemap.xml`);
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://ncbt.in/</loc>
-    <lastmod>2026-07-19</lastmod>
+    <lastmod>2026-07-22</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://ncbt.in/pyq</loc>
-    <lastmod>2026-07-19</lastmod>
+    <loc>https://ncbt.in/exam/aiims-norcet</loc>
+    <lastmod>2026-07-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://ncbt.in/exam/wbhrb-staff-nurse</loc>
+    <lastmod>2026-07-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://ncbt.in/exam/rrb-staff-nurse</loc>
+    <lastmod>2026-07-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://ncbt.in/exam/esic-nursing-officer</loc>
+    <lastmod>2026-07-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://ncbt.in/exam/dsssb-staff-nurse</loc>
+    <lastmod>2026-07-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://ncbt.in/exam/rrb-pharmacist</loc>
+    <lastmod>2026-07-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://ncbt.in/exam/ot-technician</loc>
+    <lastmod>2026-07-22</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://ncbt.in/pyq</loc>
+    <lastmod>2026-07-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://ncbt.in/mock-tests</loc>
-    <lastmod>2026-07-19</lastmod>
+    <lastmod>2026-07-22</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.8</priority>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://ncbt.in/subject-mocks</loc>
-    <lastmod>2026-07-19</lastmod>
-    <changefreq>daily</changefreq>
+    <lastmod>2026-07-22</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://ncbt.in/short-sprints</loc>
-    <lastmod>2026-07-19</lastmod>
+    <lastmod>2026-07-22</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://ncbt.in/updates</loc>
-    <lastmod>2026-07-19</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.7</priority>
+    <loc>https://ncbt.in/find-test</loc>
+    <lastmod>2026-07-22</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
   </url>
-${updatesUrls}
   <url>
     <loc>https://ncbt.in/analytics</loc>
-    <lastmod>2026-07-19</lastmod>
+    <lastmod>2026-07-22</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
+    <priority>0.7</priority>
   </url>
+  <url>
+    <loc>https://ncbt.in/about</loc>
+    <lastmod>2026-07-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ncbt.in/contact</loc>
+    <lastmod>2026-07-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://ncbt.in/updates</loc>
+    <lastmod>2026-07-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+${updatesUrls}
 </urlset>`);
   });
 
