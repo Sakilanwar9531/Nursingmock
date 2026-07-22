@@ -3098,32 +3098,6 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
             </span>
           </button>
 
-          {/* FIND TEST SEARCH BUTTON */}
-          <button 
-            className={`nav-link flex items-center gap-1.5 ${activePage === "find_test" ? "active text-emerald-400 font-bold" : ""}`} 
-            onClick={() => showPage("find_test")}
-          >
-            <Search className="w-4 h-4 text-emerald-500" /> Find Test
-          </button>
-
-          <button 
-            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && (selectedExamId === "aiims-norcet" || hubSearchText === "Nursing") ? "active" : ""}`} 
-            onClick={() => { setHubSearchText("Nursing"); selectExam("aiims-norcet"); }}
-          >
-            <Stethoscope className="w-4 h-4 text-emerald-400" /> Nursing
-          </button>
-          <button 
-            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && (selectedExamId.includes("pharmacist") || hubSearchText === "Pharmacist") ? "active" : ""}`} 
-            onClick={() => { setHubSearchText("Pharmacist"); selectExam("rrb-pharmacist"); }}
-          >
-            <Pill className="w-4 h-4 text-amber-400" /> Pharmacist
-          </button>
-          <button 
-            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && (selectedExamId.includes("technician") || hubSearchText === "Paramedical") ? "active" : ""}`} 
-            onClick={() => { setHubSearchText("Paramedical"); selectExam("ot-technician"); }}
-          >
-            <Activity className="w-4 h-4 text-[var(--accent)]" /> Paramedical
-          </button>
           <button 
             className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && hubTab === "short" ? "active" : ""}`} 
             onClick={() => { setHubSearchText(""); showPage("short_sprints", true, { examId: selectedExamId }); }}
@@ -4334,7 +4308,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                               >
                                 <span className={`w-7 h-7 rounded-lg font-black flex items-center justify-center shrink-0 border text-xs ${
                                   isSelected 
-                                    ? "bg-[var(--accent)] border-[var(--accent)] text-[var(--primary)]" 
+                                    ? "bg-[var(--accent)] border-[var(--accent)] text-white" 
                                     : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-secondary)]"
                                 }`}>
                                   {L[idx]}
@@ -4476,13 +4450,13 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                         <span className="font-bold font-sans">Not Ans</span>
                       </div>
                       <div className="flex items-center gap-1.5 bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/30 p-2 rounded-xl">
-                        <span className="w-4 h-4 rounded-md bg-[var(--accent)] flex items-center justify-center text-[9px] font-black text-[var(--primary)]">
+                        <span className="w-4 h-4 rounded-md bg-[var(--accent)] flex items-center justify-center text-[9px] font-black text-white">
                           {reviewedQuestions.filter(Boolean).length}
                         </span>
                         <span className="font-bold">Marked</span>
                       </div>
                       <div className="flex items-center gap-1.5 bg-[var(--surface-2)] text-[var(--text-secondary)] border border-[var(--border)] p-2 rounded-xl">
-                        <span className="w-4 h-4 rounded-md bg-[var(--border)] flex items-center justify-center text-[9px] font-black text-[var(--text-secondary)]">
+                        <span className="w-4 h-4 rounded-md bg-[var(--border)] flex items-center justify-center text-[9px] font-black text-[var(--text-primary)]">
                           {activeTest.data.length - (currentQuestionIndex + 1)}
                         </span>
                         <span className="font-bold font-sans">Not Visited</span>
@@ -4506,13 +4480,13 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                         if (isCurrent) {
                           btnClass += "bg-[var(--primary)] border-[var(--primary)] text-white font-black ring-2 ring-[var(--primary)]/30";
                         } else if (isReviewed) {
-                          btnClass += "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)] shadow-sm";
+                          btnClass += "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)] shadow-sm font-black";
                         } else if (isAnswered) {
-                          btnClass += "bg-emerald-600 border-emerald-500 text-white shadow-sm";
+                          btnClass += "bg-emerald-600 border-emerald-500 text-white shadow-sm font-black";
                         } else if (i <= currentQuestionIndex) {
-                          btnClass += "bg-rose-600 border-rose-500 text-white";
+                          btnClass += "bg-rose-600 border-rose-500 text-white font-black";
                         } else {
-                          btnClass += "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)]";
+                          btnClass += "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-primary)] hover:border-[var(--primary)] font-bold";
                         }
 
                         return (
@@ -7646,10 +7620,10 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
         {/* =============== ABOUT US PAGE =============== */}
         {activePage === "about" && (
-          <div className="page active p-4 md:p-8 max-w-4xl mx-auto text-white animate-fade-in" id="page-about">
+          <div className="page active p-4 md:p-8 max-w-4xl mx-auto text-[var(--text-primary)] animate-fade-in" id="page-about">
             <div className="mb-8">
-              <h2 className="text-2xl sm:text-3xl font-black font-syne tracking-tight text-white m-0">About NCBT</h2>
-              <p className="text-xs text-[var(--text2)] mt-1.5 leading-relaxed">
+              <h2 className="text-2xl sm:text-3xl font-black font-syne tracking-tight text-[var(--text-primary)] m-0">About NCBT</h2>
+              <p className="text-xs text-[var(--text-secondary)] mt-1.5 leading-relaxed">
                 NCBT (National CBT) — India's Trusted Platform for Nursing, Pharmacist &amp; Paramedical Government Exam Preparation
               </p>
             </div>
@@ -7658,52 +7632,52 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
               {/* Mission Statement */}
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
-                <h3 className="font-syne text-sm font-extrabold text-white uppercase tracking-wider mb-3">Our Core Mission</h3>
-                <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                  At <strong className="text-emerald-400">NCBT (National CBT)</strong>, we aim to revolutionize how candidates prepare for India's top Nursing, Pharmacist, and Paramedical government computer-based recruitments. We bridge the gap between extensive academic textbooks and dynamic board-level assessments by offering simulated tests with high-yield rationales and detailed performance analytics.
+                <h3 className="font-syne text-sm font-extrabold text-[var(--text-primary)] uppercase tracking-wider mb-3">Our Core Mission</h3>
+                <p className="text-xs text-[var(--text-secondary)] leading-relaxed mb-4">
+                  At <strong className="text-emerald-600 dark:text-emerald-400">NCBT (National CBT)</strong>, we aim to revolutionize how candidates prepare for India's top Nursing, Pharmacist, and Paramedical government computer-based recruitments. We bridge the gap between extensive academic textbooks and dynamic board-level assessments by offering simulated tests with high-yield rationales and detailed performance analytics.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-                  <div className="bg-white/5 border border-white/5 p-3.5 rounded-xl">
+                  <div className="bg-[var(--surface-2)] border border-[var(--border)] p-3.5 rounded-xl">
                     <span className="text-lg">🎯</span>
-                    <h4 className="text-xs font-bold text-white mt-1.5 mb-1 font-syne">Recruitment Benchmarks</h4>
-                    <p className="text-[10px] text-slate-400 leading-normal">Simulations designed to match exact recruitment standards and negative-marking rules across Nursing, Pharmacist, and Paramedical exams.</p>
+                    <h4 className="text-xs font-bold text-[var(--text-primary)] mt-1.5 mb-1 font-syne">Recruitment Benchmarks</h4>
+                    <p className="text-[10px] text-[var(--text-secondary)] leading-normal">Simulations designed to match exact recruitment standards and negative-marking rules across Nursing, Pharmacist, and Paramedical exams.</p>
                   </div>
-                  <div className="bg-white/5 border border-white/5 p-3.5 rounded-xl">
+                  <div className="bg-[var(--surface-2)] border border-[var(--border)] p-3.5 rounded-xl">
                     <span className="text-lg">🔬</span>
-                    <h4 className="text-xs font-bold text-white mt-1.5 mb-1 font-syne">Detailed Rationales</h4>
-                    <p className="text-[10px] text-slate-400 leading-normal">Comprehensive domain rationales referenced directly from official syllabus guidelines and textbooks.</p>
+                    <h4 className="text-xs font-bold text-[var(--text-primary)] mt-1.5 mb-1 font-syne">Detailed Rationales</h4>
+                    <p className="text-[10px] text-[var(--text-secondary)] leading-normal">Comprehensive domain rationales referenced directly from official syllabus guidelines and textbooks.</p>
                   </div>
-                  <div className="bg-white/5 border border-white/5 p-3.5 rounded-xl">
+                  <div className="bg-[var(--surface-2)] border border-[var(--border)] p-3.5 rounded-xl">
                     <span className="text-lg">⚡</span>
-                    <h4 className="text-xs font-bold text-white mt-1.5 mb-1 font-syne">Active Practice</h4>
-                    <p className="text-[10px] text-slate-400 leading-normal">Dynamic practice sets, PYQs, and daily speed sprints designed to build fast, accurate problem-solving skills.</p>
+                    <h4 className="text-xs font-bold text-[var(--text-primary)] mt-1.5 mb-1 font-syne">Active Practice</h4>
+                    <p className="text-[10px] text-[var(--text-secondary)] leading-normal">Dynamic practice sets, PYQs, and daily speed sprints designed to build fast, accurate problem-solving skills.</p>
                   </div>
                 </div>
               </div>
 
               {/* Who We Are & Academic Board */}
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-xl">
-                <h3 className="font-syne text-sm font-extrabold text-white uppercase tracking-wider mb-3">The Academic Board</h3>
-                <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                <h3 className="font-syne text-sm font-extrabold text-[var(--text-primary)] uppercase tracking-wider mb-3">The Academic Board</h3>
+                <p className="text-xs text-[var(--text-secondary)] leading-relaxed mb-4">
                   NCBT's questions are curated and audited by a dedicated panel of experienced nursing superintendents, clinical specialists, and senior nursing tutors.
                 </p>
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
+                  <div className="flex items-center gap-3 bg-[var(--surface-2)] p-3 rounded-xl border border-[var(--border)]">
                     <div className="w-9 h-9 rounded-full bg-[var(--accent-dim)] border border-[var(--border)] flex items-center justify-center text-[var(--accent)] font-bold text-xs">
                       DR
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-white font-syne">Dr. Rajesh Kumar (Ph.D., M.Sc. Nursing)</h4>
-                      <p className="text-[10px] text-slate-400">Former Senior Academic Advisor - AIIMS Exam Board Coordinator</p>
+                      <h4 className="text-xs font-bold text-[var(--text-primary)] font-syne">Dr. Rajesh Kumar (Ph.D., M.Sc. Nursing)</h4>
+                      <p className="text-[10px] text-[var(--text-secondary)]">Former Senior Academic Advisor - AIIMS Exam Board Coordinator</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
-                    <div className="w-9 h-9 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold text-xs">
+                  <div className="flex items-center gap-3 bg-[var(--surface-2)] p-3 rounded-xl border border-[var(--border)]">
+                    <div className="w-9 h-9 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold text-xs">
                       MS
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-white font-syne">Mrs. S. Meenakshi (M.Sc. Med-Surg Nursing)</h4>
-                      <p className="text-[10px] text-slate-400">Clinical Specialist &amp; Associate Professor with 15+ years of training staff nurse aspirants</p>
+                      <h4 className="text-xs font-bold text-[var(--text-primary)] font-syne">Mrs. S. Meenakshi (M.Sc. Med-Surg Nursing)</h4>
+                      <p className="text-[10px] text-[var(--text-secondary)]">Clinical Specialist &amp; Associate Professor with 15+ years of training staff nurse aspirants</p>
                     </div>
                   </div>
                 </div>
@@ -7711,19 +7685,19 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
               {/* Our Competitive Advantage */}
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-xl">
-                <h3 className="font-syne text-sm font-extrabold text-white uppercase tracking-wider mb-3">Why Thousands of Aspirants Choose NCBT</h3>
-                <ul className="space-y-2 text-xs text-slate-300 pl-1">
+                <h3 className="font-syne text-sm font-extrabold text-[var(--text-primary)] uppercase tracking-wider mb-3">Why Thousands of Aspirants Choose NCBT</h3>
+                <ul className="space-y-2 text-xs text-[var(--text-secondary)] pl-1">
                   <li className="flex items-start gap-2">
-                    <span className="text-emerald-400">✔</span>
-                    <span><strong>No-Lag Computer-Based Environment</strong>: Experience the identical visual interface of the actual national examinations to build mental stamina.</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">✔</span>
+                    <span><strong className="text-[var(--text-primary)]">No-Lag Computer-Based Environment</strong>: Experience the identical visual interface of the actual national examinations to build mental stamina.</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-emerald-400">✔</span>
-                    <span><strong>Intelligent Analytics</strong>: Track your progress across different specialties, monitor your speed, and watch your daily streak grow.</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">✔</span>
+                    <span><strong className="text-[var(--text-primary)]">Intelligent Analytics</strong>: Track your progress across different specialties, monitor your speed, and watch your daily streak grow.</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-emerald-400">✔</span>
-                    <span><strong>100% Reliable Syllabus</strong>: Rest easy knowing our mock tests align exactly with Nursing, Pharmacist, and Paramedical recruitment curriculum expectations.</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">✔</span>
+                    <span><strong className="text-[var(--text-primary)]">100% Reliable Syllabus</strong>: Rest easy knowing our mock tests align exactly with Nursing, Pharmacist, and Paramedical recruitment curriculum expectations.</span>
                   </li>
                 </ul>
               </div>
@@ -7737,10 +7711,10 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
         {/* =============== CONTACT DETAILS PAGE =============== */}
         {activePage === "contact" && (
-          <div className="page active p-4 md:p-8 max-w-4xl mx-auto text-white animate-fade-in" id="page-contact">
+          <div className="page active p-4 md:p-8 max-w-4xl mx-auto text-[var(--text-primary)] animate-fade-in" id="page-contact">
             <div className="mb-8">
-              <h2 className="text-2xl sm:text-3xl font-black font-syne tracking-tight text-white m-0">📞 Contact Us</h2>
-              <p className="text-xs text-[var(--text2)] mt-1.5 leading-relaxed">
+              <h2 className="text-2xl sm:text-3xl font-black font-syne tracking-tight text-[var(--text-primary)] m-0">📞 Contact Us</h2>
+              <p className="text-xs text-[var(--text-secondary)] mt-1.5 leading-relaxed">
                 Have questions or need support? Our academic team is ready to assist you.
               </p>
             </div>
@@ -7748,38 +7722,38 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Left Column: Form */}
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-xl flex flex-col gap-4">
-                <h3 className="font-syne text-sm font-extrabold text-white uppercase tracking-wider mb-2">Academic Support Ticket</h3>
+                <h3 className="font-syne text-sm font-extrabold text-[var(--text-primary)] uppercase tracking-wider mb-2">Academic Support Ticket</h3>
                 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-extrabold text-[var(--text2)] uppercase tracking-wider">Your Full Name</label>
+                  <label className="text-[10px] font-extrabold text-[var(--text-secondary)] uppercase tracking-wider">Your Full Name</label>
                   <input 
                     type="text" 
                     placeholder="e.g. Priyanjali Sharma" 
-                    className="bg-[var(--card2)] border border-[var(--border)] p-3 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 w-full"
+                    className="bg-[var(--surface-2)] border border-[var(--border)] p-3 rounded-lg text-xs text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/60 focus:outline-none focus:border-[var(--accent)] w-full"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-extrabold text-[var(--text2)] uppercase tracking-wider">Email Address</label>
+                  <label className="text-[10px] font-extrabold text-[var(--text-secondary)] uppercase tracking-wider">Email Address</label>
                   <input 
                     type="email" 
                     placeholder="e.g. priya@nursing.in" 
-                    className="bg-[var(--card2)] border border-[var(--border)] p-3 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 w-full"
+                    className="bg-[var(--surface-2)] border border-[var(--border)] p-3 rounded-lg text-xs text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/60 focus:outline-none focus:border-[var(--accent)] w-full"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-extrabold text-[var(--text2)] uppercase tracking-wider">Message Description</label>
+                  <label className="text-[10px] font-extrabold text-[var(--text-secondary)] uppercase tracking-wider">Message Description</label>
                   <textarea 
                     rows={4}
                     placeholder="Describe your query or feedback (e.g., questions regarding AIIMS NORCET mock series details)..." 
-                    className="bg-[var(--card2)] border border-[var(--border)] p-3 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 w-full resize-none"
+                    className="bg-[var(--surface-2)] border border-[var(--border)] p-3 rounded-lg text-xs text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/60 focus:outline-none focus:border-[var(--accent)] w-full resize-none"
                   />
                 </div>
 
                 <button 
                   onClick={() => triggerToast("Your ticket has been sent to our academic team! We'll reply within 12 hours.", "ok")}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-black font-extrabold text-xs py-3.5 rounded-xl transition-all shadow-md uppercase tracking-wider cursor-pointer font-syne text-center mt-2"
+                  className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-extrabold text-xs py-3.5 rounded-xl transition-all shadow-md uppercase tracking-wider cursor-pointer font-syne text-center mt-2"
                 >
                   Send Inquiry 📬
                 </button>
@@ -7788,31 +7762,31 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
               {/* Right Column: Information details */}
               <div className="flex flex-col gap-6">
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-xl space-y-4">
-                  <h3 className="font-syne text-sm font-extrabold text-white uppercase tracking-wider border-b border-[var(--border)] pb-2">Direct Contact Information</h3>
+                  <h3 className="font-syne text-sm font-extrabold text-[var(--text-primary)] uppercase tracking-wider border-b border-[var(--border)] pb-2">Direct Contact Information</h3>
                   
                   <div className="flex items-start gap-3">
-                    <span className="text-emerald-400 text-lg">📧</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 text-lg">📧</span>
                     <div>
-                      <h4 className="text-xs font-bold text-white font-syne">Email Contacts</h4>
-                      <p className="text-[11px] text-slate-300 mt-0.5">Academic Help: <a href="mailto:support@ncbt.org" className="text-[var(--primary)] hover:underline">support@ncbt.org</a></p>
-                      <p className="text-[11px] text-slate-300">Vacancies: <a href="mailto:info@ncbt.org" className="text-[var(--primary)] hover:underline">info@ncbt.org</a></p>
+                      <h4 className="text-xs font-bold text-[var(--text-primary)] font-syne">Email Contacts</h4>
+                      <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">Academic Help: <a href="mailto:support@ncbt.org" className="text-[var(--primary)] hover:underline font-semibold">support@ncbt.org</a></p>
+                      <p className="text-[11px] text-[var(--text-secondary)]">Vacancies: <a href="mailto:info@ncbt.org" className="text-[var(--primary)] hover:underline font-semibold">info@ncbt.org</a></p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <span className="text-emerald-400 text-lg">📞</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 text-lg">📞</span>
                     <div>
-                      <h4 className="text-xs font-bold text-white font-syne">Phone Support</h4>
-                      <p className="text-[11px] text-slate-300 mt-0.5">Helpline: +91 98765 43210</p>
-                      <p className="text-[11px] text-slate-300">Office Desk: +91 11 4567 8910</p>
+                      <h4 className="text-xs font-bold text-[var(--text-primary)] font-syne">Phone Support</h4>
+                      <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">Helpline: +91 98765 43210</p>
+                      <p className="text-[11px] text-[var(--text-secondary)]">Office Desk: +91 11 4567 8910</p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <span className="text-emerald-400 text-lg">📍</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 text-lg">📍</span>
                     <div>
-                      <h4 className="text-xs font-bold text-white font-syne">Academic Tower</h4>
-                      <p className="text-[11px] text-slate-300 mt-0.5 leading-relaxed">
+                      <h4 className="text-xs font-bold text-[var(--text-primary)] font-syne">Academic Tower</h4>
+                      <p className="text-[11px] text-[var(--text-secondary)] mt-0.5 leading-relaxed">
                         NCBT Academic HQ, 4th Floor, Sector 62,<br />
                         Noida, Delhi NCR, India, 201301
                       </p>
@@ -7820,17 +7794,17 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <span className="text-emerald-400 text-lg">⏰</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 text-lg">⏰</span>
                     <div>
-                      <h4 className="text-xs font-bold text-white font-syne">Support Working Hours</h4>
-                      <p className="text-[11px] text-slate-300 mt-0.5">Monday to Saturday: 09:00 AM – 06:00 PM (IST)</p>
-                      <p className="text-[11px] text-slate-300">Sunday: Closed for academic research</p>
+                      <h4 className="text-xs font-bold text-[var(--text-primary)] font-syne">Support Working Hours</h4>
+                      <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">Monday to Saturday: 09:00 AM – 06:00 PM (IST)</p>
+                      <p className="text-[11px] text-[var(--text-secondary)]">Sunday: Closed for academic research</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-amber-500/5 border border-amber-500/10 rounded-2xl p-4 text-xs text-amber-300 leading-relaxed">
-                  💡 <strong>Aspirants Note:</strong> If you are reporting a question error or requesting an answer clarification, please mention the Question Code or Test Name for a quicker response from our senior nursing faculty team!
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-xs text-amber-800 dark:text-amber-300 leading-relaxed font-medium">
+                  💡 <strong className="text-amber-900 dark:text-amber-200">Aspirants Note:</strong> If you are reporting a question error or requesting an answer clarification, please mention the Question Code or Test Name for a quicker response from our senior nursing faculty team!
                 </div>
               </div>
             </div>
