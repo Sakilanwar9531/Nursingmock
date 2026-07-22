@@ -97,6 +97,36 @@ export function getSeoMetadata(urlPath: string): SeoMeta {
     };
   }
 
+  if (cleanPath === "/about") {
+    return {
+      title: "About Us | NCBT.in – National Computer Based Test Platform",
+      description: "Learn about NCBT.in, our mission to democratize quality computer-based test prep for Indian Nursing, Pharmacist, and Paramedical government aspirants.",
+    };
+  }
+
+  if (cleanPath === "/contact") {
+    return {
+      title: "Contact Us & Academic Helpdesk | NCBT.in",
+      description: "Reach out to the NCBT academic support team for help with mock tests, question rationales, or exam syllabus notifications.",
+    };
+  }
+
+  if (cleanPath === "/find-test") {
+    return {
+      title: "Search Mock Tests & Exam Series | NCBT.in",
+      description: "Search and filter through all Nursing, Pharmacist, and Paramedical mock tests, PYQs, and subject-wise CBT series.",
+    };
+  }
+
+  if (cleanPath.startsWith("/exam/")) {
+    const examSlug = cleanPath.split("/")[2] || "";
+    const examName = examSlug.replace(/-/g, " ").toUpperCase();
+    return {
+      title: `${examName} Mock Tests, Syllabus & PYQ Prep Series | NCBT.in`,
+      description: `Prepare for ${examName} with free full-length CBT mock tests, solved past year question papers, subject-wise practice, and live rank analytics on NCBT.in`,
+    };
+  }
+
   if (cleanPath.startsWith("/test/")) {
     const parts = cleanPath.split("/");
     const testId = parts[3] ? parts[3].toUpperCase().replace(/-/g, " ") : "CBT";
