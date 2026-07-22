@@ -417,7 +417,7 @@ const generateMockTests = (): Test[] => {
       initialPage = "auth";
     } else if (cleanPath === "/admin") {
       initialPage = "admin";
-    } else if (cleanPath.startsWith("/exams/") || cleanPath.startsWith("/exam/")) {
+    } else if (cleanPath.startsWith("/exam/")) {
       initialPage = "exam_landing";
       const parts = path.split("/");
       const eId = parts[2] ? parts[2].toLowerCase() : "aiims-norcet";
@@ -2183,10 +2183,14 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     triggerToast("User authorization settings successfully parsed!", "ok");
   };
 
-  const getPathForState = (pageId: string, hTab?: string, subjId?: string | null, testId?: string | null, customExamId?: string) => {
+  const getPathForState = (pageId: string, hTab?: string, subjId?: string | null, testId?: string | null) => {
     if (pageId === "exam_landing" || pageId === "hub") {
-      const eId = customExamId || selectedExamId || "aiims-norcet";
-      return `/exams/${eId}`;
+      const tab = hTab || hubTab;
+      if (tab === "pyq") return "/pyq";
+      if (tab === "full_mock") return "/mock-tests";
+      if (tab === "subject") return "/subject-mocks";
+      if (tab === "short") return "/short-sprints";
+      return `/exam/${selectedExamId}`;
     }
     if (pageId === "find_test") return "/find-tests";
     if (pageId === "landing") return "/";
@@ -2202,16 +2206,8 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     return "/";
   };
 
-  const selectExam = (examId: string, tab?: "full_mock" | "pyq" | "subject" | "short") => {
-    const foundE = TARGET_EXAMS.find(e => e.id.toLowerCase() === examId.toLowerCase());
-    const validId = foundE ? foundE.id : "aiims-norcet";
-    setSelectedExamId(validId);
-    if (tab) setHubTab(tab);
-    showPage("exam_landing", true, { examId: validId });
-  };
-
   // Navigation controller
-  const showPage = (pageId: string, pushHistory = true, customState?: { subjectId?: string | null, testId?: string | null, examId?: string }) => {
+  const showPage = (pageId: string, pushHistory = true, customState?: { subjectId?: string | null, testId?: string | null }) => {
     let targetPage = pageId;
     let targetTab = hubTab;
     if (pageId === "pyq") {
@@ -2233,11 +2229,6 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     } else if (pageId === "hub") {
       targetPage = "exam_landing";
     }
-
-    if (customState?.examId) {
-      setSelectedExamId(customState.examId);
-    }
-
     setActivePage(targetPage);
     window.scrollTo({ top: 0 });
     if (targetPage === "analytics" && currentUser && !currentUser.guest && isSupabaseConnected()) {
@@ -2247,72 +2238,19 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     }
     if (pushHistory) {
       try {
-        const activeExam = customState?.examId || selectedExamId;
         const stateToPush = {
           page: targetPage,
           hubTab: targetTab,
-          examId: activeExam,
           subjectId: customState ? customState.subjectId : activeSubjectId,
           testId: customState ? customState.testId : (activeTest?.id || null)
         };
-        const urlPath = getPathForState(targetPage, targetTab, stateToPush.subjectId, stateToPush.testId, activeExam);
+        const urlPath = getPathForState(targetPage, targetTab, stateToPush.subjectId, stateToPush.testId);
         window.history.pushState(stateToPush, "", urlPath);
       } catch (e) {
         console.error("Failed to pushState", e);
       }
     }
   };
-
-  // Handle browser Back / Forward history navigation (popstate)
-  useEffect(() => {
-    const handlePopState = () => {
-      const route = getInitialRoute();
-      setActivePage(route.page);
-      setHubTab(route.tab);
-      setSelectedExamId(route.examId);
-      if (route.update) {
-        setSelectedUpdate(route.update);
-      } else {
-        setSelectedUpdate(null);
-      }
-      if (route.test) {
-        setActiveTest(route.test);
-      }
-    };
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
-
-  // Dynamic Document Title and Meta Description per Page / Exam
-  useEffect(() => {
-    if (activePage === "exam_landing") {
-      const exam = TARGET_EXAMS.find(e => e.id === selectedExamId) || TARGET_EXAMS[0];
-      if (exam) {
-        document.title = `${exam.fullName} — Mock Tests, PYQs & Syllabus | NCBT`;
-        let metaDesc = document.querySelector('meta[name="description"]');
-        if (!metaDesc) {
-          metaDesc = document.createElement("meta");
-          metaDesc.setAttribute("name", "description");
-          document.head.appendChild(metaDesc);
-        }
-        metaDesc.setAttribute("content", `Prepare for ${exam.fullName} (${exam.name}) with free CBT mock tests, previous year solved papers (PYQs), clinical rationales & syllabus guidelines at NCBT.`);
-      }
-    } else if (activePage === "find_test") {
-      document.title = "Find Government Exam Mock Test Series — NCBT";
-    } else if (activePage === "landing") {
-      document.title = "NCBT — India's Premier Nursing, Pharmacist & Paramedical CBT Portal";
-    } else if (activePage === "updates") {
-      document.title = "Nursing & Paramedical Exam Updates, Vacancies & Notes | NCBT";
-    } else if (activePage === "about") {
-      document.title = "About Us — NCBT National CBT Portal";
-    } else if (activePage === "contact") {
-      document.title = "Contact Us — NCBT Support";
-    } else if (activePage === "analytics") {
-      document.title = "Performance Analytics & CBT Scorecard | NCBT";
-    } else if (activePage === "test" && activeTest) {
-      document.title = `${activeTest.title} — Online CBT Practice | NCBT`;
-    }
-  }, [activePage, selectedExamId, activeTest]);
 
   const viewUpdate = (item: NursingUpdate) => {
     setSelectedUpdate(item);
@@ -3213,57 +3151,57 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   {/* Repeated twice for seamless infinite marquee scroll */}
                   {[...Array(2)].map((_, rIdx) => (
                     <div key={rIdx} className="flex gap-8 shrink-0 items-center">
-                      <span onClick={() => selectExam("aiims-norcet")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => setSelectedExamId("norcet")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">ADMIT CARD:</span>
                         <span>AIIMS NORCET 8.0 — Official Notification &amp; CBT Mocks Live</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => selectExam("wbhrb-grade2")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => setSelectedExamId("wbhrb")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">UPDATE:</span>
                         <span>WBHRB Staff Nurse Grade II — Exam Date &amp; Solved Papers</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => selectExam("esic-officer")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => setSelectedExamId("esic")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">VACANCY:</span>
                         <span>ESIC Nursing Officer — 1,980+ Vacancies Registration</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => selectExam("rrb-officer")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => setSelectedExamId("rrb")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">NEW:</span>
                         <span>RRB Railway Staff Nurse — Syllabus &amp; PYQ Question Vaults</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => selectExam("cho-recruitment")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => setSelectedExamId("cho")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">RESULT:</span>
                         <span>CHO NHM State Recruitment — Model Tests &amp; Clinical Drills</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => selectExam("dsssb-officer")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => setSelectedExamId("dsssb")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">UPDATE:</span>
                         <span>DSSSB Staff Nurse Selection — Solved PYQs Available</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => selectExam("aiims-norcet")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => setSelectedExamId("upcnet")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">NEW:</span>
                         <span>UP CNET Nursing Entrance — Full Mock Practice Suite</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => selectExam("aiims-norcet")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => setSelectedExamId("aiims_bsc")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">UPDATE:</span>
                         <span>AIIMS B.Sc Nursing Series — Specialty Drills Active</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => selectExam("esic-officer")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => setSelectedExamId("emrs")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">NEW:</span>
                         <span>EMRS Staff Nurse Prep — Scenario Based Speed Sprints</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => selectExam("ot-technician")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => setSelectedExamId("crpf")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">RESULT:</span>
                         <span>CRPF Paramedical Staff — Real CBT Exam Simulation</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => selectExam("wbhrb-nurse")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => setSelectedExamId("upsssc_anm")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">UPDATE:</span>
                         <span>UPSSSC ANM Test Series — Practice Papers Updated</span>
                       </span>
@@ -3293,7 +3231,8 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     key={idx}
                     onClick={() => {
                       if (cat.examId) {
-                        selectExam(cat.examId);
+                        setSelectedExamId(cat.examId);
+                        showPage("exam_landing");
                       } else if (cat.tab) {
                         setHubTab(cat.tab);
                         if (cat.query) setHubSearchText(cat.query);
@@ -3519,7 +3458,8 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                             };
                             const examId = mapping[mockCourse.tag];
                             if (examId) {
-                              selectExam(examId);
+                              setSelectedExamId(examId);
+                              showPage("exam_landing");
                             } else {
                               showPage("mock_tests");
                               setHubSearchText(mockCourse.query);
@@ -3613,7 +3553,8 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       viewport={{ once: true, margin: "-50px" }}
                       transition={{ duration: 0.5 }}
                       onClick={() => {
-                        selectExam(exam.id);
+                        setSelectedExamId(exam.id);
+                        showPage("exam_landing");
                       }}
                       className="premium-glow-box rounded-3xl p-6 flex flex-col justify-between group relative overflow-hidden cursor-pointer"
                     >
@@ -4927,7 +4868,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
           return (
             <div className="page active" id="page-exam-landing">
-              {/* 1. EXAM TITLE & DESCRIPTION HEADER BANNER */}
+              {/* Header banner / Hero of Dedicated landing page */}
               <div className="w-full bg-[var(--card)] border-b border-border/60 py-16 px-4 md:px-8 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-96 h-96 bg-accent/5 rounded-full filter blur-3xl pointer-events-none"></div>
                 
@@ -4977,7 +4918,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                         </div>
                       </div>
 
-                      <div className="flex items-baseline justify-between border-t border-[var(--border)]/40 pt-4">
+                      <div className="flex items-baseline justify-between border-t border-b border-[var(--border)]/40 py-4">
                         <div className="space-y-0.5">
                           <span className="text-[10px] text-[var(--text-secondary)] uppercase font-bold block">Access Level</span>
                           <div className="flex items-baseline gap-2">
@@ -4988,7 +4929,18 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                         <span className="text-[10px] text-[var(--text-secondary)] font-bold text-right self-end">Full Mock &amp; PYQ Access</span>
                       </div>
 
-                      <p className="text-[10px] text-[var(--text-secondary)] text-center pt-2">
+                      <button
+                        onClick={() => {
+                          // Scroll to included mocks section
+                          const el = document.getElementById("included-mocks-list");
+                          if (el) el.scrollIntoView({ behavior: "smooth" });
+                        }}
+                        className="w-full py-4 rounded-2xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-xs md:text-sm font-black shadow-xl shadow-[var(--primary)]/20 transition-all cursor-pointer text-center block"
+                      >
+                        🎯 Start Practice Free
+                      </button>
+
+                      <p className="text-[10px] text-[var(--text-secondary)] text-center">
                         Instant activation • No hidden charges • CBT exam interface simulation
                       </p>
                     </div>
@@ -4996,10 +4948,71 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 </div>
               </div>
 
-              {/* 2. CBT PRACTICE WORKSPACE (IMMEDIATELY BELOW TITLE/DESC) */}
-              <div className="w-full bg-[var(--surface)] py-12 px-4 md:px-8 border-b border-[var(--border)]/40" id="included-mocks-list">
-                <div id="page-hub" className="max-w-6xl mx-auto space-y-6">
+              {/* Why NCBT Section */}
+              <div className="w-full bg-[var(--bg)] py-16 px-4 md:px-8 border-b border-[var(--border)]/40">
+                <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                  <div className="lg:col-span-8 space-y-6">
+                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 md:p-8 space-y-6">
+                      <div className="flex items-center gap-3">
+                        <span className="text-3xl">🎯</span>
+                        <div>
+                          <h2 className="text-lg md:text-xl font-black text-[var(--text-primary)]">Why NCBT is Your Best Exam Partner</h2>
+                          <p className="text-[11px] text-[var(--text-secondary)]">Complete exam preparation — mock tests, study material, live tests & daily practice, all in one place.</p>
+                        </div>
+                      </div>
+
+                      <div className="border-l-4 border-[var(--primary)] pl-4 py-1">
+                        <p className="text-xs text-[var(--text-secondary)] leading-relaxed font-sans">
+                          NCBT is a full-fledged exam preparation platform built specifically for <strong className="text-[var(--text-primary)]">{exam.fullName}</strong> and other government job aspirants across India. We go far beyond simple quizzes — our platform provides Chapter-wise Tests, Subject Tests, Full-Length Mock Tests, Live Tests, PYQs, Smart Notes, and Detailed Answer Explanations — everything structured so you can clear your exam on the very first attempt.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                        <div className="bg-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl space-y-1">
+                          <span className="text-xl">🏅</span>
+                          <h4 className="text-xs font-black text-[var(--text-primary)] uppercase">Full Mock Tests</h4>
+                          <p className="text-[11px] text-[var(--text-secondary)]">Realistic timed exam conditions matching the latest recruitment guidelines.</p>
+                        </div>
+                        <div className="bg-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl space-y-1">
+                          <span className="text-xl">📖</span>
+                          <h4 className="text-xs font-black text-[var(--text-primary)] uppercase">Chapter & Subject</h4>
+                          <p className="text-[11px] text-[var(--text-secondary)]">High-yield syllabus coverage including nursing and non-nursing specialties.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-4 space-y-4">
+                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 space-y-4">
+                      <h3 className="text-xs font-black text-[var(--text-primary)] uppercase tracking-wider border-b border-[var(--border)] pb-2">📦 Course Highlights</h3>
+                      <ul className="space-y-3 text-xs text-[var(--text-secondary)]">
+                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">Instant evaluation</strong> and score calculation</li>
+                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">Negative marking penalty</strong> simulation (-0.25)</li>
+                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">Verified keys</strong> & step-by-step clinical rationales</li>
+                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">All India Ranking (AIR)</strong> comparison</li>
+                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">100% Mobile & PC</strong> friendly CBT layout</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* LIST OF INCLUDED TESTS - CBT PRACTICE ARENA WORKSPACE */}
+              <div className="w-full bg-[var(--surface)] py-16 px-4 md:px-8 border-t border-[var(--border)]/40" id="included-mocks-list">
+                <div id="page-hub" className="max-w-6xl mx-auto space-y-8">
                   <div id="hub-main-layout" className="space-y-6">
+                    <div className="text-center space-y-2">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[var(--accent-soft)] border border-[var(--accent)]/20 text-[var(--accent)] rounded-full text-[10px] font-black uppercase tracking-widest">
+                        ⚡ Professional CBT Practice Suite
+                      </div>
+                      <h2 className="text-xl md:text-3xl font-black text-[var(--text-primary)] tracking-tight">
+                        CBT Practice Arena for {exam.name}
+                      </h2>
+                      <p className="text-xs text-[var(--text-secondary)] max-w-2xl mx-auto">
+                        Search and launch full syllabus mock papers, authentic solved previous year questions (PYQs), system-wise specialty clinical drills, or rapid speed sprints.
+                      </p>
+                    </div>
+
                     {/* Search and Tab Navigation */}
                     <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-[var(--surface-2)] p-4 rounded-3xl border border-[var(--border)]">
                       {/* Tabs */}
@@ -5240,55 +5253,6 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                           )}
                         </div>
                       )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 3. WHY NCBT SECTION (MOVED AFTER PRACTICE ARENA) */}
-              <div className="w-full bg-[var(--bg)] py-16 px-4 md:px-8 border-b border-[var(--border)]/40">
-                <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                  <div className="lg:col-span-8 space-y-6">
-                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 md:p-8 space-y-6">
-                      <div className="flex items-center gap-3">
-                        <span className="text-3xl">🎯</span>
-                        <div>
-                          <h2 className="text-lg md:text-xl font-black text-[var(--text-primary)]">Why NCBT is Your Best Exam Partner</h2>
-                          <p className="text-[11px] text-[var(--text-secondary)]">Complete exam preparation — mock tests, study material, live tests & daily practice, all in one place.</p>
-                        </div>
-                      </div>
-
-                      <div className="border-l-4 border-[var(--primary)] pl-4 py-1">
-                        <p className="text-xs text-[var(--text-secondary)] leading-relaxed font-sans">
-                          NCBT is a full-fledged exam preparation platform built specifically for <strong className="text-[var(--text-primary)]">{exam.fullName}</strong> and other government job aspirants across India. We go far beyond simple quizzes — our platform provides Chapter-wise Tests, Subject Tests, Full-Length Mock Tests, Live Tests, PYQs, Smart Notes, and Detailed Answer Explanations — everything structured so you can clear your exam on the very first attempt.
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                        <div className="bg-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl space-y-1">
-                          <span className="text-xl">🏅</span>
-                          <h4 className="text-xs font-black text-[var(--text-primary)] uppercase">Full Mock Tests</h4>
-                          <p className="text-[11px] text-[var(--text-secondary)]">Realistic timed exam conditions matching the latest recruitment guidelines.</p>
-                        </div>
-                        <div className="bg-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl space-y-1">
-                          <span className="text-xl">📖</span>
-                          <h4 className="text-xs font-black text-[var(--text-primary)] uppercase">Chapter & Subject</h4>
-                          <p className="text-[11px] text-[var(--text-secondary)]">High-yield syllabus coverage including nursing and non-nursing specialties.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="lg:col-span-4 space-y-4">
-                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 space-y-4">
-                      <h3 className="text-xs font-black text-[var(--text-primary)] uppercase tracking-wider border-b border-[var(--border)] pb-2">📦 Course Highlights</h3>
-                      <ul className="space-y-3 text-xs text-[var(--text-secondary)]">
-                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">Instant evaluation</strong> and score calculation</li>
-                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">Negative marking penalty</strong> simulation (-0.25)</li>
-                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">Verified keys</strong> & step-by-step clinical rationales</li>
-                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">All India Ranking (AIR)</strong> comparison</li>
-                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">100% Mobile & PC</strong> friendly CBT layout</li>
-                      </ul>
                     </div>
                   </div>
                 </div>
@@ -5596,11 +5560,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                                       key={i}
                                       onClick={() => {
                                         const cleanRoute = p.url.toLowerCase();
-                                        if (cleanRoute.startsWith("/exams/") || cleanRoute.startsWith("/exam/")) {
-                                          const urlParts = cleanRoute.split("/").filter(Boolean);
-                                          const examSlug = urlParts[1] ? urlParts[1].toLowerCase() : "aiims-norcet";
-                                          selectExam(examSlug);
-                                        } else if (cleanRoute === "/mock-tests") {
+                                        if (cleanRoute === "/mock-tests") {
                                           showPage("mock_tests");
                                         } else if (cleanRoute === "/subject-mocks") {
                                           showPage("subject_mocks");
