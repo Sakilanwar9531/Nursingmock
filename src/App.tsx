@@ -3270,8 +3270,8 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
             </div>
 
             {/* Horizontal Categories Scrollbar (TazaQuiz Style) */}
-            <div className="w-full bg-surface/85 backdrop-blur-md border-b border-border overflow-x-auto scrollbar-none sticky top-[58px] z-[90] py-2.5 px-4 md:px-8 shadow-sm">
-              <div className="max-w-7xl mx-auto flex items-center gap-2 md:gap-3 whitespace-nowrap min-w-max">
+            <div className="w-full bg-[var(--surface)]/85 backdrop-blur-md border-b border-[var(--border)] overflow-hidden sticky top-[58px] z-[90] py-2.5 px-4 md:px-8 shadow-sm">
+              <div className="max-w-7xl mx-auto flex items-center gap-2 md:gap-3 overflow-x-auto scrollbar-none py-1">
                 {[
                   { name: "AIIMS NORCET Series", examId: "aiims-norcet" },
                   { name: "ESIC Officer Special", examId: "esic-officer" },
@@ -3295,7 +3295,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                         showPage(cat.tab === "pyq" ? "pyq" : cat.tab === "subject" ? "subject_mocks" : "mock_tests");
                       }
                     }}
-                    className="px-3.5 py-1.5 rounded-xl bg-card hover:bg-card2 border border-border/70 hover:border-accent text-xs font-bold text-text2 hover:text-accent shadow-sm cursor-pointer select-none transition-all"
+                    className="px-3.5 py-1.5 rounded-xl bg-card hover:bg-card2 border border-border/70 hover:border-accent text-xs font-bold text-text2 hover:text-accent shadow-sm cursor-pointer select-none transition-all shrink-0 whitespace-nowrap"
                   >
                     {cat.name}
                   </button>
@@ -3342,10 +3342,10 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
               <div className="absolute bottom-10 left-1/3 w-80 h-80 bg-info/10 rounded-full filter blur-[120px] pointer-events-none"></div>
 
               {/* HERO SECTION - Optimized 2-Column Responsive Desktop Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 items-center relative z-10">
                 
                 {/* Left Column: Elegant Copywriting */}
-                <div className="lg:col-span-7 space-y-6 text-left">
+                <div className="md:col-span-7 space-y-6 text-left">
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--surface-2)]/80 border border-[var(--border)] text-[var(--text-secondary)] rounded-full text-[13px] font-medium uppercase tracking-[0.08em] shadow-sm">
                     <span className="status-dot"></span>
                     NCBT – National CBT
@@ -3389,10 +3389,10 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 </div>
 
                 {/* Right Column: High-Engagement CSS Study & Clinical Dashboard Widget */}
-                <div className="lg:col-span-5 hidden lg:block relative">
+                <div className="md:col-span-5 hidden md:block relative">
                   <div className="absolute inset-0 bg-gradient-to-tr from-accent/10 to-transparent rounded-3xl filter blur-2xl pointer-events-none"></div>
                   
-                  <div className="bg-card border border-border/80 rounded-3xl p-6 shadow-2xl relative overflow-hidden space-y-6 max-w-sm mx-auto premium-glow-box">
+                  <div className="bg-card border border-border/80 rounded-3xl p-5 lg:p-6 shadow-2xl relative overflow-hidden space-y-5 lg:space-y-6 w-full max-w-md mx-auto premium-glow-box">
                     <div className="flex items-center justify-between border-b border-border/40 pb-3">
                       <div className="flex items-center gap-2">
                         <span className="status-dot"></span>
@@ -3447,7 +3447,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
               </div>
 
               {/* INTERACTIVE PORTAL GRID ON MOBILE & LAPTOP CAROUSEL */}
-              <div className="mt-16 relative z-10 max-w-4xl mx-auto">
+              <div className="mt-16 relative z-10 w-full max-w-5xl mx-auto">
                 <div className="absolute inset-0 bg-gradient-to-t from-accent/5 to-transparent rounded-3xl filter blur-3xl pointer-events-none"></div>
 
                 <motion.div
