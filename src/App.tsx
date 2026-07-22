@@ -45,10 +45,15 @@ import {
   Brain,
   ClipboardList,
   GraduationCap,
-  Star
+  Star,
+  Sparkles,
+  ChevronRight,
+  ArrowRight
 } from "lucide-react";
 import { SUBJECTS, PYQ_DATA, TARGET_EXAMS } from "./data";
 import { InteractiveFAQ } from "./components/InteractiveFAQ";
+import { AllInOneHub } from "./components/AllInOneHub";
+import { FindTestPage } from "./components/FindTestPage";
 import { STATIC_NURSING_UPDATES } from "./updatesData";
 import { BLOG_TRANSLATIONS } from "./blogTranslations";
 import { Subject, Test, Question, PyqCard, User as UserType, Attempt, StreakData, NursingUpdate } from "./types";
@@ -379,7 +384,9 @@ const generateMockTests = (): Test[] => {
     let foundTest: Test | null = null;
     let foundUpdateOnLoad: any = null;
 
-    if (cleanPath === "/pyq") {
+    if (cleanPath === "/find-tests") {
+      initialPage = "find_test";
+    } else if (cleanPath === "/pyq") {
       initialPage = "exam_landing";
       initialTab = "pyq";
     } else if (cleanPath === "/mock-tests") {
@@ -410,9 +417,9 @@ const generateMockTests = (): Test[] => {
       initialPage = "auth";
     } else if (cleanPath === "/admin") {
       initialPage = "admin";
-    } else if (cleanPath.startsWith("/exam/")) {
+    } else if (cleanPath.startsWith("/exams/") || cleanPath.startsWith("/exam/")) {
       initialPage = "exam_landing";
-      const parts = path.split("/");
+      const parts = cleanPath.split("/");
       const eId = parts[2] ? parts[2].toLowerCase() : "aiims-norcet";
       const foundE = TARGET_EXAMS.find(e => e.id.toLowerCase() === eId);
       if (foundE) {
@@ -1102,6 +1109,15 @@ export default function App() {
   const [googleEmailInput, setGoogleEmailInput] = useState<string>("");
   const [googleNameInput, setGoogleNameInput] = useState<string>("");
 
+  // Detailed Student Profile & All-in-ONE States
+  const [authStudentType, setAuthStudentType] = useState<string>("Nursing");
+  const [authDesiredPost, setAuthDesiredPost] = useState<string>("AIIMS NORCET Nursing Officer");
+  const [authState, setAuthState] = useState<string>("West Bengal");
+  const [authPin, setAuthPin] = useState<string>("700001");
+
+  // Find Test Page State
+  const [findTestCategory, setFindTestCategory] = useState<string>("all");
+
   // OTP Authentication States
   const [loginMethod, setLoginMethod] = useState<"email" | "otp">("otp");
   const [authPhone, setAuthPhone] = useState<string>("");
@@ -1513,6 +1529,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     const stateObj = {
       page: initialRoute.page,
       hubTab: initialRoute.tab,
+      examId: initialRoute.examId,
       subjectId: initialRoute.subjectId,
       testId: initialRoute.testId,
       updateId: initialRoute.update ? initialRoute.update.id : null
@@ -1525,6 +1542,9 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         setActivePage(e.state.page);
         if (e.state.hubTab) {
           setHubTab(e.state.hubTab);
+        }
+        if (e.state.examId) {
+          setSelectedExamId(e.state.examId);
         }
         if (e.state.page === "updates" && e.state.updateId) {
           const foundU = STATIC_NURSING_UPDATES.find(u => u.id === e.state.updateId);
@@ -1554,8 +1574,16 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           }
         }
       } else {
-        setActivePage("landing");
-        setSelectedUpdate(null);
+        const route = getInitialRoute();
+        setActivePage(route.page);
+        setHubTab(route.tab);
+        if (route.examId) {
+          setSelectedExamId(route.examId);
+        }
+        setSelectedUpdate(route.update || null);
+        if (route.test) {
+          setActiveTest(route.test);
+        }
       }
     };
 
@@ -1838,16 +1866,62 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     showPage("hub");
   };
 
+  const handleAllInOneClick = () => {
+    if (!currentUser || currentUser.guest || !currentUser.studentType || !currentUser.desiredPost) {
+      setAuthTab("register");
+      setAuthError("");
+      showPage("auth");
+      triggerToast("Please complete your detailed student registration to unlock 'All in ONE' 🎓", "ok");
+    } else {
+      showPage("all_in_one");
+    }
+  };
+
+  const handleUpdateProfile = (updated: Partial<UserType>) => {
+    if (!currentUser) return;
+    const merged: UserType = { ...currentUser, ...updated };
+    setCurrentUser(merged);
+    localStorage.setItem("np_user", JSON.stringify(merged));
+    
+    // Update in users array as well
+    const users: UserType[] = JSON.parse(localStorage.getItem("np_users") || "[]");
+    const idx = users.findIndex(u => u.email.toLowerCase() === merged.email.toLowerCase());
+    if (idx !== -1) {
+      users[idx] = merged;
+      localStorage.setItem("np_users", JSON.stringify(users));
+    }
+    triggerToast("Student profile updated successfully! ✨", "ok");
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!authName || !authEmail || !authPassword) {
-      setAuthError("Please fill out all fields.");
+      setAuthError("Please fill out all required fields.");
       return;
     }
     if (authPassword.length < 6) {
       setAuthError("Password must be at least 6 characters.");
       return;
     }
+
+    const users: UserType[] = JSON.parse(localStorage.getItem("np_users") || "[]");
+    if (users.some(u => u.email.toLowerCase() === authEmail.toLowerCase().trim())) {
+      setAuthError("Email is already registered.");
+      return;
+    }
+
+    const newUser: UserType = {
+      name: authName.trim(),
+      email: authEmail.toLowerCase().trim(),
+      pass: authPassword,
+      phone: authPhone.trim() || "9830000000",
+      studentType: authStudentType || "Nursing",
+      desiredPost: authDesiredPost.trim() || "AIIMS NORCET Nursing Officer",
+      state: authState || "West Bengal",
+      pin: authPin.trim() || "700001",
+      isAdmin: users.length === 0 || authEmail.toLowerCase().trim() === "sakil.net.in@gmail.com",
+      joined: Date.now()
+    };
 
     if (isSupabaseConnected()) {
       setAuthError("");
@@ -1857,34 +1931,22 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         return;
       }
       if (res.user) {
-        setCurrentUser(res.user);
-        localStorage.setItem("np_user", JSON.stringify(res.user));
-        triggerToast(`Account created on Supabase, welcome ${res.user.name}! 🎉`, "ok");
-        showPage("hub");
+        const merged = { ...res.user, ...newUser };
+        setCurrentUser(merged);
+        localStorage.setItem("np_user", JSON.stringify(merged));
+        triggerToast(`Welcome to All in ONE, ${merged.name}! 🎉`, "ok");
+        showPage("all_in_one");
         return;
       }
     }
 
-    const users: UserType[] = JSON.parse(localStorage.getItem("np_users") || "[]");
-    if (users.some(u => u.email.toLowerCase() === authEmail.toLowerCase().trim())) {
-      setAuthError("Email is already registered.");
-      return;
-    }
-    const newUser: UserType = {
-      name: authName.trim(),
-      email: authEmail.toLowerCase().trim(),
-      pass: authPassword,
-      isAdmin: users.length === 0,
-      joined: Date.now()
-    } as any;
-    
     users.push(newUser);
     localStorage.setItem("np_users", JSON.stringify(users));
     setCurrentUser(newUser);
     localStorage.setItem("np_user", JSON.stringify(newUser));
     setAuthError("");
-    triggerToast(`Account created successfully, ${newUser.name}! 🎉`, "ok");
-    showPage("hub");
+    triggerToast(`Welcome to All in ONE, ${newUser.name}! 🎉`, "ok");
+    showPage("all_in_one");
   };
 
   const handleLogout = async () => {
@@ -2133,15 +2195,14 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     triggerToast("User authorization settings successfully parsed!", "ok");
   };
 
-  const getPathForState = (pageId: string, hTab?: string, subjId?: string | null, testId?: string | null) => {
+  const getPathForState = (pageId: string, hTab?: string, subjId?: string | null, testId?: string | null, customExamId?: string) => {
     if (pageId === "exam_landing" || pageId === "hub") {
-      const tab = hTab || hubTab;
-      if (tab === "pyq") return "/pyq";
-      if (tab === "full_mock") return "/mock-tests";
-      if (tab === "subject") return "/subject-mocks";
-      if (tab === "short") return "/short-sprints";
-      return `/exam/${selectedExamId}`;
+      const eId = customExamId || selectedExamId || "aiims-norcet";
+      const found = TARGET_EXAMS.find(e => e.id.toLowerCase() === eId.toLowerCase());
+      const validSlug = found ? found.id : "aiims-norcet";
+      return `/exams/${validSlug}`;
     }
+    if (pageId === "find_test") return "/find-tests";
     if (pageId === "landing") return "/";
     if (pageId === "updates") return "/updates";
     if (pageId === "analytics") return "/analytics";
@@ -2155,8 +2216,16 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     return "/";
   };
 
+  const selectExam = (examId: string, tab?: "full_mock" | "pyq" | "subject" | "short") => {
+    const foundE = TARGET_EXAMS.find(e => e.id.toLowerCase() === examId.toLowerCase());
+    const validId = foundE ? foundE.id : "aiims-norcet";
+    setSelectedExamId(validId);
+    if (tab) setHubTab(tab);
+    showPage("exam_landing", true, { examId: validId });
+  };
+
   // Navigation controller
-  const showPage = (pageId: string, pushHistory = true, customState?: { subjectId?: string | null, testId?: string | null }) => {
+  const showPage = (pageId: string, pushHistory = true, customState?: { subjectId?: string | null, testId?: string | null, examId?: string }) => {
     let targetPage = pageId;
     let targetTab = hubTab;
     if (pageId === "pyq") {
@@ -2178,6 +2247,13 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     } else if (pageId === "hub") {
       targetPage = "exam_landing";
     }
+
+    const effectiveExamId = customState?.examId || selectedExamId || "aiims-norcet";
+
+    if (effectiveExamId !== selectedExamId) {
+      setSelectedExamId(effectiveExamId);
+    }
+
     setActivePage(targetPage);
     window.scrollTo({ top: 0 });
     if (targetPage === "analytics" && currentUser && !currentUser.guest && isSupabaseConnected()) {
@@ -2190,16 +2266,48 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         const stateToPush = {
           page: targetPage,
           hubTab: targetTab,
+          examId: effectiveExamId,
           subjectId: customState ? customState.subjectId : activeSubjectId,
           testId: customState ? customState.testId : (activeTest?.id || null)
         };
-        const urlPath = getPathForState(targetPage, targetTab, stateToPush.subjectId, stateToPush.testId);
+        const urlPath = getPathForState(targetPage, targetTab, stateToPush.subjectId, stateToPush.testId, effectiveExamId);
         window.history.pushState(stateToPush, "", urlPath);
       } catch (e) {
         console.error("Failed to pushState", e);
       }
     }
   };
+
+  // Dynamic Document Title and Meta Description per Page / Exam
+  useEffect(() => {
+    if (activePage === "exam_landing") {
+      const exam = TARGET_EXAMS.find(e => e.id === selectedExamId) || TARGET_EXAMS[0];
+      if (exam) {
+        document.title = `${exam.fullName} — Mock Tests, PYQs & Syllabus | NCBT`;
+        let metaDesc = document.querySelector('meta[name="description"]');
+        if (!metaDesc) {
+          metaDesc = document.createElement("meta");
+          metaDesc.setAttribute("name", "description");
+          document.head.appendChild(metaDesc);
+        }
+        metaDesc.setAttribute("content", `Prepare for ${exam.fullName} (${exam.name}) with free CBT mock tests, previous year solved papers (PYQs), clinical rationales & syllabus guidelines at NCBT.`);
+      }
+    } else if (activePage === "find_test") {
+      document.title = "Find Government Exam Mock Test Series — NCBT";
+    } else if (activePage === "landing") {
+      document.title = "NCBT — India's Premier Nursing, Pharmacist & Paramedical CBT Portal";
+    } else if (activePage === "updates") {
+      document.title = "Nursing & Paramedical Exam Updates, Vacancies & Notes | NCBT";
+    } else if (activePage === "about") {
+      document.title = "About Us — NCBT National CBT Portal";
+    } else if (activePage === "contact") {
+      document.title = "Contact Us — NCBT Support";
+    } else if (activePage === "analytics") {
+      document.title = "Performance Analytics & CBT Scorecard | NCBT";
+    } else if (activePage === "test" && activeTest) {
+      document.title = `${activeTest.title} — Online CBT Practice | NCBT`;
+    }
+  }, [activePage, selectedExamId, activeTest]);
 
   const viewUpdate = (item: NursingUpdate) => {
     setSelectedUpdate(item);
@@ -2735,7 +2843,69 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
                 {/* Navigation Links Grid */}
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 mb-2 select-none">Practice Centre</p>
+                  <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 mb-2 select-none">All in ONE Portal</p>
+                  
+                  <button
+                    onClick={() => { handleAllInOneClick(); setIsDrawerOpen(false); }}
+                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-amber-500/15 via-emerald-500/15 to-teal-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 hover:border-amber-500/60 transition-all cursor-pointer shadow-sm"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Sparkles className="w-4 h-4 text-amber-500 fill-amber-500/20 animate-pulse shrink-0" />
+                      <span className="text-xs font-black tracking-tight">All in ONE Landing</span>
+                    </div>
+                    <span className="px-1.5 py-0.2 text-[8px] font-black uppercase tracking-wider bg-amber-500 text-slate-950 rounded-full">
+                      NEW
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => { showPage("find_test"); setIsDrawerOpen(false); }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-all cursor-pointer border border-transparent hover:border-[var(--border)]"
+                  >
+                    <Search className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>Find Mock Test Series</span>
+                  </button>
+
+                  <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 pt-4 mb-2 select-none">Course Categories</p>
+                  
+                  <div className="space-y-1">
+                    {[
+                      { id: "Nursing", name: "Nursing", icon: "🩺", desc: "NORCET, WBHRB, ESIC, RRB, CHO" },
+                      { id: "Pharmacist", name: "Pharmacist", icon: "💊", desc: "RRB, ESIC, WBHRB, Drug Inspector" },
+                      { id: "Paramedical", name: "Paramedical", icon: "🔬", desc: "Surgical OT Tech, Ophthalmic, Dialysis" },
+                      { id: "Lab Tech", name: "Lab Technician", icon: "🧪", desc: "DMLT, AIIMS, RRB Pathology" },
+                      { id: "Radiographer", name: "Radiographer", icon: "📸", desc: "X-Ray, CT/MRI, Radiation Physics" },
+                      { id: "Medical Officer", name: "Medical Officer & Govt", icon: "👨‍⚕️", desc: "CHO Medical, UPSC CMS, State Health" },
+                    ].map((cat) => {
+                      const isSelected = activePage === "find_test" && findTestCategory.toLowerCase() === cat.id.toLowerCase();
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => {
+                            setFindTestCategory(cat.id);
+                            showPage("find_test");
+                            setIsDrawerOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                            isSelected
+                              ? "bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] shadow-sm"
+                              : "text-[var(--text-primary)] hover:bg-[var(--surface-2)] border-transparent hover:border-[var(--border)]"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-base">{cat.icon}</span>
+                            <div className="text-left">
+                              <p className="leading-tight font-bold">{cat.name}</p>
+                              <p className="text-[9px] text-[var(--text-secondary)] font-medium">{cat.desc}</p>
+                            </div>
+                          </div>
+                          <ChevronRight className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 pt-4 mb-2 select-none">Practice Centre</p>
                   
                   <button
                     onClick={() => { showPage("subject_mocks"); setIsDrawerOpen(false); }}
@@ -2784,32 +2954,6 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     <Activity className="w-4 h-4 text-[var(--text-secondary)] shrink-0" />
                     <span>Daily Speed Sprints</span>
                   </button>
-
-                  <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 pt-5 mb-2 select-none">Target Exams</p>
-                  
-                  <div className="grid grid-cols-2 gap-1.5 px-1 pb-2">
-                    {TARGET_EXAMS.map(exam => {
-                      const isSelected = selectedExamId === exam.id && activePage === "exam_landing";
-                      return (
-                        <button
-                          key={exam.id}
-                          onClick={() => {
-                            setSelectedExamId(exam.id);
-                            showPage("exam_landing");
-                            setIsDrawerOpen(false);
-                          }}
-                          className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-[9px] font-bold text-center transition-all cursor-pointer ${
-                            isSelected
-                              ? "bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] shadow-sm"
-                              : "bg-[var(--surface-2)] border-[var(--border)]/50 text-[var(--text-primary)] hover:border-[var(--border)] hover:bg-[var(--surface)]"
-                          }`}
-                        >
-                          <span className="text-sm mb-1">{exam.icon}</span>
-                          <span className="truncate w-full">{exam.name}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
 
                   <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 pt-4 mb-2 select-none">Updates & Insights</p>
 
@@ -2937,27 +3081,52 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           >
             <Home className="w-4 h-4" /> Home
           </button>
+          
+          {/* ALL IN ONE MAIN BUTTON */}
           <button 
-            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && hubSearchText === "Nursing" ? "active" : ""}`} 
-            onClick={() => { showPage("mock_tests"); setHubSearchText("Nursing"); }}
+            className={`nav-link flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+              activePage === "all_in_one" 
+                ? "bg-amber-500/20 text-amber-500 font-black border border-amber-500/40" 
+                : "text-amber-600 dark:text-amber-400 font-extrabold hover:bg-amber-500/10"
+            }`}
+            onClick={handleAllInOneClick}
+          >
+            <Sparkles className="w-4 h-4 text-amber-500 fill-amber-500/20 animate-pulse" />
+            <span>All in ONE</span>
+            <span className="px-1.5 py-0.2 text-[8px] font-black uppercase tracking-wider bg-amber-500 text-slate-950 rounded-full shadow-sm">
+              NEW
+            </span>
+          </button>
+
+          {/* FIND TEST SEARCH BUTTON */}
+          <button 
+            className={`nav-link flex items-center gap-1.5 ${activePage === "find_test" ? "active text-emerald-400 font-bold" : ""}`} 
+            onClick={() => showPage("find_test")}
+          >
+            <Search className="w-4 h-4 text-emerald-500" /> Find Test
+          </button>
+
+          <button 
+            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && (selectedExamId === "aiims-norcet" || hubSearchText === "Nursing") ? "active" : ""}`} 
+            onClick={() => { setHubSearchText("Nursing"); selectExam("aiims-norcet"); }}
           >
             <Stethoscope className="w-4 h-4 text-emerald-400" /> Nursing
           </button>
           <button 
-            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && hubSearchText === "Pharmacist" ? "active" : ""}`} 
-            onClick={() => { showPage("mock_tests"); setHubSearchText("Pharmacist"); }}
+            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && (selectedExamId.includes("pharmacist") || hubSearchText === "Pharmacist") ? "active" : ""}`} 
+            onClick={() => { setHubSearchText("Pharmacist"); selectExam("rrb-pharmacist"); }}
           >
             <Pill className="w-4 h-4 text-amber-400" /> Pharmacist
           </button>
           <button 
-            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && hubSearchText === "Paramedical" ? "active" : ""}`} 
-            onClick={() => { showPage("mock_tests"); setHubSearchText("Paramedical"); }}
+            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && (selectedExamId.includes("technician") || hubSearchText === "Paramedical") ? "active" : ""}`} 
+            onClick={() => { setHubSearchText("Paramedical"); selectExam("ot-technician"); }}
           >
             <Activity className="w-4 h-4 text-[var(--accent)]" /> Paramedical
           </button>
           <button 
             className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && hubTab === "short" ? "active" : ""}`} 
-            onClick={() => { showPage("short_sprints"); setHubSearchText(""); }}
+            onClick={() => { setHubSearchText(""); showPage("short_sprints", true, { examId: selectedExamId }); }}
           >
             <Zap className="w-4 h-4 text-[var(--accent)]" /> Current Affairs
           </button>
@@ -3039,57 +3208,57 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   {/* Repeated twice for seamless infinite marquee scroll */}
                   {[...Array(2)].map((_, rIdx) => (
                     <div key={rIdx} className="flex gap-8 shrink-0 items-center">
-                      <span onClick={() => setSelectedExamId("norcet")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("aiims-norcet")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">ADMIT CARD:</span>
                         <span>AIIMS NORCET 8.0 — Official Notification &amp; CBT Mocks Live</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => setSelectedExamId("wbhrb")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("wbhrb-grade2")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">UPDATE:</span>
                         <span>WBHRB Staff Nurse Grade II — Exam Date &amp; Solved Papers</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => setSelectedExamId("esic")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("esic-officer")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">VACANCY:</span>
                         <span>ESIC Nursing Officer — 1,980+ Vacancies Registration</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => setSelectedExamId("rrb")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("rrb-officer")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">NEW:</span>
                         <span>RRB Railway Staff Nurse — Syllabus &amp; PYQ Question Vaults</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => setSelectedExamId("cho")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("cho-recruitment")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">RESULT:</span>
                         <span>CHO NHM State Recruitment — Model Tests &amp; Clinical Drills</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => setSelectedExamId("dsssb")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("dsssb-officer")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">UPDATE:</span>
                         <span>DSSSB Staff Nurse Selection — Solved PYQs Available</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => setSelectedExamId("upcnet")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("aiims-norcet")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">NEW:</span>
                         <span>UP CNET Nursing Entrance — Full Mock Practice Suite</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => setSelectedExamId("aiims_bsc")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("aiims-norcet")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">UPDATE:</span>
                         <span>AIIMS B.Sc Nursing Series — Specialty Drills Active</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => setSelectedExamId("emrs")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("esic-officer")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">NEW:</span>
                         <span>EMRS Staff Nurse Prep — Scenario Based Speed Sprints</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => setSelectedExamId("crpf")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("ot-technician")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">RESULT:</span>
                         <span>CRPF Paramedical Staff — Real CBT Exam Simulation</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => setSelectedExamId("upsssc_anm")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("wbhrb-nurse")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">UPDATE:</span>
                         <span>UPSSSC ANM Test Series — Practice Papers Updated</span>
                       </span>
@@ -3119,8 +3288,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     key={idx}
                     onClick={() => {
                       if (cat.examId) {
-                        setSelectedExamId(cat.examId);
-                        showPage("exam_landing");
+                        selectExam(cat.examId);
                       } else if (cat.tab) {
                         setHubTab(cat.tab);
                         if (cat.query) setHubSearchText(cat.query);
@@ -3346,8 +3514,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                             };
                             const examId = mapping[mockCourse.tag];
                             if (examId) {
-                              setSelectedExamId(examId);
-                              showPage("exam_landing");
+                              selectExam(examId);
                             } else {
                               showPage("mock_tests");
                               setHubSearchText(mockCourse.query);
@@ -3441,8 +3608,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       viewport={{ once: true, margin: "-50px" }}
                       transition={{ duration: 0.5 }}
                       onClick={() => {
-                        setSelectedExamId(exam.id);
-                        showPage("exam_landing");
+                        selectExam(exam.id);
                       }}
                       className="premium-glow-box rounded-3xl p-6 flex flex-col justify-between group relative overflow-hidden cursor-pointer"
                     >
@@ -4668,55 +4834,71 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           
           // 1. Mocks for this exam
           const nameKeywords = {
-            "aiims-norcet": ["norcet", "aiims"],
-            "wbhrb-grade2": ["wbhrb", "grade2", "west bengal", "wbhrb-staff-nurse", "wbhrb-grade-2"],
-            "wbhrb-nurse": ["wbhrb", "grade2", "west bengal", "wbhrb-staff-nurse", "wbhrb-grade-2"],
-            "esic-officer": ["esic"],
-            "rrb-officer": ["rrb"],
-            "cho-recruitment": ["cho", "recruitment"],
-            "dsssb-officer": ["dsssb"]
+            "aiims-norcet": ["norcet", "aiims nursing"],
+            "wbhrb-grade2": ["wbhrb"],
+            "wbhrb-nurse": ["wbhrb"],
+            "esic-officer": ["esic staff nurse"],
+            "rrb-officer": ["rrb staff nurse"],
+            "cho-recruitment": ["cho"],
+            "dsssb-officer": ["dsssb staff nurse"],
+            "rrb-pharmacist": ["rrb pharmacist", "pharmacist"],
+            "esic-pharmacist": ["esic pharmacist", "pharmacist"],
+            "wbhrb-pharmacist": ["wbhrb pharmacist", "pharmacist"],
+            "drug-inspector": ["drug inspector"],
+            "cghs-pharmacist": ["cghs pharmacist", "pharmacist"],
+            "ot-technician": ["ot technician", "surgical ot"],
+            "ophthalmic-assistant": ["ophthalmic"],
+            "dialysis-tech": ["dialysis"],
+            "dmlt-labtech": ["dmlt", "pathology"],
+            "aiims-labtech": ["aiims lab"],
+            "rrb-labtech": ["rrb lab"],
+            "radiographer-cbt": ["radiographer", "x-ray"],
+            "aiims-xray": ["aiims radiographer"],
+            "cho-medical": ["medical officer"],
+            "upsc-cms": ["upsc cms"]
           };
-          const kws = nameKeywords[exam.id] || [];
+          const kws = nameKeywords[exam.id] || [exam.id, exam.name.toLowerCase()];
           
           const examMocks = mockSubject ? mockSubject.tests.filter(t => {
             return kws.some(kw => t.title.toLowerCase().includes(kw) || t.desc.toLowerCase().includes(kw));
           }) : [];
 
-          // Let's fallback if no exact mock found (to show at least 2 default mocks)
-          const finalMocksToShow = examMocks.length > 0 ? examMocks : (mockSubject ? mockSubject.tests.slice(0, 3) : []);
+          // STRICT FILTER: NEVER fall back to Nursing or other exam's mocks!
+          const finalMocksToShow = examMocks;
 
           const filteredMocks = finalMocksToShow.filter(t => {
             return !hubSearchText || t.title.toLowerCase().includes(hubSearchText.toLowerCase()) || t.desc.toLowerCase().includes(hubSearchText.toLowerCase());
           });
 
           // 2. Solved PYQs for this exam
-          const getPyqTagForExam = (examId) => {
-            if (examId === "aiims-norcet") return "aiims";
-            if (examId === "wbhrb-grade2" || examId === "wbhrb-nurse") return "wbhrb";
-            if (examId === "esic-officer") return "esic";
-            if (examId === "rrb-officer") return "rrb";
-            if (examId === "cho-recruitment") return "cho";
-            if (examId === "dsssb-officer") return "dsssb";
-            return "all";
-          };
-          const activePyqTag = getPyqTagForExam(exam.id);
           const examPyqs = PYQ_DATA.filter(p => {
-            const matchesExam = activePyqTag === "all" || p.tag === activePyqTag;
+            const matchesTag = p.tag === exam.id ||
+                               p.tag.includes(exam.id) ||
+                               (exam.id.startsWith("wbhrb") && p.tag === "wbhrb") ||
+                               (exam.id === "aiims-norcet" && p.tag === "aiims") ||
+                               (exam.id === "esic-officer" && p.tag === "esic") ||
+                               (exam.id === "rrb-officer" && p.tag === "rrb") ||
+                               (exam.id === "cho-recruitment" && p.tag === "cho") ||
+                               (exam.id === "dsssb-officer" && p.tag === "dsssb") ||
+                               (exam.category === "Pharmacist" && p.tag.includes("pharmacist")) ||
+                               (exam.category === "Paramedical" && (p.tag.includes("ot") || p.tag.includes("ophthalmic") || p.tag.includes("dialysis"))) ||
+                               (exam.category === "Lab Tech" && p.tag.includes("labtech")) ||
+                               (exam.category === "Radiographer" && p.tag.includes("radiograph"));
+
             const matchesSearch = !hubSearchText || p.exam.toLowerCase().includes(hubSearchText.toLowerCase()) || p.year.includes(hubSearchText);
-            return matchesExam && matchesSearch;
+            return matchesTag && matchesSearch;
           });
 
-          // 3. Specialty Drills for this exam based on syllabus
-          const EXAM_SUBJECT_SYLLABUS = {
-            "aiims-norcet": ["anatomy", "med-surg", "community", "maternal", "pediatric", "mhn"],
-            "wbhrb-grade2": ["anatomy", "med-surg", "community", "maternal", "pediatric"],
-            "wbhrb-nurse": ["anatomy", "med-surg", "community", "maternal", "pediatric"],
-            "esic-officer": ["anatomy", "med-surg", "community", "maternal", "pediatric", "mhn"],
-            "rrb-officer": ["anatomy", "med-surg", "community", "maternal", "pediatric"],
-            "cho-recruitment": ["anatomy", "community", "maternal", "pediatric"],
-            "dsssb-officer": ["anatomy", "med-surg", "community", "maternal", "pediatric", "mhn"]
+          // 3. Specialty Drills for this exam based on category
+          const CATEGORY_SUBJECT_IDS = {
+            "Nursing": ["anatomy", "med-surg", "community", "maternal", "pediatric", "mhn", "pharmacology"],
+            "Pharmacist": ["pharmacist_science", "pharmacology"],
+            "Paramedical": ["paramedical_ot"],
+            "Lab Tech": ["lab_tech_dmlt"],
+            "Radiographer": ["radiography_xray"],
+            "Medical Officer": ["community", "med-surg"]
           };
-          const allowedSubjectIds = EXAM_SUBJECT_SYLLABUS[exam.id] || ["anatomy", "med-surg", "community", "maternal", "pediatric"];
+          const allowedSubjectIds = CATEGORY_SUBJECT_IDS[exam.category] || [];
           const examSubjectTests = [];
           subjects.forEach(subj => {
             if (allowedSubjectIds.includes(subj.id)) {
@@ -4740,13 +4922,13 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
           return (
             <div className="page active" id="page-exam-landing">
-              {/* Header banner / Hero of Dedicated landing page */}
-              <div className="w-full bg-[var(--card)] border-b border-border/60 py-16 px-4 md:px-8 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-accent/5 rounded-full filter blur-3xl pointer-events-none"></div>
+              {/* 1. EXAM TITLE & DESCRIPTION HEADER BANNER */}
+              <div className="w-full bg-[var(--card)] border-b border-[var(--border)]/60 py-12 px-4 md:px-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-[var(--primary)]/5 rounded-full filter blur-3xl pointer-events-none"></div>
                 
-                <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+                <div className="max-w-6xl mx-auto space-y-8 relative z-10">
                   {/* Left Column: Exam Title, Badges & Copywriting */}
-                  <div className="lg:col-span-8 space-y-6 text-left">
+                  <div className="space-y-4 text-left max-w-4xl">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--accent-soft)] border border-[var(--accent)]/30 text-[var(--accent)] rounded-xl text-[11px] font-black uppercase tracking-wider">
                       <span>🏥 COURSE DETAILS</span>
                     </div>
@@ -4756,12 +4938,12 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       <span className="text-[var(--primary)]">Complete Preparation Package</span>
                     </h1>
 
-                    <p className="text-xs md:text-sm text-[var(--text-secondary)] leading-relaxed font-sans max-w-3xl">
+                    <p className="text-xs md:text-sm text-[var(--text-secondary)] leading-relaxed font-sans">
                       {exam.desc} This package is specially designed for candidates preparing for {exam.name} recruitment exams. It includes highly curated real-time computer-based tests (CBT), full syllabus mocks, specialty clinical drills, and verified previous year papers with rich clinical rationales to help aspirants crack the exam with absolute confidence.
                     </p>
 
                     {/* Tags */}
-                    <div className="flex items-center gap-3 flex-wrap">
+                    <div className="flex items-center gap-2.5 flex-wrap pt-1">
                       <span className="px-3 py-1.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-xs font-bold text-[var(--text-secondary)] flex items-center gap-1.5">
                         📝 {finalMocksToShow.length}+ Mock Tests
                       </span>
@@ -4777,164 +4959,133 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     </div>
                   </div>
 
-                  {/* Right Column: Pricing Box matching TazaQuiz style */}
-                  <div className="lg:col-span-4">
-                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-2xl relative overflow-hidden space-y-4">
-                      <div className="flex items-center gap-4">
-                        <span className="text-2xl w-14 h-14 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center shrink-0">
+                  {/* SINGLE UNIFIED MERGED CARD (Package + Pricing + Practice Arena Tabs & Search) */}
+                  <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 md:p-8 shadow-xl relative overflow-hidden space-y-6">
+                    {/* Top Row: Exam Info, SaaS Pricing & CTA Button */}
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-[var(--border)]/60">
+                      {/* Exam Icon, Title & Series Tag */}
+                      <div className="flex items-start sm:items-center gap-4">
+                        <span className="text-3xl w-14 h-14 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center shrink-0 shadow-sm">
                           {exam.icon}
                         </span>
-                        <div>
-                          <h3 className="text-sm font-black text-[var(--text-primary)] leading-none mb-1">{exam.fullName}</h3>
-                          <span className="text-[10px] text-[var(--text-secondary)] uppercase font-black tracking-widest">{exam.category}</span>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/30 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider">
+                              {exam.category} Series
+                            </span>
+                            <span className="text-[10px] text-[var(--text-secondary)] font-bold">
+                              Full Mock &amp; PYQ Access
+                            </span>
+                          </div>
+                          <h2 className="text-lg md:text-2xl font-black text-[var(--text-primary)] leading-snug">
+                            {exam.fullName} Complete Package
+                          </h2>
+                          <p className="text-xs text-[var(--text-secondary)] font-medium">
+                            Instant activation • CBT exam interface simulation • Verified explanations
+                          </p>
                         </div>
                       </div>
 
-                      <div className="flex items-baseline justify-between border-t border-b border-[var(--border)]/40 py-4">
-                        <div className="space-y-0.5">
-                          <span className="text-[10px] text-[var(--text-secondary)] uppercase font-bold block">Exclusive Starting Price</span>
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-3xl font-black text-[var(--primary)]">₹149</span>
-                            <span className="text-xs text-[var(--text-secondary)] line-through">₹499</span>
-                            <span className="text-[10px] bg-red-500/10 text-red-500 border border-red-500/20 px-1.5 py-0.5 rounded font-bold uppercase">70% OFF</span>
+                      {/* SaaS Pricing Block + CTA Button */}
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 shrink-0">
+                        {/* SaaS Pricing Display */}
+                        <div className="flex items-center gap-3 bg-[var(--surface-2)] px-4 py-3 rounded-2xl border border-[var(--border)] shadow-sm">
+                          <div className="flex flex-col text-left space-y-0.5">
+                            <div className="flex items-center gap-2 leading-none">
+                              <span className="text-xs text-[var(--text-secondary)] line-through font-bold opacity-80">
+                                ₹999
+                              </span>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full font-black bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/30 uppercase tracking-wider">
+                                70% OFF
+                              </span>
+                            </div>
+                            <div className="flex items-baseline gap-1 leading-none">
+                              <span className="text-2xl md:text-3xl font-black text-emerald-600 dark:text-emerald-400">
+                                ₹299
+                              </span>
+                              <span className="text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider">
+                                / Lifetime
+                              </span>
+                            </div>
                           </div>
                         </div>
-                        <span className="text-[10px] text-[var(--text-secondary)] font-bold text-right self-end">Starting price + GST</span>
+
+                        {/* Unlock CTA Button */}
+                        <button
+                          onClick={() => {
+                            const el = document.getElementById("practice-tab-content");
+                            if (el) el.scrollIntoView({ behavior: "smooth" });
+                          }}
+                          className="px-6 py-3.5 rounded-2xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-xs md:text-sm font-black shadow-lg shadow-[var(--primary)]/20 transition-all cursor-pointer text-center flex items-center justify-center gap-2 whitespace-nowrap"
+                        >
+                          <span>🔓 Unlock Full Access — ₹299</span>
+                        </button>
                       </div>
+                    </div>
 
-                      <button
-                        onClick={() => {
-                          // Scroll to included mocks section
-                          const el = document.getElementById("included-mocks-list");
-                          if (el) el.scrollIntoView({ behavior: "smooth" });
-                        }}
-                        className="w-full py-4 rounded-2xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-xs md:text-sm font-black shadow-xl shadow-[var(--primary)]/20 transition-all cursor-pointer text-center block"
-                      >
-                        🎯 Start Practice Free
-                      </button>
+                    {/* Bottom Row: Integrated Practice Arena Tabs & Search Bar */}
+                    <div className="space-y-4" id="included-mocks-list">
+                      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                        {/* Practice Tabs */}
+                        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
+                          {[
+                            { id: "full_mock", label: "📝 CBT Mock Papers", count: filteredMocks.length },
+                            { id: "pyq", label: "📄 Solved PYQs", count: examPyqs.length },
+                            { id: "subject", label: "🧠 Specialty Drills", count: examSubjectTests.length },
+                            { id: "short", label: "⏱️ Speed Sprints", count: examSprints.length },
+                          ].map((t) => (
+                            <button
+                              key={t.id}
+                              onClick={() => setHubTab(t.id as any)}
+                              className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                                hubTab === t.id
+                                  ? "bg-[var(--primary)] text-white shadow-md shadow-[var(--primary)]/20"
+                                  : "bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                              }`}
+                            >
+                              <span>{t.label}</span>
+                              <span
+                                className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                                  hubTab === t.id
+                                    ? "bg-white/20 text-white"
+                                    : "bg-[var(--surface)] border border-[var(--border)] text-[var(--text-secondary)]"
+                                }`}
+                              >
+                                {t.count}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
 
-                      <p className="text-[10px] text-[var(--text-secondary)] text-center">
-                        Instant activation • No hidden charges • CBT exam interface simulation
-                      </p>
+                        {/* Search Bar */}
+                        <div className="relative flex-1 max-w-md">
+                          <input
+                            type="text"
+                            placeholder="Search practice resources..."
+                            value={hubSearchText}
+                            onChange={(e) => setHubSearchText(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] text-xs text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-[var(--primary)] transition-all"
+                          />
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] text-xs">🔍</span>
+                          {hubSearchText && (
+                            <button
+                              onClick={() => setHubSearchText("")}
+                              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs font-bold"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Why NCBT Section */}
-              <div className="w-full bg-[var(--bg)] py-16 px-4 md:px-8 border-b border-[var(--border)]/40">
-                <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                  <div className="lg:col-span-8 space-y-6">
-                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 md:p-8 space-y-6">
-                      <div className="flex items-center gap-3">
-                        <span className="text-3xl">🎯</span>
-                        <div>
-                          <h2 className="text-lg md:text-xl font-black text-[var(--text-primary)]">Why NCBT is Your Best Exam Partner</h2>
-                          <p className="text-[11px] text-[var(--text-secondary)]">Complete exam preparation — mock tests, study material, live tests & daily practice, all in one place.</p>
-                        </div>
-                      </div>
-
-                      <div className="border-l-4 border-[var(--primary)] pl-4 py-1">
-                        <p className="text-xs text-[var(--text-secondary)] leading-relaxed font-sans">
-                          NCBT is a full-fledged exam preparation platform built specifically for <strong className="text-[var(--text-primary)]">{exam.fullName}</strong> and other government job aspirants across India. We go far beyond simple quizzes — our platform provides Chapter-wise Tests, Subject Tests, Full-Length Mock Tests, Live Tests, PYQs, Smart Notes, and Detailed Answer Explanations — everything structured so you can clear your exam on the very first attempt.
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                        <div className="bg-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl space-y-1">
-                          <span className="text-xl">🏅</span>
-                          <h4 className="text-xs font-black text-[var(--text-primary)] uppercase">Full Mock Tests</h4>
-                          <p className="text-[11px] text-[var(--text-secondary)]">Realistic timed exam conditions matching the latest recruitment guidelines.</p>
-                        </div>
-                        <div className="bg-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl space-y-1">
-                          <span className="text-xl">📖</span>
-                          <h4 className="text-xs font-black text-[var(--text-primary)] uppercase">Chapter & Subject</h4>
-                          <p className="text-[11px] text-[var(--text-secondary)]">High-yield syllabus coverage including nursing and non-nursing specialties.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="lg:col-span-4 space-y-4">
-                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 space-y-4">
-                      <h3 className="text-xs font-black text-[var(--text-primary)] uppercase tracking-wider border-b border-[var(--border)] pb-2">📦 Course Highlights</h3>
-                      <ul className="space-y-3 text-xs text-[var(--text-secondary)]">
-                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">Instant evaluation</strong> and score calculation</li>
-                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">Negative marking penalty</strong> simulation (-0.25)</li>
-                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">Verified keys</strong> & step-by-step clinical rationales</li>
-                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">All India Ranking (AIR)</strong> comparison</li>
-                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">100% Mobile & PC</strong> friendly CBT layout</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* LIST OF INCLUDED TESTS - CBT PRACTICE ARENA WORKSPACE */}
-              <div className="w-full bg-[var(--surface)] py-16 px-4 md:px-8 border-t border-[var(--border)]/40" id="included-mocks-list">
-                <div id="page-hub" className="max-w-6xl mx-auto space-y-8">
+              {/* 2. CBT PRACTICE ARENA CONTENT AREA */}
+              <div className="w-full bg-[var(--surface)] py-12 px-4 md:px-8 border-b border-[var(--border)]/40" id="practice-tab-content">
+                <div id="page-hub" className="max-w-6xl mx-auto space-y-6">
                   <div id="hub-main-layout" className="space-y-6">
-                    <div className="text-center space-y-2">
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[var(--accent-soft)] border border-[var(--accent)]/20 text-[var(--accent)] rounded-full text-[10px] font-black uppercase tracking-widest">
-                        ⚡ Professional CBT Practice Suite
-                      </div>
-                      <h2 className="text-xl md:text-3xl font-black text-[var(--text-primary)] tracking-tight">
-                        CBT Practice Arena for {exam.name}
-                      </h2>
-                      <p className="text-xs text-[var(--text-secondary)] max-w-2xl mx-auto">
-                        Search and launch full syllabus mock papers, authentic solved previous year questions (PYQs), system-wise specialty clinical drills, or rapid speed sprints.
-                      </p>
-                    </div>
-
-                    {/* Search and Tab Navigation */}
-                    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-[var(--surface-2)] p-4 rounded-3xl border border-[var(--border)]">
-                      {/* Tabs */}
-                      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
-                        {[
-                          { id: "full_mock", label: "📝 CBT Mock Papers", count: filteredMocks.length },
-                          { id: "pyq", label: "📄 Solved PYQs", count: examPyqs.length },
-                          { id: "subject", label: "🧠 Specialty Drills", count: examSubjectTests.length },
-                          { id: "short", label: "⏱️ Speed Sprints", count: examSprints.length },
-                        ].map((t) => (
-                          <button
-                            key={t.id}
-                            onClick={() => {
-                              setHubTab(t.id);
-                            }}
-                            className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                              hubTab === t.id
-                                ? "bg-[var(--primary)] text-white shadow-md shadow-[var(--primary)]/20"
-                                : "bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                            }`}
-                          >
-                            <span>{t.label}</span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${hubTab === t.id ? "bg-white/20 text-white" : "bg-[var(--surface-2)] text-[var(--text-secondary)]"}`}>
-                              {t.count}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* Search Bar */}
-                      <div className="relative flex-1 max-w-md">
-                        <input
-                          type="text"
-                          placeholder="Search practice resources..."
-                          value={hubSearchText}
-                          onChange={(e) => setHubSearchText(e.target.value)}
-                          className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-[var(--surface)] border border-border text-xs text-white placeholder-text3 focus:outline-none focus:border-accent transition-all"
-                        />
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text3 text-xs">🔍</span>
-                        {hubSearchText && (
-                          <button
-                            onClick={() => setHubSearchText("")}
-                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text3 hover:text-white text-xs font-bold"
-                          >
-                            ✕
-                          </button>
-                        )}
-                      </div>
-                    </div>
 
                     {/* Active Tab Content Area */}
                     <div className="space-y-4 pt-2">
@@ -5131,6 +5282,95 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 </div>
               </div>
 
+              {/* 3. WHY NCBT SECTION (MOVED AFTER PRACTICE ARENA) */}
+              <div className="w-full bg-[var(--bg)] py-16 px-4 md:px-8 border-b border-[var(--border)]/40">
+                <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                  <div className="lg:col-span-8 space-y-6">
+                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 md:p-8 space-y-6">
+                      <div className="flex items-center gap-3">
+                        <span className="text-3xl">🎯</span>
+                        <div>
+                          <h2 className="text-lg md:text-xl font-black text-[var(--text-primary)]">Why NCBT is Your Best Exam Partner</h2>
+                          <p className="text-[11px] text-[var(--text-secondary)]">Complete exam preparation — mock tests, study material, live tests & daily practice, all in one place.</p>
+                        </div>
+                      </div>
+
+                      <div className="border-l-4 border-[var(--primary)] pl-4 py-1">
+                        <p className="text-xs text-[var(--text-secondary)] leading-relaxed font-sans">
+                          NCBT is a full-fledged exam preparation platform built specifically for <strong className="text-[var(--text-primary)]">{exam.fullName}</strong> and other government job aspirants across India. We go far beyond simple quizzes — our platform provides Chapter-wise Tests, Subject Tests, Full-Length Mock Tests, Live Tests, PYQs, Smart Notes, and Detailed Answer Explanations — everything structured so you can clear your exam on the very first attempt.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                        <div className="bg-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl space-y-1">
+                          <span className="text-xl">🏅</span>
+                          <h4 className="text-xs font-black text-[var(--text-primary)] uppercase">Full Mock Tests</h4>
+                          <p className="text-[11px] text-[var(--text-secondary)]">Realistic timed exam conditions matching the latest recruitment guidelines.</p>
+                        </div>
+                        <div className="bg-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl space-y-1">
+                          <span className="text-xl">📖</span>
+                          <h4 className="text-xs font-black text-[var(--text-primary)] uppercase">Chapter & Subject</h4>
+                          <p className="text-[11px] text-[var(--text-secondary)]">High-yield syllabus coverage including nursing and non-nursing specialties.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-4 space-y-4">
+                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 space-y-4">
+                      <h3 className="text-xs font-black text-[var(--text-primary)] uppercase tracking-wider border-b border-[var(--border)] pb-2">📦 Course Highlights</h3>
+                      <ul className="space-y-3 text-xs text-[var(--text-secondary)]">
+                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">Instant evaluation</strong> and score calculation</li>
+                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">Negative marking penalty</strong> simulation (-0.25)</li>
+                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">Verified keys</strong> & step-by-step clinical rationales</li>
+                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">All India Ranking (AIR)</strong> comparison</li>
+                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">100% Mobile & PC</strong> friendly CBT layout</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* DEDICATED SEO EXAM GUIDE ARTICLE */}
+              {(() => {
+                const article = getArticleForExam(exam.id);
+                if (!article) return null;
+                return (
+                  <div className="w-full bg-[var(--surface-2)]/50 py-16 px-4 md:px-8 border-t border-[var(--border)]/60">
+                    <div className="max-w-5xl mx-auto space-y-8 text-left">
+                      <div className="space-y-2 border-b border-[var(--border)] pb-6">
+                        <span className="px-3 py-1 bg-[var(--accent-soft)] border border-[var(--accent)]/30 text-[var(--accent)] text-[10px] font-black uppercase tracking-widest rounded-full inline-block">
+                          📖 EXAM PREPARATION GUIDE &amp; SYLLABUS
+                        </span>
+                        <h2 className="text-xl md:text-3xl font-black text-[var(--text-primary)] leading-snug">
+                          {article.title}
+                        </h2>
+                        <p className="text-xs md:text-sm text-[var(--text-secondary)] font-medium">
+                          {article.subtitle}
+                        </p>
+
+                        {/* Keyword Chips */}
+                        {article.keywords && article.keywords.length > 0 && (
+                          <div className="flex items-center gap-2 flex-wrap pt-3">
+                            {article.keywords.map((kw, kwIdx) => (
+                              <span key={kwIdx} className="text-[10px] font-mono text-[var(--text-secondary)] bg-[var(--surface)] border border-[var(--border)] px-2.5 py-1 rounded-md">
+                                #{kw}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Render Article HTML safely */}
+                      <div 
+                        className="seo-article-body text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed space-y-6"
+                        dangerouslySetInnerHTML={{ __html: article.contentHtml }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* RECOMMENDATIONS - "You Might Also Like" section */}
               <div className="w-full bg-[var(--bg)] py-16 px-4 md:px-8 border-t border-[var(--border)]/40">
                 <div className="max-w-6xl mx-auto space-y-8">
@@ -5144,7 +5384,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       <div 
                         key={otherE.id}
                         onClick={() => {
-                          setSelectedExamId(otherE.id);
+                          selectExam(otherE.id);
                           window.scrollTo({ top: 0, behavior: "smooth" });
                         }}
                         className="bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--primary)] rounded-3xl p-5 text-left space-y-4 cursor-pointer transition-all duration-300 group hover:-translate-y-1 relative shadow-sm"
@@ -5161,7 +5401,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                         <p className="text-[11px] text-[var(--text-secondary)] line-clamp-2 font-sans">{otherE.desc}</p>
                         <div className="pt-3 border-t border-[var(--border)]/40 flex items-center justify-between text-[11px] text-[var(--primary)] font-bold group-hover:underline">
                           <span>View Package →</span>
-                          <span className="text-[10px] text-[var(--text-secondary)] font-normal font-sans">₹149 ONLY</span>
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold font-sans">100% FREE</span>
                         </div>
                       </div>
                     ))}
@@ -5169,13 +5409,13 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 </div>
               </div>
 
-              {/* FLOATING STICKY BOTTOM BAR FOR LANDING PAGE (TazaQuiz Style) */}
+              {/* FLOATING STICKY BOTTOM BAR FOR LANDING PAGE */}
               <div className="fixed bottom-0 left-0 right-0 z-[100] bg-[var(--surface)]/95 backdrop-blur-md border-t border-[var(--border)] py-3.5 px-4 md:px-8 shadow-2xl flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl hidden sm:inline">{exam.icon}</span>
                   <div>
-                    <h4 className="text-xs font-black text-[var(--text-primary)] leading-none mb-1">{exam.fullName} Package</h4>
-                    <span className="text-[10px] text-[var(--primary)] font-bold">₹149 Only • Lifetime All-Access Free Demo Trial</span>
+                    <h4 className="text-xs font-black text-[var(--text-primary)] leading-none mb-1">{exam.fullName} Series</h4>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">100% Free Practice Suite • Complete CBT &amp; PYQs</span>
                   </div>
                 </div>
 
@@ -5197,6 +5437,34 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
             </div>
           );
         })()}
+
+        {/* =============== ALL IN ONE PERSONALIZED LANDING PAGE =============== */}
+        {activePage === "all_in_one" && currentUser && (
+          <div className="page active bg-[var(--bg)] min-h-screen" id="page-all-in-one">
+            <AllInOneHub
+              currentUser={currentUser}
+              onUpdateProfile={handleUpdateProfile}
+              onStartTest={(subjId, testId) => triggerTestInit(subjId, testId)}
+              onNavigatePage={(page) => showPage(page)}
+              subjects={subjects}
+            />
+          </div>
+        )}
+
+        {/* =============== FIND TEST SEARCH PAGE =============== */}
+        {activePage === "find_test" && (
+          <div className="page active min-h-screen" id="page-find-test">
+            <FindTestPage
+              initialCategory={findTestCategory}
+              onSelectExam={(examId) => {
+                selectExam(examId);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              onStartTest={(subjId, testId) => triggerTestInit(subjId, testId)}
+              subjects={subjects}
+            />
+          </div>
+        )}
 
         {/* =============== NURSING UPDATES PAGE =============== */}
         {/* =============== NURSING UPDATES PAGE =============== */}
@@ -5364,7 +5632,11 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                                       key={i}
                                       onClick={() => {
                                         const cleanRoute = p.url.toLowerCase();
-                                        if (cleanRoute === "/mock-tests") {
+                                        if (cleanRoute.startsWith("/exams/") || cleanRoute.startsWith("/exam/")) {
+                                          const urlParts = cleanRoute.split("/").filter(Boolean);
+                                          const examSlug = urlParts[1] ? urlParts[1].toLowerCase() : "aiims-norcet";
+                                          selectExam(examSlug);
+                                        } else if (cleanRoute === "/mock-tests") {
                                           showPage("mock_tests");
                                         } else if (cleanRoute === "/subject-mocks") {
                                           showPage("subject_mocks");
@@ -6405,40 +6677,124 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     )}
                   </div>
                 ) : (
-                  // Register Form view
-                  <form onSubmit={handleRegister} className="space-y-4">
-                    <div className="form-group">
-                      <label className="form-label">Full Name</label>
+                  // Register Form view - Detailed Student Profile
+                  <form onSubmit={handleRegister} className="space-y-3.5 text-left">
+                    <div>
+                      <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Full Name *</label>
                       <input 
-                        className="form-input" 
+                        className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3.5 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
                         type="text" 
-                        placeholder="Sakil Ahmed"
+                        placeholder="e.g. Sakil Ahmed"
                         value={authName}
                         onChange={(e) => setAuthName(e.target.value)}
+                        required
                       />
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">Email</label>
-                      <input 
-                        className="form-input" 
-                        type="email" 
-                        placeholder="you@example.com"
-                        value={authEmail}
-                        onChange={(e) => setAuthEmail(e.target.value)}
-                      />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Email Address *</label>
+                        <input 
+                          className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3.5 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
+                          type="email" 
+                          placeholder="you@example.com"
+                          value={authEmail}
+                          onChange={(e) => setAuthEmail(e.target.value)}
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Phone Number *</label>
+                        <input 
+                          className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
+                          type="tel" 
+                          placeholder="9830123456"
+                          maxLength={10}
+                          value={authPhone}
+                          onChange={(e) => setAuthPhone(e.target.value.replace(/\D/g, ""))}
+                          required
+                        />
+                      </div>
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">Password</label>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Course / Student Category *</label>
+                        <select 
+                          className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500"
+                          value={authStudentType}
+                          onChange={(e) => setAuthStudentType(e.target.value)}
+                        >
+                          <option value="Nursing">🩺 Nursing (B.Sc / GNM)</option>
+                          <option value="Pharmacist">💊 Pharmacist (D.Pharm / B.Pharm)</option>
+                          <option value="Paramedical">🔬 Paramedical & OT Tech</option>
+                          <option value="Lab Technician">🧪 Lab Technician (DMLT)</option>
+                          <option value="Radiographer">📸 Radiographer & X-Ray</option>
+                          <option value="Medical Officer">👨‍⚕️ Medical Officer & CHO</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Desired Govt Post *</label>
+                        <input 
+                          className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3.5 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
+                          type="text" 
+                          placeholder="e.g. AIIMS NORCET / RRB Pharmacist"
+                          value={authDesiredPost}
+                          onChange={(e) => setAuthDesiredPost(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">State / Region *</label>
+                        <select 
+                          className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500"
+                          value={authState}
+                          onChange={(e) => setAuthState(e.target.value)}
+                        >
+                          <option value="West Bengal">West Bengal</option>
+                          <option value="Delhi">Delhi / NCR</option>
+                          <option value="Uttar Pradesh">Uttar Pradesh</option>
+                          <option value="Rajasthan">Rajasthan</option>
+                          <option value="Bihar">Bihar</option>
+                          <option value="Maharashtra">Maharashtra</option>
+                          <option value="Kerala">Kerala</option>
+                          <option value="All India">All India / Central Govt</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">PIN Code *</label>
+                        <input 
+                          className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
+                          type="text" 
+                          placeholder="700001"
+                          maxLength={6}
+                          value={authPin}
+                          onChange={(e) => setAuthPin(e.target.value.replace(/\D/g, ""))}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Create Password *</label>
                       <input 
-                        className="form-input" 
+                        className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3.5 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
                         type="password" 
                         placeholder="Min. 6 characters"
                         value={authPassword}
                         onChange={(e) => setAuthPassword(e.target.value)}
+                        required
                       />
                     </div>
-                    <button className="btn-auth" type="submit">
-                      Create Student Account
+
+                    <button className="btn-auth w-full py-3 rounded-xl font-black bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-90 text-white shadow-lg transition-all border-none cursor-pointer text-xs uppercase tracking-wider mt-2" type="submit">
+                      Register & Access All in ONE Portal 🚀
                     </button>
                   </form>
                 )}

@@ -37,6 +37,10 @@ export interface User {
   email: string;
   pass?: string;
   phone?: string;
+  studentType?: string; // Nursing, Pharmacist, Paramedical, Lab Technician, Radiographer, Medical Officer
+  desiredPost?: string; // Target Govt Post
+  state?: string;       // State/UT
+  pin?: string;         // PIN code
   isAdmin: boolean;
   guest?: boolean;
   joined?: number;

@@ -572,6 +572,19 @@ export const SUBJECTS: Subject[] = [
   { id: 'fun-vitals', icon: '🌡️', title: 'Vital Signs & Assessment', desc: 'Temperature, pulse, respiration, BP — measurement, normal values.', questions: 0, mins: 0, ready: false, data: [] },
   { id: 'fun-infection', icon: '🦠', title: 'Infection Control', desc: 'Asepsis, sterilization, disinfection, PPE, standard precautions.', questions: 0, mins: 0, ready: false, data: [] },
   { id: 'fun-procedures', icon: '🩺', title: 'Nursing Procedures', desc: 'IV therapy, wound care, catheterization, NG tube, oxygen therapy.', questions: 0, mins: 0, ready: false, data: [] },
+  {
+    id: 'rrb-pharmacist-cbt-mock',
+    icon: '💊',
+    title: 'RRB Pharmacist Grade III Full CBT Mock 2026',
+    desc: 'Full length railway pharmacist mock test based on Pharmaceutics, Pharmacology, Clinical Jurisprudence, Hospital Pharmacy & Aptitude.',
+    questions: 10,
+    mins: 15,
+    ready: true,
+    data: [
+      { q: "Which equation governs the rate of drug dissolution from a solid dosage form?", opts: ["Noyes-Whitney Equation", "Henderson-Hasselbalch Equation", "Arrhenius Equation", "Michaelis-Menten Equation"], ans: 0, source: "RRB Pharmacist 2019", explain: "The Noyes-Whitney equation describes the rate of dissolution (dC/dt = k*A*(Cs - C)) of solid particles in a liquid medium." },
+      { q: "Which test is performed to measure the mechanical strength and resistance to chipping of compressed tablets?", opts: ["Disintegration Test", "Friability Test", "Dissolution Test", "Hardness Test"], ans: 1, source: "ESIC Pharmacist 2019", explain: "The Roche friabilator is used to evaluate friability (weight loss should be less than 1% after 100 rotations)." }
+    ]
+  },
    {
      id: 'norcet-7-2024',
      icon: '📋',
@@ -1361,6 +1374,30 @@ export const SUBJECTS: Subject[] = [
  ]}
 ];
 
+SUBJECTS.push(
+  { id: 'pharmacist_science', icon: '💊', name: 'Pharmacist Sciences', tests: [
+   { id: 'pharmaceutics-mastery', icon: '🧪', title: 'Pharmaceutics & Dispensing', desc: 'Dosage forms, tablet evaluation, liquid oral preparations, and sterile dispensing.', questions: 10, mins: 10, ready: true, data: [
+      { q: "Which equation governs the rate of drug dissolution from a solid dosage form?", opts: ["Noyes-Whitney Equation", "Henderson-Hasselbalch Equation", "Arrhenius Equation", "Michaelis-Menten Equation"], ans: 0, source: "RRB Pharmacist 2019", explain: "The Noyes-Whitney equation describes the rate of dissolution (dC/dt = k*A*(Cs - C)) of solid particles in a liquid medium." },
+      { q: "Which test is performed to measure the mechanical strength and resistance to chipping of compressed tablets?", opts: ["Disintegration Test", "Friability Test", "Dissolution Test", "Hardness Test"], ans: 1, source: "ESIC Pharmacist 2019", explain: "The Roche friabilator is used to evaluate friability (weight loss should be less than 1% after 100 rotations)." }
+    ]}
+  ]},
+  { id: 'paramedical_ot', icon: '✂️', name: 'Paramedical & OT Tech', tests: [
+   { id: 'ot-sterilization-drills', icon: '🧼', title: 'Sterilization & Surgical Protocols', desc: 'Autoclaving parameters, disinfection levels, and OR sterile field management.', questions: 10, mins: 10, ready: true, data: [
+      { q: "What is the standard temperature and hold time required for steam sterilization in a gravity-displacement autoclave?", opts: ["121°C for 15-20 minutes at 15 psi", "160°C for 2 hours at 0 psi", "100°C for 30 minutes at 10 psi", "134°C for 3 minutes at 30 psi"], ans: 0, source: "AIIMS Paramedical 2023", explain: "Standard moist heat autoclaving requires saturated steam under pressure at 121°C (250°F) for 15-20 minutes at 15 psi." }
+    ]}
+  ]},
+  { id: 'lab_tech_dmlt', icon: '🧪', name: 'Lab Technology (DMLT)', tests: [
+   { id: 'hematology-biochem', icon: '🔬', title: 'Clinical Hematology & Biochemistry', desc: 'Complete Blood Count (CBC) interpretation, staining, and automated analyzer quality controls.', questions: 10, mins: 10, ready: true, data: [
+      { q: "Which anticoagulant is used as the choice reagent for Complete Blood Count (CBC) and blood cell morphology?", opts: ["K2-EDTA", "Sodium Citrate (3.2%)", "Heparin", "Sodium Fluoride"], ans: 0, source: "DSSSB Lab Technician 2021", explain: "K2-EDTA chelates calcium ions and preserves blood cell morphology without altering cell size or staining characteristics." }
+    ]}
+  ]},
+  { id: 'radiography_xray', icon: '📸', name: 'Radiography & X-Ray Tech', tests: [
+   { id: 'radiation-physics', icon: '⚛️', title: 'Radiation Protection & Physics', desc: 'ALARA principles, lead apron shielding, inverse square law, and exposure factor calculations.', questions: 10, mins: 10, ready: true, data: [
+      { q: "According to ALARA principles, which three fundamental parameters minimize occupational radiation dose?", opts: ["Time, Distance, Shielding", "Voltage, Amperage, Filtration", "Collimation, Grid, Exposure", "Density, Contrast, Detail"], ans: 0, source: "RRB Radiographer 2019", explain: "The three cardinal safety rules of radiation protection under ALARA are: minimize Time, maximize Distance, and use effective Shielding." }
+    ]}
+  ]}
+);
+
 export const PYQ_DATA: PyqCard[] = [
  { exam: 'WBHRB Staff Nurse Grade II', tag: 'wbhrb', year: '2026', count: 50, color: 'var(--red)' },
  { exam: 'WBHRB CHO', tag: 'wbhrb', year: '2025', count: 40, color: 'var(--red)' },
@@ -1376,57 +1413,81 @@ export const PYQ_DATA: PyqCard[] = [
  { exam: 'RPSC Staff Nurse', tag: 'rpsc', year: '2019', count: 12, color: 'var(--red)' },
  { exam: 'JIPMER', tag: 'aiims', year: '2017', count: 15, color: 'var(--accent)' },
  { exam: 'BSF Staff Nurse', tag: 'esic', year: '2015', count: 11, color: 'var(--purple)' },
- { exam: 'IGNOU Post B.Sc Nursing', tag: 'rrb', year: '2019', count: 9, color: 'var(--green)' }
+ { exam: 'IGNOU Post B.Sc Nursing', tag: 'rrb', year: '2019', count: 9, color: 'var(--green)' },
+
+ // PHARMACIST PYQs
+ { exam: 'RRB Pharmacist Grade III', tag: 'rrb-pharmacist', year: '2019', count: 35, color: '#10b981' },
+ { exam: 'ESIC Pharmacist Paper', tag: 'esic-pharmacist', year: '2019', count: 30, color: '#06b6d4' },
+ { exam: 'WBHRB Pharmacist', tag: 'wbhrb-pharmacist', year: '2021', count: 25, color: '#3b82f6' },
+ { exam: 'Drug Inspector Officer', tag: 'drug-inspector', year: '2020', count: 20, color: '#a855f7' },
+
+ // PARAMEDICAL & OT TECH PYQs
+ { exam: 'AIIMS Surgical OT Tech', tag: 'ot-technician', year: '2022', count: 25, color: '#f59e0b' },
+ { exam: 'RRB Ophthalmic Tech', tag: 'ophthalmic-assistant', year: '2019', count: 20, color: '#3b82f6' },
+ { exam: 'ESIC Dialysis Tech', tag: 'dialysis-tech', year: '2020', count: 20, color: '#ef4444' },
+
+ // LAB TECH PYQs
+ { exam: 'AIIMS Lab Tech Grade II', tag: 'aiims-labtech', year: '2022', count: 30, color: '#8b5cf6' },
+ { exam: 'RRB Lab Superintendent', tag: 'rrb-labtech', year: '2019', count: 25, color: '#f59e0b' },
+ { exam: 'DMLT State Pathology', tag: 'dmlt-labtech', year: '2021', count: 30, color: '#10b981' },
+
+ // RADIOGRAPHER PYQs
+ { exam: 'RRB Radiographer & X-Ray', tag: 'radiographer-cbt', year: '2019', count: 30, color: '#06b6d4' },
+ { exam: 'ESIC CT MRI Specialist', tag: 'ct-mri-tech', year: '2020', count: 20, color: '#6366f1' },
+
+ // MEDICAL OFFICER PYQs
+ { exam: 'NHM Medical Officer', tag: 'medical-officer-cho', year: '2022', count: 40, color: '#10b981' }
 ];
 
 export const TARGET_EXAMS: ExamDef[] = [
+  // NURSING EXAMS
   {
     id: "aiims-norcet",
     name: "AIIMS NORCET",
-    fullName: "AIIMS NORCET Complete Preparation",
+    fullName: "AIIMS NORCET Complete Course",
     badge: "HOT",
-    category: "Central Govt",
-    desc: "Prepare for AIIMS Nursing Officer Recruitment Common Eligibility Test with high-yield clinical and scenario-based mock series.",
+    category: "Nursing",
+    desc: "Prepare for AIIMS Nursing Officer Recruitment Common Eligibility Test with full syllabus CBT mocks, clinical scenario drills & PYQs.",
     icon: "🏥",
     color: "#388bfd"
   },
   {
     id: "wbhrb-grade2",
     name: "WBHRB Staff Nurse",
-    fullName: "WBHRB Staff Nurse Grade II Complete Prep",
-    badge: "Trending",
-    category: "West Bengal Govt",
-    desc: "Targeted West Bengal Health Recruitment Board Grade II and CHO practice exams, with localized syllabus, and interview guidelines.",
+    fullName: "WBHRB Staff Nurse Grade II Series",
+    badge: "TRENDING",
+    category: "Nursing",
+    desc: "Targeted West Bengal Health Recruitment Board Grade II exam preparation with localized state syllabus and viva-voce practice.",
     icon: "🩺",
     color: "#10b981"
   },
   {
     id: "esic-officer",
-    name: "ESIC Staff Nurse",
-    fullName: "ESIC Nursing Officer Complete Preparation",
+    name: "ESIC Nursing Officer",
+    fullName: "ESIC Nursing Officer Complete Package",
     badge: "HOT",
-    category: "Central Govt",
-    desc: "Employees' State Insurance Corporation Exam drills balancing core clinical topics and general aptitude with real-time countdowns.",
+    category: "Nursing",
+    desc: "Employees' State Insurance Corporation nursing officer mocks balancing clinical nursing subjects and general aptitude.",
     icon: "💊",
     color: "#8b5cf6"
   },
   {
     id: "rrb-officer",
     name: "RRB Staff Nurse",
-    fullName: "RRB Staff Nurse Complete Prep (CBT 1 + CBT 2)",
-    badge: "HOT",
-    category: "Railway Exams",
-    desc: "Railway Recruitment Board nursing practice including general science, arithmetic aptitude, and general awareness sections.",
+    fullName: "RRB Staff Nurse Complete (CBT 1 + CBT 2)",
+    badge: "POPULAR",
+    category: "Nursing",
+    desc: "Railway Recruitment Board nursing practice with arithmetic, general science, technical nursing, and speed drills.",
     icon: "🚆",
     color: "#f59e0b"
   },
   {
     id: "cho-recruitment",
     name: "CHO Recruitment",
-    fullName: "CHO Recruitment Complete Course",
-    badge: "Popular",
-    category: "State NHM",
-    desc: "Community Health Officer exams covering maternal & child health care, primary healthcare models, and rural health policies.",
+    fullName: "CHO Community Health Officer Series",
+    badge: "POPULAR",
+    category: "Nursing",
+    desc: "State NHM Community Health Officer exams covering maternal & child care, public health policies, and primary healthcare.",
     icon: "🏘️",
     color: "#ec4899"
   },
@@ -1435,10 +1496,170 @@ export const TARGET_EXAMS: ExamDef[] = [
     name: "DSSSB Staff Nurse",
     fullName: "DSSSB Selection POST Complete Course",
     badge: "HOT",
-    category: "Delhi Govt",
-    desc: "Delhi Subordinate Services Selection Board nurse officers preparation papers matching official patterns and question weightage.",
+    category: "Nursing",
+    desc: "Delhi Subordinate Services Selection Board nursing officer prep papers following actual question weightage and timing.",
     icon: "🏛️",
     color: "#06b6d4"
+  },
+  {
+    id: "sgpgi-jipmer",
+    name: "SGPGI & JIPMER Nursing",
+    fullName: "SGPGI & JIPMER Nursing Officer Exam",
+    badge: "NEW",
+    category: "Nursing",
+    desc: "Sanjay Gandhi PGI and JIPMER Nursing Officer specialized question bank and high-intensity speed sprints.",
+    icon: "💉",
+    color: "#6366f1"
+  },
+
+  // PHARMACIST EXAMS
+  {
+    id: "rrb-pharmacist",
+    name: "RRB Pharmacist",
+    fullName: "RRB Pharmacist Grade III Complete Course",
+    badge: "HOT",
+    category: "Pharmacist",
+    desc: "Complete CBT preparation for Railway Pharmacist exams including Pharmaceutics, Pharmacology, Pharmacognosy & Aptitude.",
+    icon: "💊",
+    color: "#10b981"
+  },
+  {
+    id: "esic-pharmacist",
+    name: "ESIC Pharmacist",
+    fullName: "ESIC Pharmacist Recruitment Package",
+    badge: "POPULAR",
+    category: "Pharmacist",
+    desc: "ESIC Pharmacist CBT mock test series covering hospital pharmacy, drug store management, and clinical jurisprudence.",
+    icon: "🧪",
+    color: "#06b6d4"
+  },
+  {
+    id: "wbhrb-pharmacist",
+    name: "WBHRB Pharmacist",
+    fullName: "WBHRB Pharmacist Grade III Series",
+    badge: "TRENDING",
+    category: "Pharmacist",
+    desc: "West Bengal Health Recruitment Board Pharmacist exams with state drug guidelines and pharmacy council practice.",
+    icon: "🩺",
+    color: "#3b82f6"
+  },
+  {
+    id: "drug-inspector",
+    name: "Drug Inspector Exam",
+    fullName: "Drug Inspector Officer Complete Suite",
+    badge: "GOVT POST",
+    category: "Pharmacist",
+    desc: "Central & State Drug Inspector Officer exam suite focusing on Drugs & Cosmetics Act, quality control, and analysis.",
+    icon: "🔬",
+    color: "#a855f7"
+  },
+  {
+    id: "cghs-pharmacist",
+    name: "CGHS Pharmacist",
+    fullName: "CGHS & Central Govt Pharmacist Exam",
+    badge: "NEW",
+    category: "Pharmacist",
+    desc: "Central Government Health Scheme Pharmacist mock test series for all central dispensary recruitment tests.",
+    icon: "🏥",
+    color: "#ec4899"
+  },
+
+  // PARAMEDICAL EXAMS
+  {
+    id: "ot-technician",
+    name: "Surgical OT Tech",
+    fullName: "Surgical OT Technician Complete Course",
+    badge: "HOT",
+    category: "Paramedical",
+    desc: "Operation Theatre Assistant & Technician exam papers covering sterilization, surgical instruments, and anesthesia basics.",
+    icon: "✂️",
+    color: "#f59e0b"
+  },
+  {
+    id: "ophthalmic-assistant",
+    name: "Ophthalmic Assistant",
+    fullName: "Ophthalmic Technician & Optometry Prep",
+    badge: "POPULAR",
+    category: "Paramedical",
+    desc: "Eye care technician, refractionist, and ophthalmic assistant recruitment mocks for government health departments.",
+    icon: "👁️",
+    color: "#3b82f6"
+  },
+  {
+    id: "dialysis-tech",
+    name: "Dialysis Technician",
+    fullName: "Dialysis Technician Specialist Series",
+    badge: "NEW",
+    category: "Paramedical",
+    desc: "Renal care & hemodialysis technician exam preparation covering dialyzer operation, vascular access, and fluid management.",
+    icon: "🩸",
+    color: "#ef4444"
+  },
+
+  // LAB TECHNICIAN EXAMS
+  {
+    id: "dmlt-labtech",
+    name: "DMLT Pathology Tech",
+    fullName: "DMLT & Clinical Pathology Complete Prep",
+    badge: "HOT",
+    category: "Lab Tech",
+    desc: "Comprehensive lab technician exam prep covering Hematology, Microbiology, Biochemistry, and Histopathology.",
+    icon: "🧪",
+    color: "#10b981"
+  },
+  {
+    id: "aiims-labtech",
+    name: "AIIMS Lab Technician",
+    fullName: "AIIMS Lab Technician Grade II Course",
+    badge: "POPULAR",
+    category: "Lab Tech",
+    desc: "AIIMS hospital laboratory technician CBT drills with clinical case studies and automated analyzer MCQs.",
+    icon: "🔬",
+    color: "#8b5cf6"
+  },
+  {
+    id: "rrb-labtech",
+    name: "RRB Pathology Assistant",
+    fullName: "RRB Lab Superintendent & Technician",
+    badge: "TRENDING",
+    category: "Lab Tech",
+    desc: "Railway recruitment board laboratory assistant exams with general science, technical pathology, and reasoning.",
+    icon: "🚆",
+    color: "#f59e0b"
+  },
+
+  // RADIOGRAPHER EXAMS
+  {
+    id: "radiographer-cbt",
+    name: "Radiographer & X-Ray",
+    fullName: "Radiographer & X-Ray Tech Complete Course",
+    badge: "HOT",
+    category: "Radiographer",
+    desc: "Radiation physics, darkroom techniques, radiographic positioning, and safety procedures exam suite.",
+    icon: "📸",
+    color: "#06b6d4"
+  },
+  {
+    id: "ct-mri-tech",
+    name: "CT & MRI Specialist",
+    fullName: "CT Scan & MRI Specialist Technician",
+    badge: "NEW",
+    category: "Radiographer",
+    desc: "Advanced cross-sectional imaging, contrast media, and cross-sectional anatomy for senior diagnostic radiographers.",
+    icon: "🦴",
+    color: "#6366f1"
+  },
+
+  // MEDICAL OFFICER & GOVT
+  {
+    id: "medical-officer-cho",
+    name: "Medical Officer (MO)",
+    fullName: "Medical Officer & District Health Series",
+    badge: "GOVT POST",
+    category: "Medical Officer",
+    desc: "State Health Dept & NHM Medical Officer exams covering clinical medicine, surgery, pediatrics, and preventive health.",
+    icon: "👨‍⚕️",
+    color: "#10b981"
   }
 ];
 

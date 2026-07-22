@@ -574,9 +574,155 @@ export const SEO_ARTICLES: Record<string, SeoArticle> = {
           <p class="text-sm text-[var(--text2)] leading-relaxed">
             Attempting a massive 200-question full-length exam can be overwhelming, especially in the early phases of your preparation cycle. <strong>Subject-wise mock exams</strong> allow you to isolate individual nursing disciplines (such as Medical-Surgical Nursing, Pharmacology, or Pediatrics) and diagnose specific areas of cognitive weakness.
           </p>
+        </section>
+      </div>
+    `
+  },
+  pharmacist: {
+    title: "Government Pharmacist Recruitment Exam Guide (RRB, ESIC, WBHRB & Drug Inspector)",
+    subtitle: "Complete Exam Pattern, Eligibility, Syllabus Breakdown & High-Yield Preparation Strategy for Govt Pharmacists",
+    keywords: ["RRB Pharmacist mock test", "ESIC Pharmacist paper", "WBHRB Pharmacist preparation", "Drug Inspector exam syllabus", "Pharmaceutics MCQs"],
+    contentHtml: `
+      <div class="prose max-w-none text-[var(--text2)] font-sans space-y-8">
+        <section class="space-y-4">
+          <h2 class="text-xl md:text-2xl font-extrabold text-[var(--text)] tracking-tight border-b border-[var(--border)] pb-2">
+            1. Overview of Government Pharmacist Recruitments
+          </h2>
           <p class="text-sm text-[var(--text2)] leading-relaxed">
-            By focusing on specific systems (like the cardiovascular system or fluid and electrolyte balance), you can link clinical theory with immediate active practice, solidifying your memory.
+            Government Pharmacist recruitment examinations conducted by Railway Recruitment Board (RRB), Employees' State Insurance Corporation (ESIC), State Health Boards (WBHRB, RSMSSB), and CGHS are among the most sought-after healthcare careers in India. Candidates compete for Permanent Grade III Pharmacist and Drug Inspector positions with central pay scale benefits.
           </p>
+        </section>
+        <section class="space-y-4">
+          <h2 class="text-xl md:text-2xl font-extrabold text-[var(--text)] tracking-tight border-b border-[var(--border)] pb-2">
+            2. Eligibility & Educational Qualifications
+          </h2>
+          <ul class="list-disc list-inside text-sm text-[var(--text2)] space-y-2">
+            <li><strong>Diploma in Pharmacy (D.Pharm):</strong> Recognized by Pharmacy Council of India (PCI) with mandatory registration as a Registered Pharmacist in State Pharmacy Council.</li>
+            <li><strong>Bachelor of Pharmacy (B.Pharm):</strong> Required for senior roles, Drug Inspector, and hospital pharmacy superintendent positions.</li>
+            <li><strong>Age Limit:</strong> 18 to 35 years (relaxation applies for reserved categories as per govt rules).</li>
+          </ul>
+        </section>
+        <section class="space-y-4">
+          <h2 class="text-xl md:text-2xl font-extrabold text-[var(--text)] tracking-tight border-b border-[var(--border)] pb-2">
+            3. Core Technical Syllabus Breakdown
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-[var(--text2)]">
+            <div class="bg-[var(--card)] p-4 rounded-xl border border-[var(--border)] space-y-2">
+              <h4 class="font-bold text-[var(--text)]">Pharmaceutics & Jurisprudence</h4>
+              <p>Dosage forms, emulsion stability, posology, Drugs & Cosmetics Act 1940, Schedules H, X, M & C.</p>
+            </div>
+            <div class="bg-[var(--card)] p-4 rounded-xl border border-[var(--border)] space-y-2">
+              <h4 class="font-bold text-[var(--text)]">Pharmacology & Pharmacognosy</h4>
+              <p>Mechanism of action, autonomic drugs, antibiotics, alkaloids, glycosides, and bioassays.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    `
+  },
+  paramedical: {
+    title: "Paramedical & Surgical OT Technician Government Recruitment Guide",
+    subtitle: "Complete Exam Pattern, Sterilization Protocols, Surgical Instruments & Mock CBT Preparation",
+    keywords: ["OT Technician mock test", "Surgical Assistant CBT exam", "Paramedical exam paper", "Sterilization protocols MCQs"],
+    contentHtml: `
+      <div class="prose max-w-none text-[var(--text2)] font-sans space-y-8">
+        <section class="space-y-4">
+          <h2 class="text-xl md:text-2xl font-extrabold text-[var(--text)] tracking-tight border-b border-[var(--border)] pb-2">
+            1. Overview of Paramedical & OT Technician Recruitment
+          </h2>
+          <p class="text-sm text-[var(--text2)] leading-relaxed">
+            Operation Theatre Technicians, Ophthalmic Assistants, and Dialysis Specialists form the operational backbone of government hospitals and medical colleges (AIIMS, ESIC, Railway Hospitals). Examinations evaluate both theoretical medical science and practical procedural mastery.
+          </p>
+        </section>
+        <section class="space-y-4">
+          <h2 class="text-xl md:text-2xl font-extrabold text-[var(--text)] tracking-tight border-b border-[var(--border)] pb-2">
+            2. Key Technical Syllabus Topics
+          </h2>
+          <ul class="list-disc list-inside text-sm text-[var(--text2)] space-y-2">
+            <li><strong>Sterilization & Infection Control:</strong> Autoclave physical parameters (121°C, 15 psi), chemical indicators, 2% Glutaraldehyde (Cidex) disinfection, HEPA air filtration.</li>
+            <li><strong>Anesthesia & Medical Gases:</strong> Color coding of cylinders (Oxygen - Black with White shoulder, N2O - French Blue), vaporizers, and endotracheal tube sizes.</li>
+            <li><strong>Surgical Instruments & Sutures:</strong> Absorbable vs non-absorbable sutures (Catgut, Vicryl, Prolene) and electrocautery machine safety.</li>
+          </ul>
+        </section>
+      </div>
+    `
+  },
+  labtech: {
+    title: "Lab Technician & DMLT Clinical Pathology Recruitment Guide",
+    subtitle: "Hematology, Clinical Biochemistry, Microbiology & Histopathology CBT Examination Preparation",
+    keywords: ["Lab Technician mock test", "DMLT recruitment paper", "AIIMS Lab Tech CBT", "Hematology MCQs"],
+    contentHtml: `
+      <div class="prose max-w-none text-[var(--text2)] font-sans space-y-8">
+        <section class="space-y-4">
+          <h2 class="text-xl md:text-2xl font-extrabold text-[var(--text)] tracking-tight border-b border-[var(--border)] pb-2">
+            1. Overview of Laboratory Technician Recruitments
+          </h2>
+          <p class="text-sm text-[var(--text2)] leading-relaxed">
+            Medical Laboratory Technicians (MLT / DMLT) in AIIMS, RRB, and State Health Services are tested across four fundamental pathology domains: Clinical Hematology, Biochemistry, Microbiology, and Histopathology/Cytology.
+          </p>
+        </section>
+        <section class="space-y-4">
+          <h2 class="text-xl md:text-2xl font-extrabold text-[var(--text)] tracking-tight border-b border-[var(--border)] pb-2">
+            2. Syllabus & Subject Weightage
+          </h2>
+          <ul class="list-disc list-inside text-sm text-[var(--text2)] space-y-2">
+            <li><strong>Hematology & Blood Banking:</strong> EDTA tubes, Leishman stain, automated cell counters, ABO & Rh blood grouping cross-matching.</li>
+            <li><strong>Clinical Biochemistry:</strong> Jaffe reaction for creatinine, enzymatic glucose oxidase test, liver function tests (LFT), and lipid profile assays.</li>
+            <li><strong>Microbiology & Parasitology:</strong> Gram staining, Ziehl-Neelsen acid-fast staining, culture media (MacConkey, Blood Agar), and antibiotic sensitivity testing.</li>
+          </ul>
+        </section>
+      </div>
+    `
+  },
+  radiographer: {
+    title: "Radiographer, X-Ray, CT & MRI Technician Examination Guide",
+    subtitle: "Radiation Physics, X-Ray Tube Design, Cross-Sectional Imaging & Radiation Safety Norms",
+    keywords: ["Radiographer mock test", "X-Ray Technician CBT", "CT Scan MRI prep", "Radiation physics MCQs"],
+    contentHtml: `
+      <div class="prose max-w-none text-[var(--text2)] font-sans space-y-8">
+        <section class="space-y-4">
+          <h2 class="text-xl md:text-2xl font-extrabold text-[var(--text)] tracking-tight border-b border-[var(--border)] pb-2">
+            1. Overview of Radiography Examinations
+          </h2>
+          <p class="text-sm text-[var(--text2)] leading-relaxed">
+            Diagnostic Radiographers operate diagnostic X-Ray units, Computed Tomography (CT) scanners, and Magnetic Resonance Imaging (MRI) equipment in major government health facilities. Examinations focus on AERB safety norms, radiation physics, and positioning techniques.
+          </p>
+        </section>
+        <section class="space-y-4">
+          <h2 class="text-xl md:text-2xl font-extrabold text-[var(--text)] tracking-tight border-b border-[var(--border)] pb-2">
+            2. Core Radiographic Physics & Safety
+          </h2>
+          <ul class="list-disc list-inside text-sm text-[var(--text2)] space-y-2">
+            <li><strong>Radiation Units:</strong> Gray (Gy) for absorbed dose, Sievert (Sv) for effective dose, TLD badges for personal dosimetry.</li>
+            <li><strong>X-Ray Equipment:</strong> Rotating tungsten anode, line-focus principle, grid ratios, and darkroom processing.</li>
+            <li><strong>Safety Standards:</strong> ALARA principle (As Low As Reasonably Achievable), 0.5mm lead equivalent protective aprons, and AERB room shielding guidelines.</li>
+          </ul>
+        </section>
+      </div>
+    `
+  },
+  medical_officer: {
+    title: "Medical Officer (MO / CHO) District Health Recruitment Guide",
+    subtitle: "Clinical Medicine, Surgery, Pediatrics, Community Medicine & Public Health Policy Exams",
+    keywords: ["Medical Officer mock test", "NHM MO paper", "CHO exam preparation", "Community Medicine MCQs"],
+    contentHtml: `
+      <div class="prose max-w-none text-[var(--text2)] font-sans space-y-8">
+        <section class="space-y-4">
+          <h2 class="text-xl md:text-2xl font-extrabold text-[var(--text)] tracking-tight border-b border-[var(--border)] pb-2">
+            1. Overview of Medical Officer Recruitment
+          </h2>
+          <p class="text-sm text-[var(--text2)] leading-relaxed">
+            Medical Officers (MBBS / AYUSH) in State Health Departments, NHM, and Urban Primary Health Centres oversee clinical emergency management, public health administration, and national health programs.
+          </p>
+        </section>
+        <section class="space-y-4">
+          <h2 class="text-xl md:text-2xl font-extrabold text-[var(--text)] tracking-tight border-b border-[var(--border)] pb-2">
+            2. Core Clinical & Preventive Medicine Syllabus
+          </h2>
+          <ul class="list-disc list-inside text-sm text-[var(--text2)] space-y-2">
+            <li><strong>Clinical Emergency Medicine:</strong> Acute MI ECG reading, organophosphate poisoning antidotes (Atropine), status epilepticus protocol.</li>
+            <li><strong>Preventive & Social Medicine (PSM):</strong> PHC population norms (30,000 plain / 20,000 tribal), NVBDCP malaria guidelines, RMNCH+A programs.</li>
+          </ul>
         </section>
       </div>
     `
@@ -585,6 +731,21 @@ export const SEO_ARTICLES: Record<string, SeoArticle> = {
 
 export function getArticleForExam(examId: string): SeoArticle {
   const id = examId.toLowerCase();
+  if (id.includes("pharma") || id.includes("drug") || id.includes("cghs")) {
+    return SEO_ARTICLES.pharmacist || SEO_ARTICLES.homepage;
+  }
+  if (id.includes("ot-") || id.includes("ophthalmic") || id.includes("dialysis")) {
+    return SEO_ARTICLES.paramedical || SEO_ARTICLES.homepage;
+  }
+  if (id.includes("labtech") || id.includes("dmlt")) {
+    return SEO_ARTICLES.labtech || SEO_ARTICLES.homepage;
+  }
+  if (id.includes("radiographer") || id.includes("mri")) {
+    return SEO_ARTICLES.radiographer || SEO_ARTICLES.homepage;
+  }
+  if (id.includes("medical-officer") || id.includes("mo-")) {
+    return SEO_ARTICLES.medical_officer || SEO_ARTICLES.homepage;
+  }
   if (id.includes("norcet") || id.includes("aiims")) {
     return SEO_ARTICLES.aiims;
   }
