@@ -384,7 +384,9 @@ const generateMockTests = (): Test[] => {
     let foundTest: Test | null = null;
     let foundUpdateOnLoad: any = null;
 
-    if (cleanPath === "/pyq") {
+    if (cleanPath === "/find-tests") {
+      initialPage = "find_test";
+    } else if (cleanPath === "/pyq") {
       initialPage = "exam_landing";
       initialTab = "pyq";
     } else if (cleanPath === "/mock-tests") {
@@ -415,9 +417,9 @@ const generateMockTests = (): Test[] => {
       initialPage = "auth";
     } else if (cleanPath === "/admin") {
       initialPage = "admin";
-    } else if (cleanPath.startsWith("/exam/")) {
+    } else if (cleanPath.startsWith("/exams/") || cleanPath.startsWith("/exam/")) {
       initialPage = "exam_landing";
-      const parts = path.split("/");
+      const parts = cleanPath.split("/");
       const eId = parts[2] ? parts[2].toLowerCase() : "aiims-norcet";
       const foundE = TARGET_EXAMS.find(e => e.id.toLowerCase() === eId);
       if (foundE) {
@@ -1527,6 +1529,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     const stateObj = {
       page: initialRoute.page,
       hubTab: initialRoute.tab,
+      examId: initialRoute.examId,
       subjectId: initialRoute.subjectId,
       testId: initialRoute.testId,
       updateId: initialRoute.update ? initialRoute.update.id : null
@@ -1539,6 +1542,9 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         setActivePage(e.state.page);
         if (e.state.hubTab) {
           setHubTab(e.state.hubTab);
+        }
+        if (e.state.examId) {
+          setSelectedExamId(e.state.examId);
         }
         if (e.state.page === "updates" && e.state.updateId) {
           const foundU = STATIC_NURSING_UPDATES.find(u => u.id === e.state.updateId);
@@ -1568,8 +1574,16 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           }
         }
       } else {
-        setActivePage("landing");
-        setSelectedUpdate(null);
+        const route = getInitialRoute();
+        setActivePage(route.page);
+        setHubTab(route.tab);
+        if (route.examId) {
+          setSelectedExamId(route.examId);
+        }
+        setSelectedUpdate(route.update || null);
+        if (route.test) {
+          setActiveTest(route.test);
+        }
       }
     };
 
@@ -2181,15 +2195,14 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     triggerToast("User authorization settings successfully parsed!", "ok");
   };
 
-  const getPathForState = (pageId: string, hTab?: string, subjId?: string | null, testId?: string | null) => {
+  const getPathForState = (pageId: string, hTab?: string, subjId?: string | null, testId?: string | null, customExamId?: string) => {
     if (pageId === "exam_landing" || pageId === "hub") {
-      const tab = hTab || hubTab;
-      if (tab === "pyq") return "/pyq";
-      if (tab === "full_mock") return "/mock-tests";
-      if (tab === "subject") return "/subject-mocks";
-      if (tab === "short") return "/short-sprints";
-      return `/exam/${selectedExamId}`;
+      const eId = customExamId || selectedExamId || "aiims-norcet";
+      const found = TARGET_EXAMS.find(e => e.id.toLowerCase() === eId.toLowerCase());
+      const validSlug = found ? found.id : "aiims-norcet";
+      return `/exams/${validSlug}`;
     }
+    if (pageId === "find_test") return "/find-tests";
     if (pageId === "landing") return "/";
     if (pageId === "updates") return "/updates";
     if (pageId === "analytics") return "/analytics";
@@ -2203,8 +2216,16 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     return "/";
   };
 
+  const selectExam = (examId: string, tab?: "full_mock" | "pyq" | "subject" | "short") => {
+    const foundE = TARGET_EXAMS.find(e => e.id.toLowerCase() === examId.toLowerCase());
+    const validId = foundE ? foundE.id : "aiims-norcet";
+    setSelectedExamId(validId);
+    if (tab) setHubTab(tab);
+    showPage("exam_landing", true, { examId: validId });
+  };
+
   // Navigation controller
-  const showPage = (pageId: string, pushHistory = true, customState?: { subjectId?: string | null, testId?: string | null }) => {
+  const showPage = (pageId: string, pushHistory = true, customState?: { subjectId?: string | null, testId?: string | null, examId?: string }) => {
     let targetPage = pageId;
     let targetTab = hubTab;
     if (pageId === "pyq") {
@@ -2226,6 +2247,13 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     } else if (pageId === "hub") {
       targetPage = "exam_landing";
     }
+
+    const effectiveExamId = customState?.examId || selectedExamId || "aiims-norcet";
+
+    if (effectiveExamId !== selectedExamId) {
+      setSelectedExamId(effectiveExamId);
+    }
+
     setActivePage(targetPage);
     window.scrollTo({ top: 0 });
     if (targetPage === "analytics" && currentUser && !currentUser.guest && isSupabaseConnected()) {
@@ -2238,16 +2266,48 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         const stateToPush = {
           page: targetPage,
           hubTab: targetTab,
+          examId: effectiveExamId,
           subjectId: customState ? customState.subjectId : activeSubjectId,
           testId: customState ? customState.testId : (activeTest?.id || null)
         };
-        const urlPath = getPathForState(targetPage, targetTab, stateToPush.subjectId, stateToPush.testId);
+        const urlPath = getPathForState(targetPage, targetTab, stateToPush.subjectId, stateToPush.testId, effectiveExamId);
         window.history.pushState(stateToPush, "", urlPath);
       } catch (e) {
         console.error("Failed to pushState", e);
       }
     }
   };
+
+  // Dynamic Document Title and Meta Description per Page / Exam
+  useEffect(() => {
+    if (activePage === "exam_landing") {
+      const exam = TARGET_EXAMS.find(e => e.id === selectedExamId) || TARGET_EXAMS[0];
+      if (exam) {
+        document.title = `${exam.fullName} — Mock Tests, PYQs & Syllabus | NCBT`;
+        let metaDesc = document.querySelector('meta[name="description"]');
+        if (!metaDesc) {
+          metaDesc = document.createElement("meta");
+          metaDesc.setAttribute("name", "description");
+          document.head.appendChild(metaDesc);
+        }
+        metaDesc.setAttribute("content", `Prepare for ${exam.fullName} (${exam.name}) with free CBT mock tests, previous year solved papers (PYQs), clinical rationales & syllabus guidelines at NCBT.`);
+      }
+    } else if (activePage === "find_test") {
+      document.title = "Find Government Exam Mock Test Series — NCBT";
+    } else if (activePage === "landing") {
+      document.title = "NCBT — India's Premier Nursing, Pharmacist & Paramedical CBT Portal";
+    } else if (activePage === "updates") {
+      document.title = "Nursing & Paramedical Exam Updates, Vacancies & Notes | NCBT";
+    } else if (activePage === "about") {
+      document.title = "About Us — NCBT National CBT Portal";
+    } else if (activePage === "contact") {
+      document.title = "Contact Us — NCBT Support";
+    } else if (activePage === "analytics") {
+      document.title = "Performance Analytics & CBT Scorecard | NCBT";
+    } else if (activePage === "test" && activeTest) {
+      document.title = `${activeTest.title} — Online CBT Practice | NCBT`;
+    }
+  }, [activePage, selectedExamId, activeTest]);
 
   const viewUpdate = (item: NursingUpdate) => {
     setSelectedUpdate(item);
@@ -2806,36 +2866,43 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     <span>Find Mock Test Series</span>
                   </button>
 
-                  <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 pt-4 mb-2 select-none">Browse by Course</p>
+                  <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 pt-4 mb-2 select-none">Course Categories</p>
                   
                   <div className="space-y-1">
                     {[
-                      { id: "Nursing", name: "Nursing Exams", icon: "🩺", desc: "NORCET, WBHRB, ESIC" },
-                      { id: "Pharmacist", name: "Pharmacist Exams", icon: "💊", desc: "RRB, ESIC, CGHS" },
-                      { id: "Paramedical", name: "Paramedical Exams", icon: "🔬", desc: "OT Tech, Ophthalmic" },
-                      { id: "Lab Tech", name: "Lab Technician", icon: "🧪", desc: "DMLT, Pathology" },
-                      { id: "Radiographer", name: "Radiographer", icon: "📸", desc: "X-Ray, CT/MRI" },
-                      { id: "Medical Officer", name: "Medical Officer & Govt", icon: "👨‍⚕️", desc: "CHO, Health Dept" },
-                    ].map((cat) => (
-                      <button
-                        key={cat.id}
-                        onClick={() => {
-                          setFindTestCategory(cat.id);
-                          showPage("find_test");
-                          setIsDrawerOpen(false);
-                        }}
-                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-all cursor-pointer border border-transparent hover:border-[var(--border)]"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <span className="text-base">{cat.icon}</span>
-                          <div className="text-left">
-                            <p className="leading-tight font-bold">{cat.name}</p>
-                            <p className="text-[9px] text-[var(--text-secondary)] font-medium">{cat.desc}</p>
+                      { id: "Nursing", name: "Nursing", icon: "🩺", desc: "NORCET, WBHRB, ESIC, RRB, CHO" },
+                      { id: "Pharmacist", name: "Pharmacist", icon: "💊", desc: "RRB, ESIC, WBHRB, Drug Inspector" },
+                      { id: "Paramedical", name: "Paramedical", icon: "🔬", desc: "Surgical OT Tech, Ophthalmic, Dialysis" },
+                      { id: "Lab Tech", name: "Lab Technician", icon: "🧪", desc: "DMLT, AIIMS, RRB Pathology" },
+                      { id: "Radiographer", name: "Radiographer", icon: "📸", desc: "X-Ray, CT/MRI, Radiation Physics" },
+                      { id: "Medical Officer", name: "Medical Officer & Govt", icon: "👨‍⚕️", desc: "CHO Medical, UPSC CMS, State Health" },
+                    ].map((cat) => {
+                      const isSelected = activePage === "find_test" && findTestCategory.toLowerCase() === cat.id.toLowerCase();
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => {
+                            setFindTestCategory(cat.id);
+                            showPage("find_test");
+                            setIsDrawerOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                            isSelected
+                              ? "bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] shadow-sm"
+                              : "text-[var(--text-primary)] hover:bg-[var(--surface-2)] border-transparent hover:border-[var(--border)]"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-base">{cat.icon}</span>
+                            <div className="text-left">
+                              <p className="leading-tight font-bold">{cat.name}</p>
+                              <p className="text-[9px] text-[var(--text-secondary)] font-medium">{cat.desc}</p>
+                            </div>
                           </div>
-                        </div>
-                        <ChevronRight className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
-                      </button>
-                    ))}
+                          <ChevronRight className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
+                        </button>
+                      );
+                    })}
                   </div>
 
                   <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 pt-4 mb-2 select-none">Practice Centre</p>
@@ -2887,41 +2954,6 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     <Activity className="w-4 h-4 text-[var(--text-secondary)] shrink-0" />
                     <span>Daily Speed Sprints</span>
                   </button>
-
-                  <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 pt-5 mb-2 select-none">Course Categories</p>
-                  
-                  <div className="flex flex-col gap-1.5 px-1 pb-2">
-                    {[
-                      { id: "Nursing", name: "Nursing Officer Exams", icon: "🩺" },
-                      { id: "Pharmacist", name: "Pharmacist Exams", icon: "💊" },
-                      { id: "Paramedical", name: "Paramedical & OT Tech", icon: "✂️" },
-                      { id: "Lab Tech", name: "Lab Technician (DMLT)", icon: "🧪" },
-                      { id: "Radiographer", name: "Radiography & X-Ray", icon: "📸" },
-                      { id: "Medical Officer", name: "Medical Officer & Health", icon: "👨‍⚕️" },
-                      { id: "all", name: "Find All Mock Tests", icon: "🔍" }
-                    ].map(cat => {
-                      const isSelected = activePage === "find_test" && findTestCategory.toLowerCase() === cat.id.toLowerCase();
-                      return (
-                        <button
-                          key={cat.id}
-                          onClick={() => {
-                            setFindTestCategory(cat.id);
-                            showPage("find_test");
-                            setIsDrawerOpen(false);
-                          }}
-                          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                            isSelected
-                              ? "bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] shadow-sm"
-                              : "bg-[var(--surface-2)] border-[var(--border)]/50 text-[var(--text-primary)] hover:border-[var(--border)] hover:bg-[var(--surface)]"
-                          }`}
-                        >
-                          <span className="text-sm shrink-0">{cat.icon}</span>
-                          <span className="truncate flex-1 text-left">{cat.name}</span>
-                          <ChevronRight className="w-3.5 h-3.5 text-[var(--text-secondary)] shrink-0" />
-                        </button>
-                      );
-                    })}
-                  </div>
 
                   <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 pt-4 mb-2 select-none">Updates & Insights</p>
 
@@ -3075,26 +3107,26 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           </button>
 
           <button 
-            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && hubSearchText === "Nursing" ? "active" : ""}`} 
-            onClick={() => { showPage("mock_tests"); setHubSearchText("Nursing"); }}
+            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && (selectedExamId === "aiims-norcet" || hubSearchText === "Nursing") ? "active" : ""}`} 
+            onClick={() => { setHubSearchText("Nursing"); selectExam("aiims-norcet"); }}
           >
             <Stethoscope className="w-4 h-4 text-emerald-400" /> Nursing
           </button>
           <button 
-            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && hubSearchText === "Pharmacist" ? "active" : ""}`} 
-            onClick={() => { showPage("mock_tests"); setHubSearchText("Pharmacist"); }}
+            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && (selectedExamId.includes("pharmacist") || hubSearchText === "Pharmacist") ? "active" : ""}`} 
+            onClick={() => { setHubSearchText("Pharmacist"); selectExam("rrb-pharmacist"); }}
           >
             <Pill className="w-4 h-4 text-amber-400" /> Pharmacist
           </button>
           <button 
-            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && hubSearchText === "Paramedical" ? "active" : ""}`} 
-            onClick={() => { showPage("mock_tests"); setHubSearchText("Paramedical"); }}
+            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && (selectedExamId.includes("technician") || hubSearchText === "Paramedical") ? "active" : ""}`} 
+            onClick={() => { setHubSearchText("Paramedical"); selectExam("ot-technician"); }}
           >
             <Activity className="w-4 h-4 text-[var(--accent)]" /> Paramedical
           </button>
           <button 
             className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && hubTab === "short" ? "active" : ""}`} 
-            onClick={() => { showPage("short_sprints"); setHubSearchText(""); }}
+            onClick={() => { setHubSearchText(""); showPage("short_sprints", true, { examId: selectedExamId }); }}
           >
             <Zap className="w-4 h-4 text-[var(--accent)]" /> Current Affairs
           </button>
@@ -3159,7 +3191,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       )}
 
       {/* Pages Container */}
-      <main className="transition-all duration-300">
+      <main className="transition-all duration-300 page-container">
         
         {/* =============== LANDING PAGE =============== */}
         {activePage === "landing" && (
@@ -3176,57 +3208,57 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   {/* Repeated twice for seamless infinite marquee scroll */}
                   {[...Array(2)].map((_, rIdx) => (
                     <div key={rIdx} className="flex gap-8 shrink-0 items-center">
-                      <span onClick={() => setSelectedExamId("norcet")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("aiims-norcet")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">ADMIT CARD:</span>
                         <span>AIIMS NORCET 8.0 — Official Notification &amp; CBT Mocks Live</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => setSelectedExamId("wbhrb")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("wbhrb-grade2")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">UPDATE:</span>
                         <span>WBHRB Staff Nurse Grade II — Exam Date &amp; Solved Papers</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => setSelectedExamId("esic")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("esic-officer")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">VACANCY:</span>
                         <span>ESIC Nursing Officer — 1,980+ Vacancies Registration</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => setSelectedExamId("rrb")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("rrb-officer")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">NEW:</span>
                         <span>RRB Railway Staff Nurse — Syllabus &amp; PYQ Question Vaults</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => setSelectedExamId("cho")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("cho-recruitment")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">RESULT:</span>
                         <span>CHO NHM State Recruitment — Model Tests &amp; Clinical Drills</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => setSelectedExamId("dsssb")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("dsssb-officer")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">UPDATE:</span>
                         <span>DSSSB Staff Nurse Selection — Solved PYQs Available</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => setSelectedExamId("upcnet")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("aiims-norcet")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">NEW:</span>
                         <span>UP CNET Nursing Entrance — Full Mock Practice Suite</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => setSelectedExamId("aiims_bsc")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("aiims-norcet")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">UPDATE:</span>
                         <span>AIIMS B.Sc Nursing Series — Specialty Drills Active</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => setSelectedExamId("emrs")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("esic-officer")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">NEW:</span>
                         <span>EMRS Staff Nurse Prep — Scenario Based Speed Sprints</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => setSelectedExamId("crpf")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("ot-technician")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">RESULT:</span>
                         <span>CRPF Paramedical Staff — Real CBT Exam Simulation</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => setSelectedExamId("upsssc_anm")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("wbhrb-nurse")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">UPDATE:</span>
                         <span>UPSSSC ANM Test Series — Practice Papers Updated</span>
                       </span>
@@ -3256,8 +3288,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     key={idx}
                     onClick={() => {
                       if (cat.examId) {
-                        setSelectedExamId(cat.examId);
-                        showPage("exam_landing");
+                        selectExam(cat.examId);
                       } else if (cat.tab) {
                         setHubTab(cat.tab);
                         if (cat.query) setHubSearchText(cat.query);
@@ -3483,8 +3514,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                             };
                             const examId = mapping[mockCourse.tag];
                             if (examId) {
-                              setSelectedExamId(examId);
-                              showPage("exam_landing");
+                              selectExam(examId);
                             } else {
                               showPage("mock_tests");
                               setHubSearchText(mockCourse.query);
@@ -3578,8 +3608,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       viewport={{ once: true, margin: "-50px" }}
                       transition={{ duration: 0.5 }}
                       onClick={() => {
-                        setSelectedExamId(exam.id);
-                        showPage("exam_landing");
+                        selectExam(exam.id);
                       }}
                       className="premium-glow-box rounded-3xl p-6 flex flex-col justify-between group relative overflow-hidden cursor-pointer"
                     >
@@ -4183,50 +4212,52 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           <div className="page active" id="page-test">
             
             {/* Topbar inside test */}
-            <div className="test-topbar flex items-center justify-between gap-4 px-4 py-3 bg-[var(--surface)] border-b border-[var(--border)] sticky top-0 z-[110]" id="test-screen-topbar">
-              <div className="flex items-center gap-3">
-                <button className="back-btn shrink-0 cursor-pointer z-50" onClick={goHub}>
-                  ← Back
-                </button>
-                <div className="hidden md:flex items-center gap-2">
-                  <span className="topbar-sep text-[var(--border)]">|</span>
-                  <span className="topbar-title text-sm font-bold text-[var(--text-primary)] line-clamp-1">{activeTest.title}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 ml-auto">
-                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border hidden sm:inline-block ${examMode ? "bg-red-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" : "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--border)]"}`}>
-                  {examMode ? "⏱️ CBT Exam" : "💡 Practice"}
-                </span>
-
-                {!isTestFinished && (
-                  <div className={`timer-pill flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--surface-2)] border border-[var(--border)] text-xs font-bold text-[var(--text-primary)] ${timeLeft <= 120 ? "text-red-500 border-red-500/30" : ""}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full bg-emerald-500 ${timeLeft <= 120 ? "bg-red-500" : ""} animate-pulse`} />
-                    <span>{formatTime(timeLeft)}</span>
-                  </div>
-                )}
-
-                {!isTestFinished && (
-                  <button 
-                    className="bg-[var(--danger)] hover:opacity-90 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-md hover:scale-[1.02] active:scale-95 cursor-pointer z-50 relative pointer-events-auto"
-                    onClick={() => {
-                      console.log("Upper Submit Test clicked");
-                      setShowFinishConfirm(true);
-                    }}
-                    title="Submit and finish this test"
-                  >
-                    🏁 Submit Test
+            <div className="test-topbar bg-[var(--surface)] border-b border-[var(--border)] sticky top-0 z-[110]" id="test-screen-topbar">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <button className="back-btn shrink-0 cursor-pointer z-50" onClick={goHub}>
+                    ← Back
                   </button>
-                )}
+                  <div className="hidden md:flex items-center gap-2">
+                    <span className="topbar-sep text-[var(--border)]">|</span>
+                    <span className="topbar-title text-sm font-bold text-[var(--text-primary)] line-clamp-1">{activeTest.title}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 ml-auto">
+                  <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border hidden sm:inline-block ${examMode ? "bg-red-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" : "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--border)]"}`}>
+                    {examMode ? "⏱️ CBT Exam" : "💡 Practice"}
+                  </span>
+
+                  {!isTestFinished && (
+                    <div className={`timer-pill flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--surface-2)] border border-[var(--border)] text-xs font-bold text-[var(--text-primary)] ${timeLeft <= 120 ? "text-red-500 border-red-500/30" : ""}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full bg-emerald-500 ${timeLeft <= 120 ? "bg-red-500" : ""} animate-pulse`} />
+                      <span>{formatTime(timeLeft)}</span>
+                    </div>
+                  )}
+
+                  {!isTestFinished && (
+                    <button 
+                      className="bg-[var(--danger)] hover:opacity-90 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-md hover:scale-[1.02] active:scale-95 cursor-pointer z-50 relative pointer-events-auto"
+                      onClick={() => {
+                        console.log("Upper Submit Test clicked");
+                        setShowFinishConfirm(true);
+                      }}
+                      title="Submit and finish this test"
+                    >
+                      🏁 Submit Test
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Statistics Bar at test progression */}
             {!isTestFinished && (
-              <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" id="test-main-grid">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" id="test-main-grid">
                 
-                {/* Left Side: Question content area */}
-                <div className="lg:col-span-8 space-y-6">
+                {/* Left Side: Question content area (70-75% width on desktop) */}
+                <div className="lg:col-span-8 xl:col-span-9 space-y-6">
                   {/* Progress bar state */}
                   <div className="progress-wrap bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
                     <div className="prog-info flex justify-between text-xs font-bold mb-2">
@@ -4403,16 +4434,28 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   </div>
                 </div>
 
-                {/* Right Side: Professional CBT Question Palette Panel */}
-                <div className="lg:col-span-4 bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-5 shadow-xl space-y-6 lg:sticky lg:top-20" id="cbt-palette-sidebar">
-                  {/* Candidate Profile block */}
-                  <div className="flex items-center gap-3 pb-4 border-b border-[var(--border)]/40">
-                    <div className="w-10 h-10 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] flex items-center justify-center text-lg font-bold">
-                      👤
+                {/* Right Side: Professional CBT Question Palette Panel (25-30% width on desktop) */}
+                <div className="lg:col-span-4 xl:col-span-3 bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-5 shadow-xl space-y-5 lg:sticky lg:top-20" id="cbt-palette-sidebar">
+                  {/* Timer & Candidate Profile block */}
+                  <div className="space-y-3 pb-4 border-b border-[var(--border)]/40">
+                    <div className="flex items-center justify-between bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl p-2.5">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--text-secondary)]">
+                        <Timer className="w-3.5 h-3.5 text-[var(--accent)]" />
+                        <span>Timer</span>
+                      </div>
+                      <span className={`text-xs font-mono font-black px-2 py-0.5 rounded-lg border ${timeLeft <= 120 ? "bg-red-500/10 text-red-500 border-red-500/30 animate-pulse" : "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--border)]"}`}>
+                        ⏱️ {formatTime(timeLeft)}
+                      </span>
                     </div>
-                    <div>
-                      <div className="text-xs font-black text-[var(--text-primary)]">Nursing Officer Candidate</div>
-                      <div className="text-[10px] text-[var(--text-secondary)] font-medium font-mono">Exam Code: {activeTest.id.toUpperCase()}</div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] flex items-center justify-center text-base font-bold shrink-0">
+                        👤
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-black text-[var(--text-primary)] truncate">Nursing Officer Candidate</div>
+                        <div className="text-[10px] text-[var(--text-secondary)] font-medium font-mono truncate">Exam: {activeTest.id.toUpperCase()}</div>
+                      </div>
                     </div>
                   </div>
 
@@ -4691,7 +4734,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                               {(() => {
                                 const aiState = aiRationales[q.q];
                                 return (
-                                  <div className="bg-[#121c2c] border border-[var(--border)] rounded-xl p-4 text-left mt-3">
+                                  <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-4 text-left mt-3">
                                     <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
                                       <span className="text-xs font-bold text-[var(--accent)] flex items-center gap-1.5">
                                         ✨ AI Exam Assistant (Gemini Powered)
@@ -4699,7 +4742,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                                       {!aiState?.text && !aiState?.loading && (
                                         <button
                                           onClick={() => generateAiRationale(q.q, q.opts, q.ans)}
-                                          className="bg-indigo-650 hover:bg-indigo-750 active:scale-95 text-[var(--text)] font-extrabold text-[10px] px-3 py-1 rounded-lg transition-all cursor-pointer shadow-md border border-[var(--border)]"
+                                          className="bg-[var(--accent-soft)] hover:opacity-90 active:scale-95 text-[var(--accent)] font-extrabold text-[10px] px-3 py-1 rounded-lg transition-all cursor-pointer shadow-md border border-[var(--accent)]/30"
                                         >
                                           Generate Expert Clinical Rationale
                                         </button>
@@ -4708,8 +4751,8 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
                                     {aiState?.loading && (
                                       <div className="py-4 flex flex-col items-center justify-center gap-2">
-                                        <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                                        <span className="text-[10px] text-slate-400 animate-pulse font-medium">Analyzing diagnostic criteria, Indian Nursing Council guidelines, & nursing protocols...</span>
+                                        <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin"></div>
+                                        <span className="text-[10px] text-[var(--text-secondary)] animate-pulse font-medium">Analyzing diagnostic criteria, Indian Nursing Council guidelines, & nursing protocols...</span>
                                       </div>
                                     )}
 
@@ -4718,8 +4761,8 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                                     )}
 
                                     {aiState?.text && (
-                                      <div className="text-xs text-slate-300 leading-relaxed space-y-2 mt-2 bg-slate-950/40 p-3 rounded-lg border border-slate-800/50 select-text">
-                                        <div className="prose-slate max-w-none text-slate-300" style={{ whiteSpace: "pre-wrap" }}>
+                                      <div className="text-xs text-[var(--text-secondary)] leading-relaxed space-y-2 mt-2 bg-[var(--surface)] p-3 rounded-lg border border-[var(--border)] select-text">
+                                        <div className="prose-slate max-w-none text-[var(--text-primary)]" style={{ whiteSpace: "pre-wrap" }}>
                                           {aiState.text}
                                         </div>
                                       </div>
@@ -4805,55 +4848,71 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           
           // 1. Mocks for this exam
           const nameKeywords = {
-            "aiims-norcet": ["norcet", "aiims"],
-            "wbhrb-grade2": ["wbhrb", "grade2", "west bengal", "wbhrb-staff-nurse", "wbhrb-grade-2"],
-            "wbhrb-nurse": ["wbhrb", "grade2", "west bengal", "wbhrb-staff-nurse", "wbhrb-grade-2"],
-            "esic-officer": ["esic"],
-            "rrb-officer": ["rrb"],
-            "cho-recruitment": ["cho", "recruitment"],
-            "dsssb-officer": ["dsssb"]
+            "aiims-norcet": ["norcet", "aiims nursing"],
+            "wbhrb-grade2": ["wbhrb"],
+            "wbhrb-nurse": ["wbhrb"],
+            "esic-officer": ["esic staff nurse"],
+            "rrb-officer": ["rrb staff nurse"],
+            "cho-recruitment": ["cho"],
+            "dsssb-officer": ["dsssb staff nurse"],
+            "rrb-pharmacist": ["rrb pharmacist", "pharmacist"],
+            "esic-pharmacist": ["esic pharmacist", "pharmacist"],
+            "wbhrb-pharmacist": ["wbhrb pharmacist", "pharmacist"],
+            "drug-inspector": ["drug inspector"],
+            "cghs-pharmacist": ["cghs pharmacist", "pharmacist"],
+            "ot-technician": ["ot technician", "surgical ot"],
+            "ophthalmic-assistant": ["ophthalmic"],
+            "dialysis-tech": ["dialysis"],
+            "dmlt-labtech": ["dmlt", "pathology"],
+            "aiims-labtech": ["aiims lab"],
+            "rrb-labtech": ["rrb lab"],
+            "radiographer-cbt": ["radiographer", "x-ray"],
+            "aiims-xray": ["aiims radiographer"],
+            "cho-medical": ["medical officer"],
+            "upsc-cms": ["upsc cms"]
           };
-          const kws = nameKeywords[exam.id] || [];
+          const kws = nameKeywords[exam.id] || [exam.id, exam.name.toLowerCase()];
           
           const examMocks = mockSubject ? mockSubject.tests.filter(t => {
             return kws.some(kw => t.title.toLowerCase().includes(kw) || t.desc.toLowerCase().includes(kw));
           }) : [];
 
-          // Let's fallback if no exact mock found (to show at least 2 default mocks)
-          const finalMocksToShow = examMocks.length > 0 ? examMocks : (mockSubject ? mockSubject.tests.slice(0, 3) : []);
+          // STRICT FILTER: NEVER fall back to Nursing or other exam's mocks!
+          const finalMocksToShow = examMocks;
 
           const filteredMocks = finalMocksToShow.filter(t => {
             return !hubSearchText || t.title.toLowerCase().includes(hubSearchText.toLowerCase()) || t.desc.toLowerCase().includes(hubSearchText.toLowerCase());
           });
 
           // 2. Solved PYQs for this exam
-          const getPyqTagForExam = (examId) => {
-            if (examId === "aiims-norcet") return "aiims";
-            if (examId === "wbhrb-grade2" || examId === "wbhrb-nurse") return "wbhrb";
-            if (examId === "esic-officer") return "esic";
-            if (examId === "rrb-officer") return "rrb";
-            if (examId === "cho-recruitment") return "cho";
-            if (examId === "dsssb-officer") return "dsssb";
-            return "all";
-          };
-          const activePyqTag = getPyqTagForExam(exam.id);
           const examPyqs = PYQ_DATA.filter(p => {
-            const matchesExam = activePyqTag === "all" || p.tag === activePyqTag;
+            const matchesTag = p.tag === exam.id ||
+                               p.tag.includes(exam.id) ||
+                               (exam.id.startsWith("wbhrb") && p.tag === "wbhrb") ||
+                               (exam.id === "aiims-norcet" && p.tag === "aiims") ||
+                               (exam.id === "esic-officer" && p.tag === "esic") ||
+                               (exam.id === "rrb-officer" && p.tag === "rrb") ||
+                               (exam.id === "cho-recruitment" && p.tag === "cho") ||
+                               (exam.id === "dsssb-officer" && p.tag === "dsssb") ||
+                               (exam.category === "Pharmacist" && p.tag.includes("pharmacist")) ||
+                               (exam.category === "Paramedical" && (p.tag.includes("ot") || p.tag.includes("ophthalmic") || p.tag.includes("dialysis"))) ||
+                               (exam.category === "Lab Tech" && p.tag.includes("labtech")) ||
+                               (exam.category === "Radiographer" && p.tag.includes("radiograph"));
+
             const matchesSearch = !hubSearchText || p.exam.toLowerCase().includes(hubSearchText.toLowerCase()) || p.year.includes(hubSearchText);
-            return matchesExam && matchesSearch;
+            return matchesTag && matchesSearch;
           });
 
-          // 3. Specialty Drills for this exam based on syllabus
-          const EXAM_SUBJECT_SYLLABUS = {
-            "aiims-norcet": ["anatomy", "med-surg", "community", "maternal", "pediatric", "mhn"],
-            "wbhrb-grade2": ["anatomy", "med-surg", "community", "maternal", "pediatric"],
-            "wbhrb-nurse": ["anatomy", "med-surg", "community", "maternal", "pediatric"],
-            "esic-officer": ["anatomy", "med-surg", "community", "maternal", "pediatric", "mhn"],
-            "rrb-officer": ["anatomy", "med-surg", "community", "maternal", "pediatric"],
-            "cho-recruitment": ["anatomy", "community", "maternal", "pediatric"],
-            "dsssb-officer": ["anatomy", "med-surg", "community", "maternal", "pediatric", "mhn"]
+          // 3. Specialty Drills for this exam based on category
+          const CATEGORY_SUBJECT_IDS = {
+            "Nursing": ["anatomy", "med-surg", "community", "maternal", "pediatric", "mhn", "pharmacology"],
+            "Pharmacist": ["pharmacist_science", "pharmacology"],
+            "Paramedical": ["paramedical_ot"],
+            "Lab Tech": ["lab_tech_dmlt"],
+            "Radiographer": ["radiography_xray"],
+            "Medical Officer": ["community", "med-surg"]
           };
-          const allowedSubjectIds = EXAM_SUBJECT_SYLLABUS[exam.id] || ["anatomy", "med-surg", "community", "maternal", "pediatric"];
+          const allowedSubjectIds = CATEGORY_SUBJECT_IDS[exam.category] || [];
           const examSubjectTests = [];
           subjects.forEach(subj => {
             if (allowedSubjectIds.includes(subj.id)) {
@@ -4877,13 +4936,13 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
           return (
             <div className="page active" id="page-exam-landing">
-              {/* Header banner / Hero of Dedicated landing page */}
-              <div className="w-full bg-[var(--card)] border-b border-border/60 py-16 px-4 md:px-8 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-accent/5 rounded-full filter blur-3xl pointer-events-none"></div>
+              {/* 1. EXAM TITLE & DESCRIPTION HEADER BANNER */}
+              <div className="w-full bg-[var(--card)] border-b border-[var(--border)]/60 py-12 px-4 md:px-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-[var(--primary)]/5 rounded-full filter blur-3xl pointer-events-none"></div>
                 
-                <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+                <div className="max-w-6xl mx-auto space-y-8 relative z-10">
                   {/* Left Column: Exam Title, Badges & Copywriting */}
-                  <div className="lg:col-span-8 space-y-6 text-left">
+                  <div className="space-y-4 text-left max-w-4xl">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--accent-soft)] border border-[var(--accent)]/30 text-[var(--accent)] rounded-xl text-[11px] font-black uppercase tracking-wider">
                       <span>🏥 COURSE DETAILS</span>
                     </div>
@@ -4893,12 +4952,12 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       <span className="text-[var(--primary)]">Complete Preparation Package</span>
                     </h1>
 
-                    <p className="text-xs md:text-sm text-[var(--text-secondary)] leading-relaxed font-sans max-w-3xl">
+                    <p className="text-xs md:text-sm text-[var(--text-secondary)] leading-relaxed font-sans">
                       {exam.desc} This package is specially designed for candidates preparing for {exam.name} recruitment exams. It includes highly curated real-time computer-based tests (CBT), full syllabus mocks, specialty clinical drills, and verified previous year papers with rich clinical rationales to help aspirants crack the exam with absolute confidence.
                     </p>
 
                     {/* Tags */}
-                    <div className="flex items-center gap-3 flex-wrap">
+                    <div className="flex items-center gap-2.5 flex-wrap pt-1">
                       <span className="px-3 py-1.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-xs font-bold text-[var(--text-secondary)] flex items-center gap-1.5">
                         📝 {finalMocksToShow.length}+ Mock Tests
                       </span>
@@ -4914,163 +4973,133 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     </div>
                   </div>
 
-                  {/* Right Column: Free Access Card */}
-                  <div className="lg:col-span-4">
-                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-2xl relative overflow-hidden space-y-4">
-                      <div className="flex items-center gap-4">
-                        <span className="text-2xl w-14 h-14 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center shrink-0">
+                  {/* SINGLE UNIFIED MERGED CARD (Package + Pricing + Practice Arena Tabs & Search) */}
+                  <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 md:p-8 shadow-xl relative overflow-hidden space-y-6">
+                    {/* Top Row: Exam Info, SaaS Pricing & CTA Button */}
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-[var(--border)]/60">
+                      {/* Exam Icon, Title & Series Tag */}
+                      <div className="flex items-start sm:items-center gap-4">
+                        <span className="text-3xl w-14 h-14 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center shrink-0 shadow-sm">
                           {exam.icon}
                         </span>
-                        <div>
-                          <h3 className="text-sm font-black text-[var(--text-primary)] leading-none mb-1">{exam.fullName}</h3>
-                          <span className="text-[10px] text-[var(--text-secondary)] uppercase font-black tracking-widest">{exam.category} Series</span>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/30 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider">
+                              {exam.category} Series
+                            </span>
+                            <span className="text-[10px] text-[var(--text-secondary)] font-bold">
+                              Full Mock &amp; PYQ Access
+                            </span>
+                          </div>
+                          <h2 className="text-lg md:text-2xl font-black text-[var(--text-primary)] leading-snug">
+                            {exam.fullName} Complete Package
+                          </h2>
+                          <p className="text-xs text-[var(--text-secondary)] font-medium">
+                            Instant activation • CBT exam interface simulation • Verified explanations
+                          </p>
                         </div>
                       </div>
 
-                      <div className="flex items-baseline justify-between border-t border-b border-[var(--border)]/40 py-4">
-                        <div className="space-y-0.5">
-                          <span className="text-[10px] text-[var(--text-secondary)] uppercase font-bold block">Access Level</span>
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-2xl font-black text-emerald-500">100% FREE</span>
-                            <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-bold uppercase">UNLOCKED</span>
+                      {/* SaaS Pricing Block + CTA Button */}
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 shrink-0">
+                        {/* SaaS Pricing Display */}
+                        <div className="flex items-center gap-3 bg-[var(--surface-2)] px-4 py-3 rounded-2xl border border-[var(--border)] shadow-sm">
+                          <div className="flex flex-col text-left space-y-0.5">
+                            <div className="flex items-center gap-2 leading-none">
+                              <span className="text-xs text-[var(--text-secondary)] line-through font-bold opacity-80">
+                                ₹999
+                              </span>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full font-black bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/30 uppercase tracking-wider">
+                                70% OFF
+                              </span>
+                            </div>
+                            <div className="flex items-baseline gap-1 leading-none">
+                              <span className="text-2xl md:text-3xl font-black text-emerald-600 dark:text-emerald-400">
+                                ₹299
+                              </span>
+                              <span className="text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider">
+                                / Lifetime
+                              </span>
+                            </div>
                           </div>
                         </div>
-                        <span className="text-[10px] text-[var(--text-secondary)] font-bold text-right self-end">Full Mock &amp; PYQ Access</span>
+
+                        {/* Unlock CTA Button */}
+                        <button
+                          onClick={() => {
+                            const el = document.getElementById("practice-tab-content");
+                            if (el) el.scrollIntoView({ behavior: "smooth" });
+                          }}
+                          className="px-6 py-3.5 rounded-2xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-xs md:text-sm font-black shadow-lg shadow-[var(--primary)]/20 transition-all cursor-pointer text-center flex items-center justify-center gap-2 whitespace-nowrap"
+                        >
+                          <span>🔓 Unlock Full Access — ₹299</span>
+                        </button>
                       </div>
+                    </div>
 
-                      <button
-                        onClick={() => {
-                          // Scroll to included mocks section
-                          const el = document.getElementById("included-mocks-list");
-                          if (el) el.scrollIntoView({ behavior: "smooth" });
-                        }}
-                        className="w-full py-4 rounded-2xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-xs md:text-sm font-black shadow-xl shadow-[var(--primary)]/20 transition-all cursor-pointer text-center block"
-                      >
-                        🎯 Start Practice Free
-                      </button>
+                    {/* Bottom Row: Integrated Practice Arena Tabs & Search Bar */}
+                    <div className="space-y-4" id="included-mocks-list">
+                      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                        {/* Practice Tabs */}
+                        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
+                          {[
+                            { id: "full_mock", label: "📝 CBT Mock Papers", count: filteredMocks.length },
+                            { id: "pyq", label: "📄 Solved PYQs", count: examPyqs.length },
+                            { id: "subject", label: "🧠 Specialty Drills", count: examSubjectTests.length },
+                            { id: "short", label: "⏱️ Speed Sprints", count: examSprints.length },
+                          ].map((t) => (
+                            <button
+                              key={t.id}
+                              onClick={() => setHubTab(t.id as any)}
+                              className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                                hubTab === t.id
+                                  ? "bg-[var(--primary)] text-white shadow-md shadow-[var(--primary)]/20"
+                                  : "bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                              }`}
+                            >
+                              <span>{t.label}</span>
+                              <span
+                                className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                                  hubTab === t.id
+                                    ? "bg-white/20 text-white"
+                                    : "bg-[var(--surface)] border border-[var(--border)] text-[var(--text-secondary)]"
+                                }`}
+                              >
+                                {t.count}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
 
-                      <p className="text-[10px] text-[var(--text-secondary)] text-center">
-                        Instant activation • No hidden charges • CBT exam interface simulation
-                      </p>
+                        {/* Search Bar */}
+                        <div className="relative flex-1 max-w-md">
+                          <input
+                            type="text"
+                            placeholder="Search practice resources..."
+                            value={hubSearchText}
+                            onChange={(e) => setHubSearchText(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] text-xs text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-[var(--primary)] transition-all"
+                          />
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] text-xs">🔍</span>
+                          {hubSearchText && (
+                            <button
+                              onClick={() => setHubSearchText("")}
+                              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs font-bold"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Why NCBT Section */}
-              <div className="w-full bg-[var(--bg)] py-16 px-4 md:px-8 border-b border-[var(--border)]/40">
-                <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                  <div className="lg:col-span-8 space-y-6">
-                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 md:p-8 space-y-6">
-                      <div className="flex items-center gap-3">
-                        <span className="text-3xl">🎯</span>
-                        <div>
-                          <h2 className="text-lg md:text-xl font-black text-[var(--text-primary)]">Why NCBT is Your Best Exam Partner</h2>
-                          <p className="text-[11px] text-[var(--text-secondary)]">Complete exam preparation — mock tests, study material, live tests & daily practice, all in one place.</p>
-                        </div>
-                      </div>
-
-                      <div className="border-l-4 border-[var(--primary)] pl-4 py-1">
-                        <p className="text-xs text-[var(--text-secondary)] leading-relaxed font-sans">
-                          NCBT is a full-fledged exam preparation platform built specifically for <strong className="text-[var(--text-primary)]">{exam.fullName}</strong> and other government job aspirants across India. We go far beyond simple quizzes — our platform provides Chapter-wise Tests, Subject Tests, Full-Length Mock Tests, Live Tests, PYQs, Smart Notes, and Detailed Answer Explanations — everything structured so you can clear your exam on the very first attempt.
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                        <div className="bg-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl space-y-1">
-                          <span className="text-xl">🏅</span>
-                          <h4 className="text-xs font-black text-[var(--text-primary)] uppercase">Full Mock Tests</h4>
-                          <p className="text-[11px] text-[var(--text-secondary)]">Realistic timed exam conditions matching the latest recruitment guidelines.</p>
-                        </div>
-                        <div className="bg-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl space-y-1">
-                          <span className="text-xl">📖</span>
-                          <h4 className="text-xs font-black text-[var(--text-primary)] uppercase">Chapter & Subject</h4>
-                          <p className="text-[11px] text-[var(--text-secondary)]">High-yield syllabus coverage including nursing and non-nursing specialties.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="lg:col-span-4 space-y-4">
-                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 space-y-4">
-                      <h3 className="text-xs font-black text-[var(--text-primary)] uppercase tracking-wider border-b border-[var(--border)] pb-2">📦 Course Highlights</h3>
-                      <ul className="space-y-3 text-xs text-[var(--text-secondary)]">
-                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">Instant evaluation</strong> and score calculation</li>
-                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">Negative marking penalty</strong> simulation (-0.25)</li>
-                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">Verified keys</strong> & step-by-step clinical rationales</li>
-                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">All India Ranking (AIR)</strong> comparison</li>
-                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">100% Mobile & PC</strong> friendly CBT layout</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* LIST OF INCLUDED TESTS - CBT PRACTICE ARENA WORKSPACE */}
-              <div className="w-full bg-[var(--surface)] py-16 px-4 md:px-8 border-t border-[var(--border)]/40" id="included-mocks-list">
-                <div id="page-hub" className="max-w-6xl mx-auto space-y-8">
+              {/* 2. CBT PRACTICE ARENA CONTENT AREA */}
+              <div className="w-full bg-[var(--surface)] py-12 px-4 md:px-8 border-b border-[var(--border)]/40" id="practice-tab-content">
+                <div id="page-hub" className="max-w-6xl mx-auto space-y-6">
                   <div id="hub-main-layout" className="space-y-6">
-                    <div className="text-center space-y-2">
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[var(--accent-soft)] border border-[var(--accent)]/20 text-[var(--accent)] rounded-full text-[10px] font-black uppercase tracking-widest">
-                        ⚡ Professional CBT Practice Suite
-                      </div>
-                      <h2 className="text-xl md:text-3xl font-black text-[var(--text-primary)] tracking-tight">
-                        CBT Practice Arena for {exam.name}
-                      </h2>
-                      <p className="text-xs text-[var(--text-secondary)] max-w-2xl mx-auto">
-                        Search and launch full syllabus mock papers, authentic solved previous year questions (PYQs), system-wise specialty clinical drills, or rapid speed sprints.
-                      </p>
-                    </div>
-
-                    {/* Search and Tab Navigation */}
-                    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-[var(--surface-2)] p-4 rounded-3xl border border-[var(--border)]">
-                      {/* Tabs */}
-                      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
-                        {[
-                          { id: "full_mock", label: "📝 CBT Mock Papers", count: filteredMocks.length },
-                          { id: "pyq", label: "📄 Solved PYQs", count: examPyqs.length },
-                          { id: "subject", label: "🧠 Specialty Drills", count: examSubjectTests.length },
-                          { id: "short", label: "⏱️ Speed Sprints", count: examSprints.length },
-                        ].map((t) => (
-                          <button
-                            key={t.id}
-                            onClick={() => {
-                              setHubTab(t.id);
-                            }}
-                            className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                              hubTab === t.id
-                                ? "bg-[var(--primary)] text-white shadow-md shadow-[var(--primary)]/20"
-                                : "bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                            }`}
-                          >
-                            <span>{t.label}</span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${hubTab === t.id ? "bg-white/20 text-white" : "bg-[var(--surface-2)] text-[var(--text-secondary)]"}`}>
-                              {t.count}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* Search Bar */}
-                      <div className="relative flex-1 max-w-md">
-                        <input
-                          type="text"
-                          placeholder="Search practice resources..."
-                          value={hubSearchText}
-                          onChange={(e) => setHubSearchText(e.target.value)}
-                          className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-[var(--surface)] border border-border text-xs text-white placeholder-text3 focus:outline-none focus:border-accent transition-all"
-                        />
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text3 text-xs">🔍</span>
-                        {hubSearchText && (
-                          <button
-                            onClick={() => setHubSearchText("")}
-                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text3 hover:text-white text-xs font-bold"
-                          >
-                            ✕
-                          </button>
-                        )}
-                      </div>
-                    </div>
 
                     {/* Active Tab Content Area */}
                     <div className="space-y-4 pt-2">
@@ -5267,6 +5296,55 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 </div>
               </div>
 
+              {/* 3. WHY NCBT SECTION (MOVED AFTER PRACTICE ARENA) */}
+              <div className="w-full bg-[var(--bg)] py-16 px-4 md:px-8 border-b border-[var(--border)]/40">
+                <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                  <div className="lg:col-span-8 space-y-6">
+                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 md:p-8 space-y-6">
+                      <div className="flex items-center gap-3">
+                        <span className="text-3xl">🎯</span>
+                        <div>
+                          <h2 className="text-lg md:text-xl font-black text-[var(--text-primary)]">Why NCBT is Your Best Exam Partner</h2>
+                          <p className="text-[11px] text-[var(--text-secondary)]">Complete exam preparation — mock tests, study material, live tests & daily practice, all in one place.</p>
+                        </div>
+                      </div>
+
+                      <div className="border-l-4 border-[var(--primary)] pl-4 py-1">
+                        <p className="text-xs text-[var(--text-secondary)] leading-relaxed font-sans">
+                          NCBT is a full-fledged exam preparation platform built specifically for <strong className="text-[var(--text-primary)]">{exam.fullName}</strong> and other government job aspirants across India. We go far beyond simple quizzes — our platform provides Chapter-wise Tests, Subject Tests, Full-Length Mock Tests, Live Tests, PYQs, Smart Notes, and Detailed Answer Explanations — everything structured so you can clear your exam on the very first attempt.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                        <div className="bg-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl space-y-1">
+                          <span className="text-xl">🏅</span>
+                          <h4 className="text-xs font-black text-[var(--text-primary)] uppercase">Full Mock Tests</h4>
+                          <p className="text-[11px] text-[var(--text-secondary)]">Realistic timed exam conditions matching the latest recruitment guidelines.</p>
+                        </div>
+                        <div className="bg-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl space-y-1">
+                          <span className="text-xl">📖</span>
+                          <h4 className="text-xs font-black text-[var(--text-primary)] uppercase">Chapter & Subject</h4>
+                          <p className="text-[11px] text-[var(--text-secondary)]">High-yield syllabus coverage including nursing and non-nursing specialties.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-4 space-y-4">
+                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 space-y-4">
+                      <h3 className="text-xs font-black text-[var(--text-primary)] uppercase tracking-wider border-b border-[var(--border)] pb-2">📦 Course Highlights</h3>
+                      <ul className="space-y-3 text-xs text-[var(--text-secondary)]">
+                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">Instant evaluation</strong> and score calculation</li>
+                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">Negative marking penalty</strong> simulation (-0.25)</li>
+                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">Verified keys</strong> & step-by-step clinical rationales</li>
+                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">All India Ranking (AIR)</strong> comparison</li>
+                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">100% Mobile & PC</strong> friendly CBT layout</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* DEDICATED SEO EXAM GUIDE ARTICLE */}
               {(() => {
                 const article = getArticleForExam(exam.id);
@@ -5320,7 +5398,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       <div 
                         key={otherE.id}
                         onClick={() => {
-                          setSelectedExamId(otherE.id);
+                          selectExam(otherE.id);
                           window.scrollTo({ top: 0, behavior: "smooth" });
                         }}
                         className="bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--primary)] rounded-3xl p-5 text-left space-y-4 cursor-pointer transition-all duration-300 group hover:-translate-y-1 relative shadow-sm"
@@ -5393,8 +5471,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
             <FindTestPage
               initialCategory={findTestCategory}
               onSelectExam={(examId) => {
-                setSelectedExamId(examId);
-                showPage("exam_landing");
+                selectExam(examId);
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
               onStartTest={(subjId, testId) => triggerTestInit(subjId, testId)}
@@ -5569,7 +5646,11 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                                       key={i}
                                       onClick={() => {
                                         const cleanRoute = p.url.toLowerCase();
-                                        if (cleanRoute === "/mock-tests") {
+                                        if (cleanRoute.startsWith("/exams/") || cleanRoute.startsWith("/exam/")) {
+                                          const urlParts = cleanRoute.split("/").filter(Boolean);
+                                          const examSlug = urlParts[1] ? urlParts[1].toLowerCase() : "aiims-norcet";
+                                          selectExam(examSlug);
+                                        } else if (cleanRoute === "/mock-tests") {
                                           showPage("mock_tests");
                                         } else if (cleanRoute === "/subject-mocks") {
                                           showPage("subject_mocks");
@@ -7768,28 +7849,28 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       {pendingTest && (() => {
         const testArticle = getArticleForTest(pendingTest.subjectId, pendingTest.testId);
         return (
-          <div className="fixed inset-0 bg-[var(--bg)] overflow-y-auto z-[200] flex flex-col animate-fade-in text-white pb-20">
+          <div className="fixed inset-0 bg-[var(--bg)] overflow-y-auto z-[200] flex flex-col animate-fade-in text-[var(--text-primary)] pb-20">
             {/* Topbar of the Exam page */}
             <div className="bg-[var(--surface)] border-b border-[var(--border)] sticky top-0 z-[210] px-4 md:px-8 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <button 
-                  className="px-3.5 py-1.5 rounded-xl border border-[var(--border)] text-xs font-bold text-[var(--text2)] hover:bg-[#1e2d45] hover:text-white transition-all cursor-pointer bg-[var(--surface)]"
+                  className="px-3.5 py-1.5 rounded-xl border border-[var(--border)] text-xs font-bold text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] transition-all cursor-pointer bg-[var(--surface)]"
                   onClick={() => setPendingTest(null)}
                 >
                   ← Back to Prep Hub
                 </button>
-                <div className="hidden sm:flex items-center gap-2 text-xs text-neutral-500">
+                <div className="hidden sm:flex items-center gap-2 text-xs text-[var(--text-secondary)]">
                   <span>/</span>
-                  <span className="text-neutral-400 font-medium">Exam details & syllabus study guide</span>
+                  <span className="font-medium">Exam details & syllabus study guide</span>
                 </div>
               </div>
               
               <div className="flex items-center gap-2">
                 <span className="flex h-2.5 w-2.5 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#58a6ff] opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#58a6ff]"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent)] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[var(--accent)]"></span>
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-wider text-neutral-400 font-mono">CBT ENGINE V1.2</span>
+                <span className="text-[10px] font-black uppercase tracking-wider text-[var(--text-secondary)] font-mono">CBT ENGINE V1.2</span>
               </div>
             </div>
 
@@ -7802,10 +7883,10 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   <div className="flex items-center gap-2 mb-2 bg-amber-500/10 text-amber-500 text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border border-amber-500/20 w-fit">
                     ⚡ ONLINE CBT PORTAL ACTIVE
                   </div>
-                  <h1 className="text-xl md:text-2xl font-black text-white tracking-tight leading-tight">
+                  <h1 className="text-xl md:text-2xl font-black text-[var(--text-primary)] tracking-tight leading-tight">
                     {pendingTest.test.title}
                   </h1>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-xs text-[var(--text-secondary)] mt-1">
                     {pendingTest.test.desc || "Official Computer Based Mock Test assessment series for competitive central nursing vacancies."}
                   </p>
                 </div>
@@ -7814,19 +7895,19 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div className="bg-[var(--card2)] border border-[var(--border)] rounded-2xl p-3 text-center">
                     <span className="block text-[8px] text-[var(--text2)] font-extrabold uppercase mb-0.5">QUESTIONS</span>
-                    <strong className="text-xs md:text-sm text-white">{pendingTest.test.questions} MCQs</strong>
+                    <strong className="text-xs md:text-sm text-[var(--text-primary)]">{pendingTest.test.questions} MCQs</strong>
                   </div>
                   <div className="bg-[var(--card2)] border border-[var(--border)] rounded-2xl p-3 text-center">
                     <span className="block text-[8px] text-[var(--text2)] font-extrabold uppercase mb-0.5">TOTAL MARKS</span>
-                    <strong className="text-xs md:text-sm text-white">{pendingTest.test.questions} Marks</strong>
+                    <strong className="text-xs md:text-sm text-[var(--text-primary)]">{pendingTest.test.questions} Marks</strong>
                   </div>
                   <div className="bg-[var(--card2)] border border-[var(--border)] rounded-2xl p-3 text-center">
                     <span className="block text-[8px] text-[var(--text2)] font-extrabold uppercase mb-0.5">DURATION</span>
-                    <strong className="text-xs md:text-sm text-white">{pendingTest.test.mins} Mins</strong>
+                    <strong className="text-xs md:text-sm text-[var(--text-primary)]">{pendingTest.test.mins} Mins</strong>
                   </div>
                   <div className="bg-[var(--card2)] border border-[var(--border)] rounded-2xl p-3 text-center">
                     <span className="block text-[8px] text-[var(--text2)] font-extrabold uppercase mb-0.5">PENALTY RATIO</span>
-                    <strong className="text-xs md:text-sm text-amber-400">-0.25 Negative</strong>
+                    <strong className="text-xs md:text-sm text-amber-500 font-bold">-0.25 Negative</strong>
                   </div>
                 </div>
 
@@ -7845,8 +7926,8 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       }`}
                     >
                       <div className="flex items-center gap-2 mb-1 justify-between">
-                        <span className="font-extrabold text-xs text-white tracking-tight">⏱️ CBT Exam Mode</span>
-                        <span className="text-[8px] bg-red-500/10 text-red-400 border border-red-500/20 px-1 py-0.2 rounded font-extrabold">NEGATIVE</span>
+                        <span className="font-extrabold text-xs text-[var(--text-primary)] tracking-tight">⏱️ CBT Exam Mode</span>
+                        <span className="text-[8px] bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 px-1 py-0.2 rounded font-extrabold">NEGATIVE</span>
                       </div>
                       <p className="text-[11px] text-[var(--text2)] leading-snug">
                         Replicates clinical exams. Detailed rationale is hidden until finish. <strong>-0.25 penalty</strong> applies for errors.
@@ -7858,13 +7939,13 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       onClick={() => setSelectedModeForPending("practice")}
                       className={`p-4 rounded-2xl border cursor-pointer transition-all duration-200 ${
                         selectedModeForPending === "practice" 
-                          ? "bg-[var(--accent-dim)] border-[#a181ff] shadow-lg ring-1 ring-[#a181ff]" 
+                          ? "bg-[var(--accent-dim)] border-[var(--accent)] shadow-lg ring-1 ring-[var(--accent)]" 
                           : "bg-[var(--card2)] border-[var(--border)] hover:border-[var(--border)]/80 hover:bg-[var(--card)]"
                       }`}
                     >
                       <div className="flex items-center gap-2 mb-1 justify-between">
-                        <span className="font-extrabold text-xs text-white tracking-tight">💡 Practice Mode</span>
-                        <span className="text-[8px] bg-green-500/10 text-green-400 border border-green-500/20 px-1 py-0.2 rounded font-extrabold">LEARNING</span>
+                        <span className="font-extrabold text-xs text-[var(--text-primary)] tracking-tight">💡 Practice Mode</span>
+                        <span className="text-[8px] bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 px-1 py-0.2 rounded font-extrabold">LEARNING</span>
                       </div>
                       <p className="text-[11px] text-[var(--text2)] leading-snug">
                         Instant feedback and detailed explanations after submitting every option. Unlimited timer, zero penalties.
@@ -7876,19 +7957,19 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
                 {/* CBT Portal Actions */}
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-[var(--border)]/50 bg-[var(--card2)] rounded-2xl px-4 py-3">
-                  <div className="text-[11px] text-neutral-400 flex items-center gap-1.5">
-                    <span className="text-green-400 font-bold">✓</span>
+                  <div className="text-[11px] text-[var(--text-secondary)] flex items-center gap-1.5">
+                    <span className="text-green-600 dark:text-green-400 font-bold">✓</span>
                     <span>Standard Central Government assessment algorithms apply.</span>
                   </div>
                   <div className="flex items-center gap-3 w-full sm:w-auto">
                     <button 
-                      className="px-4 py-2 rounded-xl border border-[var(--border)] text-xs font-bold text-[var(--text2)] hover:bg-[#1e2d45] hover:text-white transition-all cursor-pointer flex-1 sm:flex-none text-center"
+                      className="px-4 py-2 rounded-xl border border-[var(--border)] text-xs font-bold text-[var(--text2)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)] transition-all cursor-pointer flex-1 sm:flex-none text-center"
                       onClick={() => setPendingTest(null)}
                     >
                       Cancel
                     </button>
                     <button 
-                      className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black text-xs font-black shadow-lg shadow-amber-500/20 transition-all text-center tracking-wide cursor-pointer active:scale-95 flex-1 sm:flex-none"
+                      className="px-6 py-2.5 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-xs font-black shadow-lg transition-all text-center tracking-wide cursor-pointer active:scale-95 flex-1 sm:flex-none"
                       onClick={() => {
                         const subId = pendingTest.subjectId;
                         const testId = pendingTest.testId;
@@ -7903,12 +7984,12 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
               </div>
 
               {/* LOWER PORTION: DETAILED SCROLLABLE SEO-FRIENDLY BLOG/ARTICLE */}
-              <div className="bg-[var(--card)]/60 border border-[var(--border)]/60 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
-                <div className="flex items-center gap-1.5 text-[#58a6ff] text-[10px] font-black uppercase tracking-widest bg-[#58a6ff]/10 border border-[#58a6ff]/20 px-3 py-1 rounded-full w-fit">
+              <div className="bg-[var(--card)] border border-[var(--border)]/60 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
+                <div className="flex items-center gap-1.5 text-[var(--accent)] text-[10px] font-black uppercase tracking-widest bg-[var(--accent-soft)] border border-[var(--border)] px-3 py-1 rounded-full w-fit">
                   📄 Exam Guide, Syllabus & High-Yield Analysis
                 </div>
                 <div>
-                  <h2 className="text-xl md:text-2xl font-black text-white tracking-tight leading-tight">
+                  <h2 className="text-xl md:text-2xl font-black text-[var(--text-primary)] tracking-tight leading-tight">
                     {testArticle.title}
                   </h2>
                   <p className="text-xs text-[var(--text2)] font-sans mt-1.5 italic leading-relaxed">

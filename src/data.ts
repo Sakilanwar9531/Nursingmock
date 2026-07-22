@@ -572,6 +572,19 @@ export const SUBJECTS: Subject[] = [
   { id: 'fun-vitals', icon: '🌡️', title: 'Vital Signs & Assessment', desc: 'Temperature, pulse, respiration, BP — measurement, normal values.', questions: 0, mins: 0, ready: false, data: [] },
   { id: 'fun-infection', icon: '🦠', title: 'Infection Control', desc: 'Asepsis, sterilization, disinfection, PPE, standard precautions.', questions: 0, mins: 0, ready: false, data: [] },
   { id: 'fun-procedures', icon: '🩺', title: 'Nursing Procedures', desc: 'IV therapy, wound care, catheterization, NG tube, oxygen therapy.', questions: 0, mins: 0, ready: false, data: [] },
+  {
+    id: 'rrb-pharmacist-cbt-mock',
+    icon: '💊',
+    title: 'RRB Pharmacist Grade III Full CBT Mock 2026',
+    desc: 'Full length railway pharmacist mock test based on Pharmaceutics, Pharmacology, Clinical Jurisprudence, Hospital Pharmacy & Aptitude.',
+    questions: 10,
+    mins: 15,
+    ready: true,
+    data: [
+      { q: "Which equation governs the rate of drug dissolution from a solid dosage form?", opts: ["Noyes-Whitney Equation", "Henderson-Hasselbalch Equation", "Arrhenius Equation", "Michaelis-Menten Equation"], ans: 0, source: "RRB Pharmacist 2019", explain: "The Noyes-Whitney equation describes the rate of dissolution (dC/dt = k*A*(Cs - C)) of solid particles in a liquid medium." },
+      { q: "Which test is performed to measure the mechanical strength and resistance to chipping of compressed tablets?", opts: ["Disintegration Test", "Friability Test", "Dissolution Test", "Hardness Test"], ans: 1, source: "ESIC Pharmacist 2019", explain: "The Roche friabilator is used to evaluate friability (weight loss should be less than 1% after 100 rotations)." }
+    ]
+  },
    {
      id: 'norcet-7-2024',
      icon: '📋',
