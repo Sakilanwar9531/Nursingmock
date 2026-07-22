@@ -384,9 +384,7 @@ const generateMockTests = (): Test[] => {
     let foundTest: Test | null = null;
     let foundUpdateOnLoad: any = null;
 
-    if (cleanPath === "/find-tests") {
-      initialPage = "find_test";
-    } else if (cleanPath === "/pyq") {
+    if (cleanPath === "/pyq") {
       initialPage = "exam_landing";
       initialTab = "pyq";
     } else if (cleanPath === "/mock-tests") {
@@ -2192,7 +2190,6 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       if (tab === "short") return "/short-sprints";
       return `/exam/${selectedExamId}`;
     }
-    if (pageId === "find_test") return "/find-tests";
     if (pageId === "landing") return "/";
     if (pageId === "updates") return "/updates";
     if (pageId === "analytics") return "/analytics";
@@ -2809,43 +2806,36 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     <span>Find Mock Test Series</span>
                   </button>
 
-                  <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 pt-4 mb-2 select-none">Course Categories</p>
+                  <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 pt-4 mb-2 select-none">Browse by Course</p>
                   
                   <div className="space-y-1">
                     {[
-                      { id: "Nursing", name: "Nursing", icon: "🩺", desc: "NORCET, WBHRB, ESIC, RRB, CHO" },
-                      { id: "Pharmacist", name: "Pharmacist", icon: "💊", desc: "RRB, ESIC, WBHRB, Drug Inspector" },
-                      { id: "Paramedical", name: "Paramedical", icon: "🔬", desc: "Surgical OT Tech, Ophthalmic, Dialysis" },
-                      { id: "Lab Tech", name: "Lab Technician", icon: "🧪", desc: "DMLT, AIIMS, RRB Pathology" },
-                      { id: "Radiographer", name: "Radiographer", icon: "📸", desc: "X-Ray, CT/MRI, Radiation Physics" },
-                      { id: "Medical Officer", name: "Medical Officer & Govt", icon: "👨‍⚕️", desc: "CHO Medical, UPSC CMS, State Health" },
-                    ].map((cat) => {
-                      const isSelected = activePage === "find_test" && findTestCategory.toLowerCase() === cat.id.toLowerCase();
-                      return (
-                        <button
-                          key={cat.id}
-                          onClick={() => {
-                            setFindTestCategory(cat.id);
-                            showPage("find_test");
-                            setIsDrawerOpen(false);
-                          }}
-                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                            isSelected
-                              ? "bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] shadow-sm"
-                              : "text-[var(--text-primary)] hover:bg-[var(--surface-2)] border-transparent hover:border-[var(--border)]"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <span className="text-base">{cat.icon}</span>
-                            <div className="text-left">
-                              <p className="leading-tight font-bold">{cat.name}</p>
-                              <p className="text-[9px] text-[var(--text-secondary)] font-medium">{cat.desc}</p>
-                            </div>
+                      { id: "Nursing", name: "Nursing Exams", icon: "🩺", desc: "NORCET, WBHRB, ESIC" },
+                      { id: "Pharmacist", name: "Pharmacist Exams", icon: "💊", desc: "RRB, ESIC, CGHS" },
+                      { id: "Paramedical", name: "Paramedical Exams", icon: "🔬", desc: "OT Tech, Ophthalmic" },
+                      { id: "Lab Tech", name: "Lab Technician", icon: "🧪", desc: "DMLT, Pathology" },
+                      { id: "Radiographer", name: "Radiographer", icon: "📸", desc: "X-Ray, CT/MRI" },
+                      { id: "Medical Officer", name: "Medical Officer & Govt", icon: "👨‍⚕️", desc: "CHO, Health Dept" },
+                    ].map((cat) => (
+                      <button
+                        key={cat.id}
+                        onClick={() => {
+                          setFindTestCategory(cat.id);
+                          showPage("find_test");
+                          setIsDrawerOpen(false);
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-all cursor-pointer border border-transparent hover:border-[var(--border)]"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-base">{cat.icon}</span>
+                          <div className="text-left">
+                            <p className="leading-tight font-bold">{cat.name}</p>
+                            <p className="text-[9px] text-[var(--text-secondary)] font-medium">{cat.desc}</p>
                           </div>
-                          <ChevronRight className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
-                        </button>
-                      );
-                    })}
+                        </div>
+                        <ChevronRight className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
+                      </button>
+                    ))}
                   </div>
 
                   <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 pt-4 mb-2 select-none">Practice Centre</p>
@@ -2897,6 +2887,41 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     <Activity className="w-4 h-4 text-[var(--text-secondary)] shrink-0" />
                     <span>Daily Speed Sprints</span>
                   </button>
+
+                  <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 pt-5 mb-2 select-none">Course Categories</p>
+                  
+                  <div className="flex flex-col gap-1.5 px-1 pb-2">
+                    {[
+                      { id: "Nursing", name: "Nursing Officer Exams", icon: "🩺" },
+                      { id: "Pharmacist", name: "Pharmacist Exams", icon: "💊" },
+                      { id: "Paramedical", name: "Paramedical & OT Tech", icon: "✂️" },
+                      { id: "Lab Tech", name: "Lab Technician (DMLT)", icon: "🧪" },
+                      { id: "Radiographer", name: "Radiography & X-Ray", icon: "📸" },
+                      { id: "Medical Officer", name: "Medical Officer & Health", icon: "👨‍⚕️" },
+                      { id: "all", name: "Find All Mock Tests", icon: "🔍" }
+                    ].map(cat => {
+                      const isSelected = activePage === "find_test" && findTestCategory.toLowerCase() === cat.id.toLowerCase();
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => {
+                            setFindTestCategory(cat.id);
+                            showPage("find_test");
+                            setIsDrawerOpen(false);
+                          }}
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                            isSelected
+                              ? "bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] shadow-sm"
+                              : "bg-[var(--surface-2)] border-[var(--border)]/50 text-[var(--text-primary)] hover:border-[var(--border)] hover:bg-[var(--surface)]"
+                          }`}
+                        >
+                          <span className="text-sm shrink-0">{cat.icon}</span>
+                          <span className="truncate flex-1 text-left">{cat.name}</span>
+                          <ChevronRight className="w-3.5 h-3.5 text-[var(--text-secondary)] shrink-0" />
+                        </button>
+                      );
+                    })}
+                  </div>
 
                   <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 pt-4 mb-2 select-none">Updates & Insights</p>
 
@@ -4780,71 +4805,55 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           
           // 1. Mocks for this exam
           const nameKeywords = {
-            "aiims-norcet": ["norcet", "aiims nursing"],
-            "wbhrb-grade2": ["wbhrb"],
-            "wbhrb-nurse": ["wbhrb"],
-            "esic-officer": ["esic staff nurse"],
-            "rrb-officer": ["rrb staff nurse"],
-            "cho-recruitment": ["cho"],
-            "dsssb-officer": ["dsssb staff nurse"],
-            "rrb-pharmacist": ["rrb pharmacist", "pharmacist"],
-            "esic-pharmacist": ["esic pharmacist", "pharmacist"],
-            "wbhrb-pharmacist": ["wbhrb pharmacist", "pharmacist"],
-            "drug-inspector": ["drug inspector"],
-            "cghs-pharmacist": ["cghs pharmacist", "pharmacist"],
-            "ot-technician": ["ot technician", "surgical ot"],
-            "ophthalmic-assistant": ["ophthalmic"],
-            "dialysis-tech": ["dialysis"],
-            "dmlt-labtech": ["dmlt", "pathology"],
-            "aiims-labtech": ["aiims lab"],
-            "rrb-labtech": ["rrb lab"],
-            "radiographer-cbt": ["radiographer", "x-ray"],
-            "aiims-xray": ["aiims radiographer"],
-            "cho-medical": ["medical officer"],
-            "upsc-cms": ["upsc cms"]
+            "aiims-norcet": ["norcet", "aiims"],
+            "wbhrb-grade2": ["wbhrb", "grade2", "west bengal", "wbhrb-staff-nurse", "wbhrb-grade-2"],
+            "wbhrb-nurse": ["wbhrb", "grade2", "west bengal", "wbhrb-staff-nurse", "wbhrb-grade-2"],
+            "esic-officer": ["esic"],
+            "rrb-officer": ["rrb"],
+            "cho-recruitment": ["cho", "recruitment"],
+            "dsssb-officer": ["dsssb"]
           };
-          const kws = nameKeywords[exam.id] || [exam.id, exam.name.toLowerCase()];
+          const kws = nameKeywords[exam.id] || [];
           
           const examMocks = mockSubject ? mockSubject.tests.filter(t => {
             return kws.some(kw => t.title.toLowerCase().includes(kw) || t.desc.toLowerCase().includes(kw));
           }) : [];
 
-          // STRICT FILTER: NEVER fall back to Nursing or other exam's mocks!
-          const finalMocksToShow = examMocks;
+          // Let's fallback if no exact mock found (to show at least 2 default mocks)
+          const finalMocksToShow = examMocks.length > 0 ? examMocks : (mockSubject ? mockSubject.tests.slice(0, 3) : []);
 
           const filteredMocks = finalMocksToShow.filter(t => {
             return !hubSearchText || t.title.toLowerCase().includes(hubSearchText.toLowerCase()) || t.desc.toLowerCase().includes(hubSearchText.toLowerCase());
           });
 
           // 2. Solved PYQs for this exam
+          const getPyqTagForExam = (examId) => {
+            if (examId === "aiims-norcet") return "aiims";
+            if (examId === "wbhrb-grade2" || examId === "wbhrb-nurse") return "wbhrb";
+            if (examId === "esic-officer") return "esic";
+            if (examId === "rrb-officer") return "rrb";
+            if (examId === "cho-recruitment") return "cho";
+            if (examId === "dsssb-officer") return "dsssb";
+            return "all";
+          };
+          const activePyqTag = getPyqTagForExam(exam.id);
           const examPyqs = PYQ_DATA.filter(p => {
-            const matchesTag = p.tag === exam.id ||
-                               p.tag.includes(exam.id) ||
-                               (exam.id.startsWith("wbhrb") && p.tag === "wbhrb") ||
-                               (exam.id === "aiims-norcet" && p.tag === "aiims") ||
-                               (exam.id === "esic-officer" && p.tag === "esic") ||
-                               (exam.id === "rrb-officer" && p.tag === "rrb") ||
-                               (exam.id === "cho-recruitment" && p.tag === "cho") ||
-                               (exam.id === "dsssb-officer" && p.tag === "dsssb") ||
-                               (exam.category === "Pharmacist" && p.tag.includes("pharmacist")) ||
-                               (exam.category === "Paramedical" && (p.tag.includes("ot") || p.tag.includes("ophthalmic") || p.tag.includes("dialysis"))) ||
-                               (exam.category === "Lab Tech" && p.tag.includes("labtech")) ||
-                               (exam.category === "Radiographer" && p.tag.includes("radiograph"));
-
+            const matchesExam = activePyqTag === "all" || p.tag === activePyqTag;
             const matchesSearch = !hubSearchText || p.exam.toLowerCase().includes(hubSearchText.toLowerCase()) || p.year.includes(hubSearchText);
-            return matchesTag && matchesSearch;
+            return matchesExam && matchesSearch;
           });
 
-          // 3. Specialty Drills for this exam based on category
-          const CATEGORY_SUBJECT_IDS = {
-            "Nursing": ["anatomy", "med-surg", "community", "maternal", "pediatric", "mhn", "pharmacology"],
-            "Pharmacist": ["pharmacist_science", "pharmacology"],
-            "Paramedical": ["paramedical_ot"],
-            "Lab Tech": ["lab_tech_dmlt"],
-            "Radiographer": ["radiography_xray"],
-            "Medical Officer": ["community", "med-surg"]
+          // 3. Specialty Drills for this exam based on syllabus
+          const EXAM_SUBJECT_SYLLABUS = {
+            "aiims-norcet": ["anatomy", "med-surg", "community", "maternal", "pediatric", "mhn"],
+            "wbhrb-grade2": ["anatomy", "med-surg", "community", "maternal", "pediatric"],
+            "wbhrb-nurse": ["anatomy", "med-surg", "community", "maternal", "pediatric"],
+            "esic-officer": ["anatomy", "med-surg", "community", "maternal", "pediatric", "mhn"],
+            "rrb-officer": ["anatomy", "med-surg", "community", "maternal", "pediatric"],
+            "cho-recruitment": ["anatomy", "community", "maternal", "pediatric"],
+            "dsssb-officer": ["anatomy", "med-surg", "community", "maternal", "pediatric", "mhn"]
           };
-          const allowedSubjectIds = CATEGORY_SUBJECT_IDS[exam.category] || [];
+          const allowedSubjectIds = EXAM_SUBJECT_SYLLABUS[exam.id] || ["anatomy", "med-surg", "community", "maternal", "pediatric"];
           const examSubjectTests = [];
           subjects.forEach(subj => {
             if (allowedSubjectIds.includes(subj.id)) {
