@@ -2677,20 +2677,4 @@ footer a {
   animation-play-state: paused;
 }
 
-.page-container {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding-left: 24px;
-  padding-right: 24px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-@media (min-width: 1024px) {
-  .page-container {
-    padding-left: 32px;
-    padding-right: 32px;
-  }
-}
-
 
