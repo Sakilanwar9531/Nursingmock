@@ -4212,50 +4212,52 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           <div className="page active" id="page-test">
             
             {/* Topbar inside test */}
-            <div className="test-topbar flex items-center justify-between gap-4 px-4 py-3 bg-[var(--surface)] border-b border-[var(--border)] sticky top-0 z-[110]" id="test-screen-topbar">
-              <div className="flex items-center gap-3">
-                <button className="back-btn shrink-0 cursor-pointer z-50" onClick={goHub}>
-                  ← Back
-                </button>
-                <div className="hidden md:flex items-center gap-2">
-                  <span className="topbar-sep text-[var(--border)]">|</span>
-                  <span className="topbar-title text-sm font-bold text-[var(--text-primary)] line-clamp-1">{activeTest.title}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 ml-auto">
-                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border hidden sm:inline-block ${examMode ? "bg-red-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" : "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--border)]"}`}>
-                  {examMode ? "⏱️ CBT Exam" : "💡 Practice"}
-                </span>
-
-                {!isTestFinished && (
-                  <div className={`timer-pill flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--surface-2)] border border-[var(--border)] text-xs font-bold text-[var(--text-primary)] ${timeLeft <= 120 ? "text-red-500 border-red-500/30" : ""}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full bg-emerald-500 ${timeLeft <= 120 ? "bg-red-500" : ""} animate-pulse`} />
-                    <span>{formatTime(timeLeft)}</span>
-                  </div>
-                )}
-
-                {!isTestFinished && (
-                  <button 
-                    className="bg-[var(--danger)] hover:opacity-90 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-md hover:scale-[1.02] active:scale-95 cursor-pointer z-50 relative pointer-events-auto"
-                    onClick={() => {
-                      console.log("Upper Submit Test clicked");
-                      setShowFinishConfirm(true);
-                    }}
-                    title="Submit and finish this test"
-                  >
-                    🏁 Submit Test
+            <div className="test-topbar bg-[var(--surface)] border-b border-[var(--border)] sticky top-0 z-[110]" id="test-screen-topbar">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <button className="back-btn shrink-0 cursor-pointer z-50" onClick={goHub}>
+                    ← Back
                   </button>
-                )}
+                  <div className="hidden md:flex items-center gap-2">
+                    <span className="topbar-sep text-[var(--border)]">|</span>
+                    <span className="topbar-title text-sm font-bold text-[var(--text-primary)] line-clamp-1">{activeTest.title}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 ml-auto">
+                  <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border hidden sm:inline-block ${examMode ? "bg-red-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" : "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--border)]"}`}>
+                    {examMode ? "⏱️ CBT Exam" : "💡 Practice"}
+                  </span>
+
+                  {!isTestFinished && (
+                    <div className={`timer-pill flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--surface-2)] border border-[var(--border)] text-xs font-bold text-[var(--text-primary)] ${timeLeft <= 120 ? "text-red-500 border-red-500/30" : ""}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full bg-emerald-500 ${timeLeft <= 120 ? "bg-red-500" : ""} animate-pulse`} />
+                      <span>{formatTime(timeLeft)}</span>
+                    </div>
+                  )}
+
+                  {!isTestFinished && (
+                    <button 
+                      className="bg-[var(--danger)] hover:opacity-90 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-md hover:scale-[1.02] active:scale-95 cursor-pointer z-50 relative pointer-events-auto"
+                      onClick={() => {
+                        console.log("Upper Submit Test clicked");
+                        setShowFinishConfirm(true);
+                      }}
+                      title="Submit and finish this test"
+                    >
+                      🏁 Submit Test
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Statistics Bar at test progression */}
             {!isTestFinished && (
-              <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" id="test-main-grid">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" id="test-main-grid">
                 
-                {/* Left Side: Question content area */}
-                <div className="lg:col-span-8 space-y-6">
+                {/* Left Side: Question content area (70-75% width on desktop) */}
+                <div className="lg:col-span-8 xl:col-span-9 space-y-6">
                   {/* Progress bar state */}
                   <div className="progress-wrap bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
                     <div className="prog-info flex justify-between text-xs font-bold mb-2">
@@ -4432,16 +4434,28 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   </div>
                 </div>
 
-                {/* Right Side: Professional CBT Question Palette Panel */}
-                <div className="lg:col-span-4 bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-5 shadow-xl space-y-6 lg:sticky lg:top-20" id="cbt-palette-sidebar">
-                  {/* Candidate Profile block */}
-                  <div className="flex items-center gap-3 pb-4 border-b border-[var(--border)]/40">
-                    <div className="w-10 h-10 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] flex items-center justify-center text-lg font-bold">
-                      👤
+                {/* Right Side: Professional CBT Question Palette Panel (25-30% width on desktop) */}
+                <div className="lg:col-span-4 xl:col-span-3 bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-5 shadow-xl space-y-5 lg:sticky lg:top-20" id="cbt-palette-sidebar">
+                  {/* Timer & Candidate Profile block */}
+                  <div className="space-y-3 pb-4 border-b border-[var(--border)]/40">
+                    <div className="flex items-center justify-between bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl p-2.5">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--text-secondary)]">
+                        <Timer className="w-3.5 h-3.5 text-[var(--accent)]" />
+                        <span>Timer</span>
+                      </div>
+                      <span className={`text-xs font-mono font-black px-2 py-0.5 rounded-lg border ${timeLeft <= 120 ? "bg-red-500/10 text-red-500 border-red-500/30 animate-pulse" : "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--border)]"}`}>
+                        ⏱️ {formatTime(timeLeft)}
+                      </span>
                     </div>
-                    <div>
-                      <div className="text-xs font-black text-[var(--text-primary)]">Nursing Officer Candidate</div>
-                      <div className="text-[10px] text-[var(--text-secondary)] font-medium font-mono">Exam Code: {activeTest.id.toUpperCase()}</div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] flex items-center justify-center text-base font-bold shrink-0">
+                        👤
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-black text-[var(--text-primary)] truncate">Nursing Officer Candidate</div>
+                        <div className="text-[10px] text-[var(--text-secondary)] font-medium font-mono truncate">Exam: {activeTest.id.toUpperCase()}</div>
+                      </div>
                     </div>
                   </div>
 
@@ -4720,7 +4734,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                               {(() => {
                                 const aiState = aiRationales[q.q];
                                 return (
-                                  <div className="bg-[#121c2c] border border-[var(--border)] rounded-xl p-4 text-left mt-3">
+                                  <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-4 text-left mt-3">
                                     <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
                                       <span className="text-xs font-bold text-[var(--accent)] flex items-center gap-1.5">
                                         ✨ AI Exam Assistant (Gemini Powered)
@@ -4728,7 +4742,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                                       {!aiState?.text && !aiState?.loading && (
                                         <button
                                           onClick={() => generateAiRationale(q.q, q.opts, q.ans)}
-                                          className="bg-indigo-650 hover:bg-indigo-750 active:scale-95 text-[var(--text)] font-extrabold text-[10px] px-3 py-1 rounded-lg transition-all cursor-pointer shadow-md border border-[var(--border)]"
+                                          className="bg-[var(--accent-soft)] hover:opacity-90 active:scale-95 text-[var(--accent)] font-extrabold text-[10px] px-3 py-1 rounded-lg transition-all cursor-pointer shadow-md border border-[var(--accent)]/30"
                                         >
                                           Generate Expert Clinical Rationale
                                         </button>
@@ -4737,8 +4751,8 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
                                     {aiState?.loading && (
                                       <div className="py-4 flex flex-col items-center justify-center gap-2">
-                                        <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                                        <span className="text-[10px] text-slate-400 animate-pulse font-medium">Analyzing diagnostic criteria, Indian Nursing Council guidelines, & nursing protocols...</span>
+                                        <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin"></div>
+                                        <span className="text-[10px] text-[var(--text-secondary)] animate-pulse font-medium">Analyzing diagnostic criteria, Indian Nursing Council guidelines, & nursing protocols...</span>
                                       </div>
                                     )}
 
@@ -4747,8 +4761,8 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                                     )}
 
                                     {aiState?.text && (
-                                      <div className="text-xs text-slate-300 leading-relaxed space-y-2 mt-2 bg-slate-950/40 p-3 rounded-lg border border-slate-800/50 select-text">
-                                        <div className="prose-slate max-w-none text-slate-300" style={{ whiteSpace: "pre-wrap" }}>
+                                      <div className="text-xs text-[var(--text-secondary)] leading-relaxed space-y-2 mt-2 bg-[var(--surface)] p-3 rounded-lg border border-[var(--border)] select-text">
+                                        <div className="prose-slate max-w-none text-[var(--text-primary)]" style={{ whiteSpace: "pre-wrap" }}>
                                           {aiState.text}
                                         </div>
                                       </div>
@@ -7835,28 +7849,28 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       {pendingTest && (() => {
         const testArticle = getArticleForTest(pendingTest.subjectId, pendingTest.testId);
         return (
-          <div className="fixed inset-0 bg-[var(--bg)] overflow-y-auto z-[200] flex flex-col animate-fade-in text-white pb-20">
+          <div className="fixed inset-0 bg-[var(--bg)] overflow-y-auto z-[200] flex flex-col animate-fade-in text-[var(--text-primary)] pb-20">
             {/* Topbar of the Exam page */}
             <div className="bg-[var(--surface)] border-b border-[var(--border)] sticky top-0 z-[210] px-4 md:px-8 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <button 
-                  className="px-3.5 py-1.5 rounded-xl border border-[var(--border)] text-xs font-bold text-[var(--text2)] hover:bg-[#1e2d45] hover:text-white transition-all cursor-pointer bg-[var(--surface)]"
+                  className="px-3.5 py-1.5 rounded-xl border border-[var(--border)] text-xs font-bold text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] transition-all cursor-pointer bg-[var(--surface)]"
                   onClick={() => setPendingTest(null)}
                 >
                   ← Back to Prep Hub
                 </button>
-                <div className="hidden sm:flex items-center gap-2 text-xs text-neutral-500">
+                <div className="hidden sm:flex items-center gap-2 text-xs text-[var(--text-secondary)]">
                   <span>/</span>
-                  <span className="text-neutral-400 font-medium">Exam details & syllabus study guide</span>
+                  <span className="font-medium">Exam details & syllabus study guide</span>
                 </div>
               </div>
               
               <div className="flex items-center gap-2">
                 <span className="flex h-2.5 w-2.5 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#58a6ff] opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#58a6ff]"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent)] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[var(--accent)]"></span>
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-wider text-neutral-400 font-mono">CBT ENGINE V1.2</span>
+                <span className="text-[10px] font-black uppercase tracking-wider text-[var(--text-secondary)] font-mono">CBT ENGINE V1.2</span>
               </div>
             </div>
 
@@ -7869,10 +7883,10 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   <div className="flex items-center gap-2 mb-2 bg-amber-500/10 text-amber-500 text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border border-amber-500/20 w-fit">
                     ⚡ ONLINE CBT PORTAL ACTIVE
                   </div>
-                  <h1 className="text-xl md:text-2xl font-black text-white tracking-tight leading-tight">
+                  <h1 className="text-xl md:text-2xl font-black text-[var(--text-primary)] tracking-tight leading-tight">
                     {pendingTest.test.title}
                   </h1>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-xs text-[var(--text-secondary)] mt-1">
                     {pendingTest.test.desc || "Official Computer Based Mock Test assessment series for competitive central nursing vacancies."}
                   </p>
                 </div>
@@ -7881,19 +7895,19 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div className="bg-[var(--card2)] border border-[var(--border)] rounded-2xl p-3 text-center">
                     <span className="block text-[8px] text-[var(--text2)] font-extrabold uppercase mb-0.5">QUESTIONS</span>
-                    <strong className="text-xs md:text-sm text-white">{pendingTest.test.questions} MCQs</strong>
+                    <strong className="text-xs md:text-sm text-[var(--text-primary)]">{pendingTest.test.questions} MCQs</strong>
                   </div>
                   <div className="bg-[var(--card2)] border border-[var(--border)] rounded-2xl p-3 text-center">
                     <span className="block text-[8px] text-[var(--text2)] font-extrabold uppercase mb-0.5">TOTAL MARKS</span>
-                    <strong className="text-xs md:text-sm text-white">{pendingTest.test.questions} Marks</strong>
+                    <strong className="text-xs md:text-sm text-[var(--text-primary)]">{pendingTest.test.questions} Marks</strong>
                   </div>
                   <div className="bg-[var(--card2)] border border-[var(--border)] rounded-2xl p-3 text-center">
                     <span className="block text-[8px] text-[var(--text2)] font-extrabold uppercase mb-0.5">DURATION</span>
-                    <strong className="text-xs md:text-sm text-white">{pendingTest.test.mins} Mins</strong>
+                    <strong className="text-xs md:text-sm text-[var(--text-primary)]">{pendingTest.test.mins} Mins</strong>
                   </div>
                   <div className="bg-[var(--card2)] border border-[var(--border)] rounded-2xl p-3 text-center">
                     <span className="block text-[8px] text-[var(--text2)] font-extrabold uppercase mb-0.5">PENALTY RATIO</span>
-                    <strong className="text-xs md:text-sm text-amber-400">-0.25 Negative</strong>
+                    <strong className="text-xs md:text-sm text-amber-500 font-bold">-0.25 Negative</strong>
                   </div>
                 </div>
 
@@ -7912,8 +7926,8 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       }`}
                     >
                       <div className="flex items-center gap-2 mb-1 justify-between">
-                        <span className="font-extrabold text-xs text-white tracking-tight">⏱️ CBT Exam Mode</span>
-                        <span className="text-[8px] bg-red-500/10 text-red-400 border border-red-500/20 px-1 py-0.2 rounded font-extrabold">NEGATIVE</span>
+                        <span className="font-extrabold text-xs text-[var(--text-primary)] tracking-tight">⏱️ CBT Exam Mode</span>
+                        <span className="text-[8px] bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 px-1 py-0.2 rounded font-extrabold">NEGATIVE</span>
                       </div>
                       <p className="text-[11px] text-[var(--text2)] leading-snug">
                         Replicates clinical exams. Detailed rationale is hidden until finish. <strong>-0.25 penalty</strong> applies for errors.
@@ -7925,13 +7939,13 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       onClick={() => setSelectedModeForPending("practice")}
                       className={`p-4 rounded-2xl border cursor-pointer transition-all duration-200 ${
                         selectedModeForPending === "practice" 
-                          ? "bg-[var(--accent-dim)] border-[#a181ff] shadow-lg ring-1 ring-[#a181ff]" 
+                          ? "bg-[var(--accent-dim)] border-[var(--accent)] shadow-lg ring-1 ring-[var(--accent)]" 
                           : "bg-[var(--card2)] border-[var(--border)] hover:border-[var(--border)]/80 hover:bg-[var(--card)]"
                       }`}
                     >
                       <div className="flex items-center gap-2 mb-1 justify-between">
-                        <span className="font-extrabold text-xs text-white tracking-tight">💡 Practice Mode</span>
-                        <span className="text-[8px] bg-green-500/10 text-green-400 border border-green-500/20 px-1 py-0.2 rounded font-extrabold">LEARNING</span>
+                        <span className="font-extrabold text-xs text-[var(--text-primary)] tracking-tight">💡 Practice Mode</span>
+                        <span className="text-[8px] bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 px-1 py-0.2 rounded font-extrabold">LEARNING</span>
                       </div>
                       <p className="text-[11px] text-[var(--text2)] leading-snug">
                         Instant feedback and detailed explanations after submitting every option. Unlimited timer, zero penalties.
@@ -7943,19 +7957,19 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
                 {/* CBT Portal Actions */}
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-[var(--border)]/50 bg-[var(--card2)] rounded-2xl px-4 py-3">
-                  <div className="text-[11px] text-neutral-400 flex items-center gap-1.5">
-                    <span className="text-green-400 font-bold">✓</span>
+                  <div className="text-[11px] text-[var(--text-secondary)] flex items-center gap-1.5">
+                    <span className="text-green-600 dark:text-green-400 font-bold">✓</span>
                     <span>Standard Central Government assessment algorithms apply.</span>
                   </div>
                   <div className="flex items-center gap-3 w-full sm:w-auto">
                     <button 
-                      className="px-4 py-2 rounded-xl border border-[var(--border)] text-xs font-bold text-[var(--text2)] hover:bg-[#1e2d45] hover:text-white transition-all cursor-pointer flex-1 sm:flex-none text-center"
+                      className="px-4 py-2 rounded-xl border border-[var(--border)] text-xs font-bold text-[var(--text2)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)] transition-all cursor-pointer flex-1 sm:flex-none text-center"
                       onClick={() => setPendingTest(null)}
                     >
                       Cancel
                     </button>
                     <button 
-                      className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black text-xs font-black shadow-lg shadow-amber-500/20 transition-all text-center tracking-wide cursor-pointer active:scale-95 flex-1 sm:flex-none"
+                      className="px-6 py-2.5 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-xs font-black shadow-lg transition-all text-center tracking-wide cursor-pointer active:scale-95 flex-1 sm:flex-none"
                       onClick={() => {
                         const subId = pendingTest.subjectId;
                         const testId = pendingTest.testId;
@@ -7970,12 +7984,12 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
               </div>
 
               {/* LOWER PORTION: DETAILED SCROLLABLE SEO-FRIENDLY BLOG/ARTICLE */}
-              <div className="bg-[var(--card)]/60 border border-[var(--border)]/60 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
-                <div className="flex items-center gap-1.5 text-[#58a6ff] text-[10px] font-black uppercase tracking-widest bg-[#58a6ff]/10 border border-[#58a6ff]/20 px-3 py-1 rounded-full w-fit">
+              <div className="bg-[var(--card)] border border-[var(--border)]/60 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
+                <div className="flex items-center gap-1.5 text-[var(--accent)] text-[10px] font-black uppercase tracking-widest bg-[var(--accent-soft)] border border-[var(--border)] px-3 py-1 rounded-full w-fit">
                   📄 Exam Guide, Syllabus & High-Yield Analysis
                 </div>
                 <div>
-                  <h2 className="text-xl md:text-2xl font-black text-white tracking-tight leading-tight">
+                  <h2 className="text-xl md:text-2xl font-black text-[var(--text-primary)] tracking-tight leading-tight">
                     {testArticle.title}
                   </h2>
                   <p className="text-xs text-[var(--text2)] font-sans mt-1.5 italic leading-relaxed">
