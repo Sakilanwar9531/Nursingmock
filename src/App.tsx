@@ -3191,7 +3191,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       )}
 
       {/* Pages Container */}
-      <main className="transition-all duration-300">
+      <main className="transition-all duration-300 page-container">
         
         {/* =============== LANDING PAGE =============== */}
         {activePage === "landing" && (
