@@ -2863,7 +2863,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-all cursor-pointer border border-transparent hover:border-[var(--border)]"
                   >
                     <Search className="w-4 h-4 text-emerald-500 shrink-0" />
-                    <span>Find Mock Test Series</span>
+                    <span>Find Exams/Mocks</span>
                   </button>
 
                   <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 pt-4 mb-2 select-none">Course Categories</p>
@@ -2904,56 +2904,6 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       );
                     })}
                   </div>
-
-                  <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 pt-4 mb-2 select-none">Practice Centre</p>
-                  
-                  <button
-                    onClick={() => { showPage("subject_mocks"); setIsDrawerOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                      activePage === "exam_landing" && hubTab === "subject" 
-                        ? "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--border)]" 
-                        : "text-[var(--text-primary)] hover:bg-[var(--surface-2)] border-transparent"
-                    }`}
-                  >
-                    <BookOpen className="w-4 h-4 text-[var(--text-secondary)] shrink-0" />
-                    <span>Test Centre (Subjects)</span>
-                  </button>
-
-                  <button
-                    onClick={() => { showPage("mock_tests"); setIsDrawerOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                      activePage === "exam_landing" && hubTab === "full_mock" 
-                        ? "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--border)]" 
-                        : "text-[var(--text-primary)] hover:bg-[var(--surface-2)] border-transparent"
-                    }`}
-                  >
-                    <Flame className="w-4 h-4 text-[var(--accent)] shrink-0" />
-                    <span>Full Mock Tests</span>
-                  </button>
-
-                  <button
-                    onClick={() => { showPage("pyq"); setIsDrawerOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                      activePage === "exam_landing" && hubTab === "pyq" 
-                        ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/35" 
-                        : "text-[var(--text-primary)] hover:bg-[var(--surface-2)] border-transparent"
-                    }`}
-                  >
-                    <FileText className="w-4 h-4 text-[var(--text-secondary)] shrink-0" />
-                    <span>Previous Year Papers (PYQ)</span>
-                  </button>
-
-                  <button
-                    onClick={() => { showPage("short_sprints"); setIsDrawerOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                      activePage === "exam_landing" && hubTab === "short" 
-                        ? "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--border)]" 
-                        : "text-[var(--text-primary)] hover:bg-[var(--surface-2)] border-transparent"
-                    }`}
-                  >
-                    <Activity className="w-4 h-4 text-[var(--text-secondary)] shrink-0" />
-                    <span>Daily Speed Sprints</span>
-                  </button>
 
                   <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 pt-4 mb-2 select-none">Updates & Insights</p>
 
@@ -3336,15 +3286,15 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   <div className="flex items-center gap-3 flex-wrap pt-2">
                     <button 
                       className="px-7 py-3.5 rounded-full bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-xs md:text-sm font-bold shadow-md transition-all cursor-pointer transform hover:-translate-y-0.5 active:scale-95 flex items-center gap-2"
-                      onClick={() => showPage("exam_landing")}
+                      onClick={() => showPage("updates")}
                     >
-                      <span>See Today's Updates →</span>
+                      <span>NCBT Syllabus →</span>
                     </button>
                     <button 
                       className="px-6 py-3.5 rounded-full bg-card hover:bg-card2 text-text text-xs md:text-sm font-bold border border-border hover:border-accent transition-all cursor-pointer transform hover:-translate-y-0.5"
-                      onClick={() => showPage("subject_mocks")}
+                      onClick={() => showPage("find_test")}
                     >
-                      <span>Find Course / Subject Mocks</span>
+                      <span>Find Exams/Mocks</span>
                     </button>
                   </div>
 
