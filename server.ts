@@ -4,7 +4,7 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { STATIC_NURSING_UPDATES } from "./src/updatesData";
 import { GoogleGenAI } from "@google/genai";
-import { getSeoMetadata, getPreRenderedContent, SeoMeta } from "./src/seoData";
+import { getSeoMetadata, getPreRenderedContent, getAllAppRoutes, SeoMeta } from "./src/seoData";
 
 async function startServer() {
   const app = express();
@@ -41,12 +41,18 @@ Sitemap: https://ncbt.in/sitemap.xml`);
     res.send(`google-site-verification: google${id}.html`);
   });
 
-  // SEO Optimization: sitemap.xml Endpoint
+  // SEO Optimization: Dynamic sitemap.xml Endpoint
   app.get('/sitemap.xml', (req, res) => {
     try {
-      const sitemapPath = path.join(process.cwd(), 'sitemap.xml');
-      if (fs.existsSync(sitemapPath)) {
-        const xml = fs.readFileSync(sitemapPath, 'utf8');
+      const sitemapDist = path.join(process.cwd(), 'dist', 'sitemap.xml');
+      if (fs.existsSync(sitemapDist)) {
+        const xml = fs.readFileSync(sitemapDist, 'utf8');
+        res.header('Content-Type', 'application/xml');
+        return res.send(xml);
+      }
+      const sitemapRoot = path.join(process.cwd(), 'sitemap.xml');
+      if (fs.existsSync(sitemapRoot)) {
+        const xml = fs.readFileSync(sitemapRoot, 'utf8');
         res.header('Content-Type', 'application/xml');
         return res.send(xml);
       }
@@ -54,119 +60,24 @@ Sitemap: https://ncbt.in/sitemap.xml`);
       console.error("Error reading sitemap.xml from disk:", e);
     }
 
-    const updatesUrls = STATIC_NURSING_UPDATES.map(u => `  <url>
-    <loc>https://ncbt.in/updates/${u.id}</loc>
-    <lastmod>2026-07-22</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>`).join("\n");
+    const routes = getAllAppRoutes();
+    const today = new Date().toISOString().split("T")[0];
+    const urlNodes = routes.map((route) => {
+      const priority = route === "/" ? "1.0" :
+                       route.startsWith("/exam/") || route.startsWith("/nursing") || route === "/updates" || route === "/pyq" || route === "/mock-tests" ? "0.9" : "0.8";
+      const freq = route === "/" || route.startsWith("/exam/") || route === "/updates" ? "daily" : "weekly";
+      return `  <url>
+    <loc>https://ncbt.in${route === "/" ? "" : route}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>${freq}</changefreq>
+    <priority>${priority}</priority>
+  </url>`;
+    }).join("\n");
 
     res.header('Content-Type', 'application/xml');
     res.send(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://ncbt.in/</loc>
-    <lastmod>2026-07-22</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://ncbt.in/exam/aiims-norcet</loc>
-    <lastmod>2026-07-22</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://ncbt.in/exam/wbhrb-staff-nurse</loc>
-    <lastmod>2026-07-22</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://ncbt.in/exam/rrb-staff-nurse</loc>
-    <lastmod>2026-07-22</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://ncbt.in/exam/esic-nursing-officer</loc>
-    <lastmod>2026-07-22</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://ncbt.in/exam/dsssb-staff-nurse</loc>
-    <lastmod>2026-07-22</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://ncbt.in/exam/rrb-pharmacist</loc>
-    <lastmod>2026-07-22</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://ncbt.in/exam/ot-technician</loc>
-    <lastmod>2026-07-22</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://ncbt.in/pyq</loc>
-    <lastmod>2026-07-22</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://ncbt.in/mock-tests</loc>
-    <lastmod>2026-07-22</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://ncbt.in/subject-mocks</loc>
-    <lastmod>2026-07-22</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://ncbt.in/short-sprints</loc>
-    <lastmod>2026-07-22</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://ncbt.in/find-test</loc>
-    <lastmod>2026-07-22</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://ncbt.in/analytics</loc>
-    <lastmod>2026-07-22</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://ncbt.in/about</loc>
-    <lastmod>2026-07-22</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://ncbt.in/contact</loc>
-    <lastmod>2026-07-22</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://ncbt.in/updates</loc>
-    <lastmod>2026-07-22</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-${updatesUrls}
+${urlNodes}
 </urlset>`);
   });
 
@@ -375,11 +286,21 @@ Please break down the rationale into four logical components:
     app.use(express.static(distPath));
     app.get('*all', (req, res) => {
       try {
+        const cleanPath = req.path.split('?')[0];
+
+        // 1. If a physical pre-rendered HTML file exists for this route, serve it directly with HTTP 200
+        if (cleanPath !== '/') {
+          const relativePath = cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath;
+          const prerenderedFile = path.join(distPath, relativePath, 'index.html');
+          if (fs.existsSync(prerenderedFile)) {
+            return res.sendFile(prerenderedFile);
+          }
+        }
+
         const indexPath = path.join(distPath, 'index.html');
         let html = fs.readFileSync(indexPath, 'utf8');
         
         const meta = getSeoMetadata(req.path);
-        const cleanPath = req.path.split('?')[0];
         
         // 1. Replace Title
         html = html.replace(
@@ -390,12 +311,12 @@ Please break down the rationale into four logical components:
         // 2. Inject optimal meta tags, canonical link, & structured data JSON-LD inside the head
         const headTags = [
           `<meta name="description" content="${meta.description}" />`,
-          `<link rel="canonical" href="https://ncbt.in${cleanPath}" />`,
+          `<link rel="canonical" href="https://ncbt.in${cleanPath === '/' ? '' : cleanPath}" />`,
           `<meta property="og:title" content="${meta.title}" />`,
           `<meta property="og:description" content="${meta.description}" />`,
           `<meta property="og:type" content="website" />`,
           `<meta property="og:site_name" content="NCBT.in" />`,
-          `<meta name="twitter:card" content="summary" />`,
+          `<meta name="twitter:card" content="summary_large_image" />`,
           `<meta name="twitter:title" content="${meta.title}" />`,
           `<meta name="twitter:description" content="${meta.description}" />`
         ];
@@ -413,7 +334,7 @@ Please break down the rationale into four logical components:
         // Replace </head> to inject tags right before it closes
         html = html.replace('</head>', `  ${tagsString}\n  </head>`);
         
-        // 3. Inject pre-rendered static content inside #root for static search engine bots (like Rank Math, Googlebot)
+        // 3. Inject pre-rendered static content inside #root for static search engine bots
         const preRendered = getPreRenderedContent(req.path);
         html = html.replace('<div id="root"></div>', `<div id="root">${preRendered}</div>`);
         
