@@ -4,7 +4,7 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { STATIC_NURSING_UPDATES } from "./src/updatesData";
 import { GoogleGenAI } from "@google/genai";
-import { getSeoMetadata, getPreRenderedContent, getAllAppRoutes, SeoMeta } from "./src/seoData";
+import { getSeoMetadata, getPreRenderedContent, getAllAppRoutes, isValidAppRoute, SeoMeta } from "./src/seoData";
 
 async function startServer() {
   const app = express();
@@ -338,7 +338,8 @@ Please break down the rationale into four logical components:
         const preRendered = getPreRenderedContent(req.path);
         html = html.replace('<div id="root"></div>', `<div id="root">${preRendered}</div>`);
         
-        res.setHeader('Content-Type', 'text/html');
+        const statusCode = isValidAppRoute(cleanPath) ? 200 : 404;
+        res.status(statusCode).setHeader('Content-Type', 'text/html');
         res.send(html);
       } catch (err) {
         console.error("Error serving dynamic index.html:", err);

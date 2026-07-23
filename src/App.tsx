@@ -55,6 +55,7 @@ import { InteractiveFAQ } from "./components/InteractiveFAQ";
 import { AllInOneHub } from "./components/AllInOneHub";
 import { FindTestPage } from "./components/FindTestPage";
 import { STATIC_NURSING_UPDATES } from "./updatesData";
+import { CATEGORY_ROUTES } from "./seoData";
 import { BLOG_TRANSLATIONS } from "./blogTranslations";
 import { Subject, Test, Question, PyqCard, User as UserType, Attempt, StreakData, NursingUpdate } from "./types";
 import { 
@@ -381,33 +382,43 @@ const generateMockTests = (): Test[] => {
     let initialSubjId: string | null = null;
     let initialTestId: string | null = null;
     let initialExamId: string = "aiims-norcet";
+    let initialCategory: string = "all";
     let foundTest: Test | null = null;
     let foundUpdateOnLoad: any = null;
 
-    if (cleanPath === "/find-tests") {
+    if (cleanPath === "/" || cleanPath === "") {
+      initialPage = "landing";
+    } else if (cleanPath === "/find-tests" || cleanPath === "/find-test") {
       initialPage = "find_test";
-    } else if (cleanPath === "/pyq") {
-      initialPage = "exam_landing";
-      initialTab = "pyq";
+      initialCategory = "all";
     } else if (cleanPath === "/mock-tests") {
-      initialPage = "exam_landing";
-      initialTab = "full_mock";
+      initialPage = "find_test";
+      initialCategory = "all";
+    } else if (cleanPath === "/pyq") {
+      initialPage = "find_test";
+      initialCategory = "pyq";
     } else if (cleanPath === "/subject-mocks") {
-      initialPage = "exam_landing";
-      initialTab = "subject";
+      initialPage = "find_test";
+      initialCategory = "subject";
     } else if (cleanPath === "/short-sprints") {
-      initialPage = "exam_landing";
-      initialTab = "short";
+      initialPage = "find_test";
+      initialCategory = "sprint";
+    } else if (CATEGORY_ROUTES.some(c => c.path === cleanPath)) {
+      initialPage = "find_test";
+      const cat = CATEGORY_ROUTES.find(c => c.path === cleanPath);
+      if (cat) initialCategory = cat.id;
     } else if (cleanPath === "/about") {
       initialPage = "about";
     } else if (cleanPath === "/contact") {
       initialPage = "contact";
     } else if (cleanPath.startsWith("/updates/")) {
-      initialPage = "updates";
       const uId = path.split("/")[2];
       const foundU = STATIC_NURSING_UPDATES.find(u => u.id === uId);
       if (foundU) {
+        initialPage = "updates";
         foundUpdateOnLoad = foundU;
+      } else {
+        initialPage = "404";
       }
     } else if (cleanPath === "/updates") {
       initialPage = "updates";
@@ -418,14 +429,14 @@ const generateMockTests = (): Test[] => {
     } else if (cleanPath === "/admin") {
       initialPage = "admin";
     } else if (cleanPath.startsWith("/exams/") || cleanPath.startsWith("/exam/")) {
-      initialPage = "exam_landing";
       const parts = cleanPath.split("/");
-      const eId = parts[2] ? parts[2].toLowerCase() : "aiims-norcet";
+      const eId = parts[2] ? parts[2].toLowerCase() : "";
       const foundE = TARGET_EXAMS.find(e => e.id.toLowerCase() === eId);
       if (foundE) {
+        initialPage = "exam_landing";
         initialExamId = foundE.id;
       } else {
-        initialExamId = "aiims-norcet";
+        initialPage = "404";
       }
     } else if (cleanPath.startsWith("/test/")) {
       const parts = path.split("/");
@@ -458,6 +469,8 @@ const generateMockTests = (): Test[] => {
             if (virtualTest) {
               initialPage = "test";
               foundTest = virtualTest;
+            } else {
+              initialPage = "404";
             }
           } else if (initialTestId.startsWith("sprint-")) {
             const sprintSubjId = initialTestId.replace("sprint-", "");
@@ -465,7 +478,11 @@ const generateMockTests = (): Test[] => {
             if (virtualTest) {
               initialPage = "test";
               foundTest = virtualTest;
+            } else {
+              initialPage = "404";
             }
+          } else {
+            initialPage = "404";
           }
         } else {
           const subject = subjectsList.find(s => s.id === initialSubjId);
@@ -474,12 +491,18 @@ const generateMockTests = (): Test[] => {
             if (test) {
               initialPage = "test";
               foundTest = test;
+            } else {
+              initialPage = "404";
             }
+          } else {
+            initialPage = "404";
           }
         }
+      } else {
+        initialPage = "404";
       }
     } else {
-      initialPage = "landing";
+      initialPage = "404";
     }
 
     return {
@@ -488,6 +511,7 @@ const generateMockTests = (): Test[] => {
       subjectId: initialSubjId,
       testId: initialTestId,
       examId: initialExamId,
+      category: initialCategory,
       test: foundTest,
       update: foundUpdateOnLoad
     };
@@ -1116,7 +1140,7 @@ export default function App() {
   const [authPin, setAuthPin] = useState<string>("700001");
 
   // Find Test Page State
-  const [findTestCategory, setFindTestCategory] = useState<string>("all");
+  const [findTestCategory, setFindTestCategory] = useState<string>(initialRoute.category || "all");
 
   // OTP Authentication States
   const [loginMethod, setLoginMethod] = useState<"email" | "otp">("otp");
@@ -2200,7 +2224,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       const eId = customExamId || selectedExamId || "aiims-norcet";
       const found = TARGET_EXAMS.find(e => e.id.toLowerCase() === eId.toLowerCase());
       const validSlug = found ? found.id : "aiims-norcet";
-      return `/exams/${validSlug}`;
+      return `/exam/${validSlug}`;
     }
     if (pageId === "find_test") return "/find-tests";
     if (pageId === "landing") return "/";
@@ -2308,6 +2332,20 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       document.title = `${activeTest.title} — Online CBT Practice | NCBT`;
     }
   }, [activePage, selectedExamId, activeTest]);
+
+  // Handle Browser Back/Forward buttons smoothly
+  useEffect(() => {
+    const handlePopState = () => {
+      const route = getInitialRoute();
+      setActivePage(route.page);
+      if (route.examId) setSelectedExamId(route.examId);
+      if (route.category) setFindTestCategory(route.category);
+      if (route.test) setActiveTest(route.test);
+      if (route.update) setSelectedUpdate(route.update);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   const viewUpdate = (item: NursingUpdate) => {
     setSelectedUpdate(item);
@@ -7761,6 +7799,69 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
             <div className="mt-16">
               <InteractiveFAQ title="Inquiries & Helpdesk FAQ" />
+            </div>
+          </div>
+        )}
+
+        {/* =============== 404 PAGE NOT FOUND =============== */}
+        {activePage === "404" && (
+          <div className="page active p-6 md:p-12 max-w-3xl mx-auto text-center text-[var(--text-primary)] animate-fade-in" id="page-404">
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 md:p-12 shadow-2xl space-y-6">
+              <div className="w-20 h-20 mx-auto rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-4xl shadow-inner">
+                🔍
+              </div>
+              <div>
+                <span className="text-xs font-black uppercase tracking-widest text-amber-500 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full">
+                  HTTP 404 — PAGE NOT FOUND
+                </span>
+                <h1 className="text-2xl md:text-4xl font-black font-syne text-[var(--text-primary)] mt-3 tracking-tight">
+                  Oops! This Assessment Route Is Missing
+                </h1>
+                <p className="text-xs md:text-sm text-[var(--text-secondary)] mt-2 max-w-lg mx-auto leading-relaxed">
+                  The link or URL you followed may be expired, misspelled, or replaced during our recent syllabus and route updates.
+                </p>
+              </div>
+
+              {/* Quick Action Navigation Buttons */}
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <button
+                  onClick={() => showPage("landing")}
+                  className="px-6 py-3 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-extrabold text-xs shadow-md transition-all cursor-pointer uppercase tracking-wider flex items-center gap-2"
+                >
+                  <Home className="w-4 h-4" /> Return to Homepage
+                </button>
+                <button
+                  onClick={() => showPage("find_test")}
+                  className="px-6 py-3 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] font-bold text-xs transition-all cursor-pointer uppercase tracking-wider flex items-center gap-2"
+                >
+                  <Search className="w-4 h-4" /> Browse CBT Mocks & PYQs
+                </button>
+              </div>
+
+              {/* Popular Exams Grid */}
+              <div className="border-t border-[var(--border)] pt-6 mt-6">
+                <span className="text-[10px] font-extrabold text-[var(--text-secondary)] uppercase tracking-widest block mb-3">
+                  Quick Access to Top Central Recruitment Exams:
+                </span>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {[
+                    { name: "AIIMS NORCET 8.0", id: "aiims-norcet" },
+                    { name: "WBHRB Staff Nurse", id: "wbhrb-grade2" },
+                    { name: "ESIC Nursing Officer", id: "esic-officer" },
+                    { name: "RRB Staff Nurse", id: "rrb-officer" },
+                    { name: "CHO NHM Officer", id: "cho-recruitment" },
+                    { name: "DSSSB Nursing", id: "dsssb-officer" },
+                  ].map((exam) => (
+                    <button
+                      key={exam.id}
+                      onClick={() => selectExam(exam.id)}
+                      className="px-3 py-1.5 rounded-lg bg-[var(--surface-2)] hover:bg-[var(--surface)] text-[11px] font-bold text-[var(--text-primary)] border border-[var(--border)] transition-all cursor-pointer"
+                    >
+                      {exam.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         )}

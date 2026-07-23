@@ -32,16 +32,14 @@ export function getAllAppRoutes(): string[] {
     '/contact',
     '/analytics',
     '/find-tests',
-    '/find-test',
   ];
 
   // 1. Add Category/Profession landing routes
   CATEGORY_ROUTES.forEach(c => routes.push(c.path));
 
-  // 2. Add Target Exam landing routes (/exam/exam-id and /exams/exam-id)
+  // 2. Add Target Exam landing routes (/exam/exam-id)
   TARGET_EXAMS.forEach(exam => {
     routes.push(`/exam/${exam.id}`);
-    routes.push(`/exams/${exam.id}`);
   });
 
   // 3. Add Blog/Update article routes (/updates/update-id)
@@ -74,8 +72,35 @@ export function getAllAppRoutes(): string[] {
   return Array.from(new Set(routes));
 }
 
+export function isValidAppRoute(urlPath: string): boolean {
+  const cleanPath = urlPath.toLowerCase().split('?')[0];
+  if (cleanPath === "/" || cleanPath === "") return true;
+
+  const validRoutes = getAllAppRoutes();
+  if (validRoutes.includes(cleanPath)) return true;
+
+  // Check alias routes
+  if (cleanPath === "/find-test") return true;
+  if (cleanPath.startsWith("/exams/")) {
+    const slug = cleanPath.split("/")[2];
+    if (slug && TARGET_EXAMS.some(e => e.id.toLowerCase() === slug.toLowerCase())) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export function getSeoMetadata(urlPath: string): SeoMeta {
   const cleanPath = urlPath.toLowerCase().split('?')[0];
+
+  // If path is invalid / 404
+  if (!isValidAppRoute(cleanPath)) {
+    return {
+      title: "404 - Page Not Found | NCBT.in",
+      description: "The page or assessment route you requested does not exist or has been updated on NCBT.in."
+    };
+  }
 
   // 1. Static Core Pages
   if (cleanPath === "/pyq") {
@@ -292,6 +317,20 @@ export function getSeoMetadata(urlPath: string): SeoMeta {
 
 export function getPreRenderedContent(urlPath: string): string {
   const cleanPath = urlPath.toLowerCase().split('?')[0];
+
+  if (!isValidAppRoute(cleanPath)) {
+    return `
+      <div class="page active" style="max-width: 800px; margin: 0 auto; padding: 60px 24px; text-align: center; font-family: system-ui, -apple-system, sans-serif; color: #1e293b;">
+        <div style="font-size: 72px; font-weight: 900; color: #d97706; line-height: 1; margin-bottom: 16px;">404</div>
+        <h1 style="font-size: 30px; font-weight: 800; color: #0f172a; margin: 0 0 16px 0;">Page Not Found</h1>
+        <p style="font-size: 16px; color: #64748b; margin: 0 auto 32px auto; max-width: 500px; line-height: 1.6;">The page or assessment route you requested does not exist, has been updated, or was moved on NCBT.in.</p>
+        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+          <a href="/" style="background: #0f172a; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; font-size: 14px;">Return to Homepage</a>
+          <a href="/mock-tests" style="background: #d97706; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; font-size: 14px;">Browse CBT Mocks</a>
+        </div>
+      </div>
+    `;
+  }
 
   // 1. Category / Profession Landing Pages
   const categoryMatch = CATEGORY_ROUTES.find(c => c.path === cleanPath);
