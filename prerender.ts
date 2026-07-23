@@ -100,6 +100,29 @@ function prerender() {
     }
   }
 
+  // 5. Generate and sync sitemap.xml dynamically for all 35 routes
+  const today = new Date().toISOString().split("T")[0];
+  const urlNodes = routes.map((route) => {
+    const priority = route === "/" ? "1.0" : route.startsWith("/exam/") || route === "/updates" || route === "/pyq" || route === "/mock-tests" ? "0.9" : "0.8";
+    const freq = route === "/" || route.startsWith("/exam/") || route === "/updates" ? "daily" : "weekly";
+    return `  <url>
+    <loc>https://ncbt.in${route === "/" ? "" : route}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>${freq}</changefreq>
+    <priority>${priority}</priority>
+  </url>`;
+  }).join("\n");
+
+  const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urlNodes}
+</urlset>`;
+
+  fs.writeFileSync(path.join(distPath, "sitemap.xml"), sitemapXml, "utf8");
+  fs.writeFileSync(path.join(process.cwd(), "public", "sitemap.xml"), sitemapXml, "utf8");
+  fs.writeFileSync(path.join(process.cwd(), "sitemap.xml"), sitemapXml, "utf8");
+  console.log(`📡 Automatically updated sitemap.xml in dist/, public/, and root with all ${routes.length} pages!`);
+
   console.log(`\n🎉 Pre-rendering complete! Static site generated with ${routes.length} physical HTML pages.`);
 }
 
