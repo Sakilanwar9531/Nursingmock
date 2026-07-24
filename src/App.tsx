@@ -2304,32 +2304,48 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
   // Dynamic Document Title and Meta Description per Page / Exam
   useEffect(() => {
-    if (activePage === "exam_landing") {
-      const exam = TARGET_EXAMS.find(e => e.id === selectedExamId) || TARGET_EXAMS[0];
-      if (exam) {
-        document.title = `${exam.fullName} — Mock Tests, PYQs & Syllabus | NCBT`;
-        let metaDesc = document.querySelector('meta[name="description"]');
-        if (!metaDesc) {
-          metaDesc = document.createElement("meta");
-          metaDesc.setAttribute("name", "description");
-          document.head.appendChild(metaDesc);
-        }
-        metaDesc.setAttribute("content", `Prepare for ${exam.fullName} (${exam.name}) with free CBT mock tests, previous year solved papers (PYQs), clinical rationales & syllabus guidelines at NCBT.`);
+    let metaRobots = document.querySelector('meta[name="robots"]');
+
+    if (activePage === "404") {
+      document.title = "404 - Page Not Found | NCBT.in";
+      if (!metaRobots) {
+        metaRobots = document.createElement("meta");
+        metaRobots.setAttribute("name", "robots");
+        document.head.appendChild(metaRobots);
       }
-    } else if (activePage === "find_test") {
-      document.title = "Find Government Exam Mock Test Series — NCBT";
-    } else if (activePage === "landing") {
-      document.title = "NCBT — India's Premier Nursing, Pharmacist & Paramedical CBT Portal";
-    } else if (activePage === "updates") {
-      document.title = "Nursing & Paramedical Exam Updates, Vacancies & Notes | NCBT";
-    } else if (activePage === "about") {
-      document.title = "About Us — NCBT National CBT Portal";
-    } else if (activePage === "contact") {
-      document.title = "Contact Us — NCBT Support";
-    } else if (activePage === "analytics") {
-      document.title = "Performance Analytics & CBT Scorecard | NCBT";
-    } else if (activePage === "test" && activeTest) {
-      document.title = `${activeTest.title} — Online CBT Practice | NCBT`;
+      metaRobots.setAttribute("content", "noindex, nofollow");
+    } else {
+      if (metaRobots) {
+        metaRobots.setAttribute("content", "index, follow");
+      }
+
+      if (activePage === "exam_landing") {
+        const exam = TARGET_EXAMS.find(e => e.id === selectedExamId) || TARGET_EXAMS[0];
+        if (exam) {
+          document.title = `${exam.fullName} — Mock Tests, PYQs & Syllabus | NCBT`;
+          let metaDesc = document.querySelector('meta[name="description"]');
+          if (!metaDesc) {
+            metaDesc = document.createElement("meta");
+            metaDesc.setAttribute("name", "description");
+            document.head.appendChild(metaDesc);
+          }
+          metaDesc.setAttribute("content", `Prepare for ${exam.fullName} (${exam.name}) with free CBT mock tests, previous year solved papers (PYQs), clinical rationales & syllabus guidelines at NCBT.`);
+        }
+      } else if (activePage === "find_test") {
+        document.title = "Find Government Exam Mock Test Series — NCBT";
+      } else if (activePage === "landing") {
+        document.title = "NCBT — India's Premier Nursing, Pharmacist & Paramedical CBT Portal";
+      } else if (activePage === "updates") {
+        document.title = "Nursing & Paramedical Exam Updates, Vacancies & Notes | NCBT";
+      } else if (activePage === "about") {
+        document.title = "About Us — NCBT National CBT Portal";
+      } else if (activePage === "contact") {
+        document.title = "Contact Us — NCBT Support";
+      } else if (activePage === "analytics") {
+        document.title = "Performance Analytics & CBT Scorecard | NCBT";
+      } else if (activePage === "test" && activeTest) {
+        document.title = `${activeTest.title} — Online CBT Practice | NCBT`;
+      }
     }
   }, [activePage, selectedExamId, activeTest]);
 

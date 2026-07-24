@@ -5,6 +5,7 @@ export interface SeoMeta {
   title: string;
   description: string;
   jsonLd?: string;
+  noIndex?: boolean;
 }
 
 export const CATEGORY_ROUTES = [
@@ -98,7 +99,8 @@ export function getSeoMetadata(urlPath: string): SeoMeta {
   if (!isValidAppRoute(cleanPath)) {
     return {
       title: "404 - Page Not Found | NCBT.in",
-      description: "The page or assessment route you requested does not exist or has been updated on NCBT.in."
+      description: "The page or assessment route you requested does not exist or has been updated on NCBT.in.",
+      noIndex: true
     };
   }
 

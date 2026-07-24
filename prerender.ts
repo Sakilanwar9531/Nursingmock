@@ -39,6 +39,7 @@ function prerender() {
 
     // 2. Form head tags
     const headTags = [
+      meta.noIndex ? `<meta name="robots" content="noindex, nofollow" />` : `<meta name="robots" content="index, follow" />`,
       `<meta name="description" content="${meta.description}" />`,
       `<link rel="canonical" href="${canonicalUrl}" />`,
       `<meta property="og:title" content="${meta.title}" />`,
@@ -72,6 +73,22 @@ function prerender() {
       console.log(`✅ Pre-rendered route: '${route}' -> dist${route}/index.html`);
     }
   }
+
+  // 5. Explicitly generate pre-rendered physical dist/404.html for Vercel and static hosting
+  const meta404 = getSeoMetadata("/404");
+  const body404 = getPreRenderedContent("/404");
+  let html404 = cleanBaseTemplate;
+  html404 = html404.replace(/<title>.*?<\/title>/i, `<title>${meta404.title}</title>`);
+  const head404 = [
+    `<meta name="robots" content="noindex, nofollow" />`,
+    `<meta name="description" content="${meta404.description}" />`,
+    `<meta property="og:title" content="${meta404.title}" />`,
+    `<meta property="og:description" content="${meta404.description}" />`
+  ].join("\n    ");
+  html404 = html404.replace("</head>", `  ${head404}\n  </head>`);
+  html404 = html404.replace('<div id="root"></div>', `<div id="root">${body404}</div>`);
+  fs.writeFileSync(path.join(distPath, "404.html"), html404, "utf8");
+  console.log(`✅ Generated branded dist/404.html with noindex, nofollow`);
 
   // 5. Generate and sync sitemap.xml dynamically from single source of truth (getAllAppRoutes)
   const today = new Date().toISOString().split("T")[0];

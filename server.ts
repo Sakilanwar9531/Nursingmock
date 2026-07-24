@@ -310,6 +310,7 @@ Please break down the rationale into four logical components:
         
         // 2. Inject optimal meta tags, canonical link, & structured data JSON-LD inside the head
         const headTags = [
+          meta.noIndex ? `<meta name="robots" content="noindex, nofollow" />` : `<meta name="robots" content="index, follow" />`,
           `<meta name="description" content="${meta.description}" />`,
           `<link rel="canonical" href="https://ncbt.in${cleanPath === '/' ? '' : cleanPath}" />`,
           `<meta property="og:title" content="${meta.title}" />`,
