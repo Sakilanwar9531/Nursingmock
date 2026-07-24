@@ -76,12 +76,28 @@ export function isValidAppRoute(urlPath: string): boolean {
   const validRoutes = getAllAppRoutes();
   if (validRoutes.includes(cleanPath)) return true;
 
-  // Check alias routes
+  // Check alias routes & dynamic patterns
   if (cleanPath === "/find-test") return true;
   if (cleanPath.startsWith("/exams/")) {
     const slug = cleanPath.split("/")[2];
     if (slug && TARGET_EXAMS.some(e => e.id.toLowerCase() === slug.toLowerCase())) {
       return true;
+    }
+  }
+  if (cleanPath.startsWith("/updates/")) {
+    const slug = cleanPath.split("/")[2];
+    if (slug && STATIC_NURSING_UPDATES.some(u => u.id.toLowerCase() === slug.toLowerCase())) {
+      return true;
+    }
+  }
+  if (cleanPath.startsWith("/test/")) {
+    const parts = cleanPath.split("/");
+    const subjId = parts[2];
+    const testId = parts[3];
+    if (subjId === "virtual" && testId) return true;
+    if (subjId && testId) {
+      const subj = SUBJECTS.find(s => s.id === subjId);
+      if (subj && subj.tests.some(t => t.id === testId)) return true;
     }
   }
 

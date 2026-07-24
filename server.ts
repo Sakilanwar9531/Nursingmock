@@ -5,6 +5,7 @@ import { createServer as createViteServer } from "vite";
 import { STATIC_NURSING_UPDATES } from "./src/updatesData";
 import { GoogleGenAI } from "@google/genai";
 import { getSeoMetadata, getPreRenderedContent, getAllAppRoutes, isValidAppRoute, SeoMeta } from "./src/seoData";
+import { TARGET_EXAMS, SUBJECTS } from "./src/data";
 
 async function startServer() {
   const app = express();
@@ -283,13 +284,26 @@ Please break down the rationale into four logical components:
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
+    const validRoutesSet = new Set(getAllAppRoutes());
+
     app.use(express.static(distPath));
     app.get('*all', (req, res) => {
       try {
-        const cleanPath = req.path.split('?')[0];
+        const cleanPath = req.path.toLowerCase().split('?')[0];
 
-        // 1. If a physical pre-rendered HTML file exists for this route, serve it directly with HTTP 200
-        if (cleanPath !== '/') {
+        // Determine if route is valid (exact static match or supported dynamic pattern)
+        const isValidRoute =
+          validRoutesSet.has(cleanPath) ||
+          cleanPath === "/find-test" ||
+          (cleanPath.startsWith("/exams/") && TARGET_EXAMS.some(e => e.id.toLowerCase() === cleanPath.split("/")[2]?.toLowerCase())) ||
+          (cleanPath.startsWith("/updates/") && STATIC_NURSING_UPDATES.some(u => u.id.toLowerCase() === cleanPath.split("/")[2]?.toLowerCase())) ||
+          (cleanPath.startsWith("/test/") && (
+            cleanPath.split("/")[2] === "virtual" ||
+            SUBJECTS.some(s => s.id === cleanPath.split("/")[2] && s.tests.some(t => t.id === cleanPath.split("/")[3]))
+          ));
+
+        // 1. If a physical pre-rendered HTML file exists for a valid route, serve it directly with HTTP 200
+        if (isValidRoute && cleanPath !== '/') {
           const relativePath = cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath;
           const prerenderedFile = path.join(distPath, relativePath, 'index.html');
           if (fs.existsSync(prerenderedFile)) {
@@ -301,6 +315,7 @@ Please break down the rationale into four logical components:
         let html = fs.readFileSync(indexPath, 'utf8');
         
         const meta = getSeoMetadata(req.path);
+        const shouldNoIndex = !isValidRoute || meta.noIndex;
         
         // 1. Replace Title
         html = html.replace(
@@ -310,7 +325,7 @@ Please break down the rationale into four logical components:
         
         // 2. Inject optimal meta tags, canonical link, & structured data JSON-LD inside the head
         const headTags = [
-          meta.noIndex ? `<meta name="robots" content="noindex, nofollow" />` : `<meta name="robots" content="index, follow" />`,
+          shouldNoIndex ? `<meta name="robots" content="noindex, nofollow" />` : `<meta name="robots" content="index, follow" />`,
           `<meta name="description" content="${meta.description}" />`,
           `<link rel="canonical" href="https://ncbt.in${cleanPath === '/' ? '' : cleanPath}" />`,
           `<meta property="og:title" content="${meta.title}" />`,
@@ -339,7 +354,7 @@ Please break down the rationale into four logical components:
         const preRendered = getPreRenderedContent(req.path);
         html = html.replace('<div id="root"></div>', `<div id="root">${preRendered}</div>`);
         
-        const statusCode = isValidAppRoute(cleanPath) ? 200 : 404;
+        const statusCode = isValidRoute ? 200 : 404;
         res.status(statusCode).setHeader('Content-Type', 'text/html');
         res.send(html);
       } catch (err) {
