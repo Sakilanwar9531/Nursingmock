@@ -116,7 +116,7 @@ function prerender() {
   let html404 = cleanBaseTemplate;
   html404 = html404.replace(/<title>.*?<\/title>/i, `<title>${meta404.title}</title>`);
   const head404 = [
-    `<meta name="robots" content="noindex, nofollow" />`,
+    `<meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />`,
     `<meta name="description" content="${meta404.description}" />`,
     `<meta property="og:title" content="${meta404.title}" />`,
     `<meta property="og:description" content="${meta404.description}" />`

@@ -284,26 +284,103 @@ Please break down the rationale into four logical components:
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    const validRoutesSet = new Set(getAllAppRoutes());
 
     app.use(express.static(distPath));
     app.get('*all', (req, res) => {
       try {
-        const cleanPath = req.path.toLowerCase().split('?')[0];
+        let cleanPath = req.path.toLowerCase().split('?')[0];
+        if (cleanPath.length > 1 && cleanPath.endsWith("/")) {
+          cleanPath = cleanPath.slice(0, -1);
+        }
 
-        // Determine if route is valid (exact static match or supported dynamic pattern)
-        const isValidRoute =
-          validRoutesSet.has(cleanPath) ||
-          cleanPath === "/find-test" ||
-          (cleanPath.startsWith("/exams/") && TARGET_EXAMS.some(e => e.id.toLowerCase() === cleanPath.split("/")[2]?.toLowerCase())) ||
-          (cleanPath.startsWith("/updates/") && STATIC_NURSING_UPDATES.some(u => u.id.toLowerCase() === cleanPath.split("/")[2]?.toLowerCase())) ||
-          (cleanPath.startsWith("/test/") && (
-            cleanPath.split("/")[2] === "virtual" ||
-            SUBJECTS.some(s => s.id === cleanPath.split("/")[2] && s.tests.some(t => t.id === cleanPath.split("/")[3]))
-          ));
+        // 1. Handle 301 Permanent Redirects for legacy / singular alias paths
+        if (cleanPath.startsWith("/exam/")) {
+          const examSlug = cleanPath.split("/")[2] || "";
+          return res.redirect(301, `/exams/${examSlug}`);
+        }
+        if (cleanPath === "/find-test") {
+          return res.redirect(301, "/find-tests");
+        }
 
-        // 1. If a physical pre-rendered HTML file exists for a valid route, serve it directly with HTTP 200
-        if (isValidRoute && cleanPath !== '/') {
+        // 2. Validate route against the canonical application route system
+        const isValid = isValidAppRoute(cleanPath);
+
+        // 3. HARD SERVER 404 RESPONSE FOR INVALID / OBSOLETE ROUTES
+        if (!isValid) {
+          res.status(404);
+          res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet, noimageindex');
+          res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+          res.setHeader('Content-Type', 'text/html; charset=utf-8');
+          return res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>404 - Page Not Found | NCBT.in</title>
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #0b1329;
+      color: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 24px;
+      text-align: center;
+    }
+    .card {
+      background: #111c38;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 40px 32px;
+      max-width: 480px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      letter-spacing: 0.05em;
+    }
+    h1 { font-size: 24px; font-weight: 800; margin: 0 0 12px 0; color: #ffffff; }
+    p { font-size: 14px; color: #94a3b8; line-height: 1.6; margin: 0 0 24px 0; }
+    a {
+      display: inline-block;
+      background: #059669;
+      color: #ffffff;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    a:hover { background: #047857; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">HTTP 404 — NOT FOUND</div>
+    <h1>Page Does Not Exist</h1>
+    <p>The requested route (<code>${cleanPath}</code>) does not exist or has been permanently removed from NCBT.in.</p>
+    <a href="/">Return to NCBT Homepage</a>
+  </div>
+</body>
+</html>`);
+        }
+
+        // 4. If a physical pre-rendered HTML file exists for a valid route, serve it directly with HTTP 200
+        if (cleanPath !== '/') {
           const relativePath = cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath;
           const prerenderedFile = path.join(distPath, relativePath, 'index.html');
           if (fs.existsSync(prerenderedFile)) {
@@ -315,7 +392,6 @@ Please break down the rationale into four logical components:
         let html = fs.readFileSync(indexPath, 'utf8');
         
         const meta = getSeoMetadata(req.path);
-        const shouldNoIndex = !isValidRoute || meta.noIndex;
         
         // 1. Replace Title
         html = html.replace(
@@ -325,7 +401,7 @@ Please break down the rationale into four logical components:
         
         // 2. Inject optimal meta tags, canonical link, & structured data JSON-LD inside the head
         const headTags = [
-          shouldNoIndex ? `<meta name="robots" content="noindex, nofollow" />` : `<meta name="robots" content="index, follow" />`,
+          `<meta name="robots" content="index, follow" />`,
           `<meta name="description" content="${meta.description}" />`,
           `<link rel="canonical" href="https://ncbt.in${cleanPath === '/' ? '' : cleanPath}" />`,
           `<meta property="og:title" content="${meta.title}" />`,
@@ -354,8 +430,7 @@ Please break down the rationale into four logical components:
         const preRendered = getPreRenderedContent(req.path);
         html = html.replace('<div id="root"></div>', `<div id="root">${preRendered}</div>`);
         
-        const statusCode = isValidRoute ? 200 : 404;
-        res.status(statusCode).setHeader('Content-Type', 'text/html');
+        res.status(200).setHeader('Content-Type', 'text/html');
         res.send(html);
       } catch (err) {
         console.error("Error serving dynamic index.html:", err);

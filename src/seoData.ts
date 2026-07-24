@@ -70,35 +70,46 @@ export function getAllAppRoutes(): string[] {
 }
 
 export function isValidAppRoute(urlPath: string): boolean {
-  const cleanPath = urlPath.toLowerCase().split('?')[0];
+  let cleanPath = urlPath.toLowerCase().split('?')[0];
+  if (cleanPath.length > 1 && cleanPath.endsWith("/")) {
+    cleanPath = cleanPath.slice(0, -1);
+  }
   if (cleanPath === "/" || cleanPath === "") return true;
 
   const validRoutes = getAllAppRoutes();
   if (validRoutes.includes(cleanPath)) return true;
 
   // Check alias routes & dynamic patterns
-  if (cleanPath === "/find-test") return true;
-  if (cleanPath.startsWith("/exams/")) {
+  if (cleanPath === "/find-test" || cleanPath === "/find-tests") return true;
+  if (cleanPath.startsWith("/exams/") || cleanPath.startsWith("/exam/")) {
     const slug = cleanPath.split("/")[2];
     if (slug && TARGET_EXAMS.some(e => e.id.toLowerCase() === slug.toLowerCase())) {
       return true;
     }
+    return false;
   }
   if (cleanPath.startsWith("/updates/")) {
     const slug = cleanPath.split("/")[2];
     if (slug && STATIC_NURSING_UPDATES.some(u => u.id.toLowerCase() === slug.toLowerCase())) {
       return true;
     }
+    return false;
   }
   if (cleanPath.startsWith("/test/")) {
     const parts = cleanPath.split("/");
     const subjId = parts[2];
     const testId = parts[3];
-    if (subjId === "virtual" && testId) return true;
+    if (subjId === "virtual" && testId) {
+      if (testId.startsWith("pyq-")) {
+        return PYQ_DATA.some(p => `pyq-${p.tag}-${p.year}`.toLowerCase() === testId.toLowerCase());
+      }
+      if (testId.startsWith("sprint-")) return true;
+    }
     if (subjId && testId) {
       const subj = SUBJECTS.find(s => s.id === subjId);
       if (subj && subj.tests.some(t => t.id === testId)) return true;
     }
+    return false;
   }
 
   return false;
