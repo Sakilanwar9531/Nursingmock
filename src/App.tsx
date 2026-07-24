@@ -48,7 +48,14 @@ import {
   Star,
   Sparkles,
   ChevronRight,
-  ArrowRight
+  ArrowRight,
+  ArrowLeft,
+  ChevronLeft,
+  ChevronDown,
+  Play,
+  Pause,
+  Grid,
+  Bookmark
 } from "lucide-react";
 import { SUBJECTS, PYQ_DATA, TARGET_EXAMS } from "./data";
 import { InteractiveFAQ } from "./components/InteractiveFAQ";
@@ -1175,6 +1182,34 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState<number>(initialRoute.test ? initialRoute.test.mins * 60 : 0);
   const [isTestFinished, setIsTestFinished] = useState<boolean>(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState<boolean>(false);
+  const [isTimerPaused, setIsTimerPaused] = useState<boolean>(false);
+  const [showPalette, setShowPalette] = useState<boolean>(false);
+
+  // Swipe Gesture Refs & Touch Handlers
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+    touchStartYRef.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null || touchStartYRef.current === null) return;
+    const diffX = touchStartXRef.current - e.changedTouches[0].clientX;
+    const diffY = touchStartYRef.current - e.changedTouches[0].clientY;
+
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+
+    if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY) * 1.5) {
+      if (diffX > 0) {
+        handleNextQuestion();
+      } else {
+        handlePrevQuestion();
+      }
+    }
+  };
 
   // PYQ Filter State
   const [pyqFilter, setPyqFilter] = useState<string>("all");
@@ -1680,7 +1715,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
   // Timer Effect
   useEffect(() => {
-    if (activePage === "test" && !isTestFinished && timeLeft > 0) {
+    if (activePage === "test" && !isTestFinished && !isTimerPaused && timeLeft > 0) {
       timerIntervalRef.current = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
@@ -1695,7 +1730,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [activePage, isTestFinished, timeLeft]);
+  }, [activePage, isTestFinished, isTimerPaused, timeLeft]);
 
   // Synchronizes local storage with Supabase database for dynamic cloud backup
   const syncWithSupabase = async (userEmail: string) => {
@@ -2412,6 +2447,8 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     setTimeLeft(test.mins * 60);
     setIsTestFinished(false);
     setShowFinishConfirm(false);
+    setIsTimerPaused(false);
+    setShowPalette(false);
     showPage("test", true, { subjectId, testId });
     triggerToast(`Good luck on your mock! 📖`, "ok");
   };
@@ -4177,334 +4214,391 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         {activePage === "test" && activeTest && (
           <div className="page active" id="page-test">
             
-            {/* Topbar inside test */}
-            <div className="test-topbar bg-[var(--surface)] border-b border-[var(--border)] sticky top-0 z-[110]" id="test-screen-topbar">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <button className="back-btn shrink-0 cursor-pointer z-50" onClick={goHub}>
-                    ← Back
+            {/* Topbar inside test (Compact single row) */}
+            <div className="test-topbar bg-[var(--surface)] border-b border-[var(--border)] sticky top-0 z-[110] shadow-sm" id="test-screen-topbar">
+              <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <button 
+                    className="back-btn shrink-0 cursor-pointer text-xs font-bold px-2.5 py-1.5 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--border)] text-[var(--text-primary)] transition-all flex items-center gap-1 border border-[var(--border)]" 
+                    onClick={goHub}
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Back</span>
                   </button>
-                  <div className="hidden md:flex items-center gap-2">
-                    <span className="topbar-sep text-[var(--border)]">|</span>
-                    <span className="topbar-title text-sm font-bold text-[var(--text-primary)] line-clamp-1">{activeTest.title}</span>
-                  </div>
+                  <span className="hidden sm:inline-block text-[var(--border)] font-normal">|</span>
+                  <span className="topbar-title text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate max-w-[120px] xs:max-w-[180px] sm:max-w-xs md:max-w-md">
+                    {activeTest.title}
+                  </span>
                 </div>
 
-                <div className="flex items-center gap-3 ml-auto">
-                  <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border hidden sm:inline-block ${examMode ? "bg-red-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" : "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--border)]"}`}>
-                    {examMode ? "⏱️ CBT Exam" : "💡 Practice"}
-                  </span>
-
+                <div className="flex items-center gap-2 shrink-0">
                   {!isTestFinished && (
-                    <div className={`timer-pill flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--surface-2)] border border-[var(--border)] text-xs font-bold text-[var(--text-primary)] ${timeLeft <= 120 ? "text-red-500 border-red-500/30" : ""}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full bg-emerald-500 ${timeLeft <= 120 ? "bg-red-500" : ""} animate-pulse`} />
+                    <div className={`timer-pill flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--surface-2)] border text-xs font-mono font-extrabold text-[var(--text-primary)] transition-colors ${
+                      timeLeft <= 120 ? "text-red-500 border-red-500/40 bg-red-500/10 animate-pulse" : "border-[var(--border)]"
+                    }`}>
+                      <span className={`w-2 h-2 rounded-full ${isTimerPaused ? "bg-amber-500" : timeLeft <= 120 ? "bg-red-500 animate-ping" : "bg-emerald-500 animate-pulse"}`} />
                       <span>{formatTime(timeLeft)}</span>
+                      <button
+                        onClick={() => setIsTimerPaused(!isTimerPaused)}
+                        className="p-1 hover:bg-[var(--border)] rounded-full transition-colors cursor-pointer text-[var(--text-secondary)] hover:text-[var(--text-primary)] ml-0.5"
+                        title={isTimerPaused ? "Resume Timer" : "Pause Timer"}
+                      >
+                        {isTimerPaused ? <Play className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500" /> : <Pause className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />}
+                      </button>
                     </div>
                   )}
 
                   {!isTestFinished && (
                     <button 
-                      className="bg-[var(--danger)] hover:opacity-90 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-md hover:scale-[1.02] active:scale-95 cursor-pointer z-50 relative pointer-events-auto"
-                      onClick={() => {
-                        console.log("Upper Submit Test clicked");
-                        setShowFinishConfirm(true);
-                      }}
-                      title="Submit and finish this test"
+                      className="bg-[var(--danger)] hover:opacity-90 text-white font-extrabold text-xs px-3 sm:px-4 py-1.5 rounded-xl transition-all flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer shrink-0"
+                      onClick={() => setShowFinishConfirm(true)}
+                      title="Submit and finish test"
                     >
-                      🏁 Submit Test
+                      <span>🏁</span>
+                      <span className="hidden xs:inline">Submit</span>
                     </button>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Statistics Bar at test progression */}
-            {!isTestFinished && (
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" id="test-main-grid">
-                
-                {/* Left Side: Question content area (70-75% width on desktop) */}
-                <div className="lg:col-span-8 xl:col-span-9 space-y-6">
-                  {/* Progress bar state */}
-                  <div className="progress-wrap bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
-                    <div className="prog-info flex justify-between text-xs font-bold mb-2">
-                      <span className="text-[var(--text-primary)]">Question {currentQuestionIndex + 1} of {activeTest.data.length}</span>
-                      <span className="text-[var(--accent)] font-extrabold">
-                        {Math.round((selectedOptions.filter(o => o !== null).length / activeTest.data.length) * 100)}% Complete
-                      </span>
-                    </div>
-                    <div className="prog-bar w-full h-2 bg-[var(--surface-2)] rounded-full overflow-hidden">
-                      <div 
-                        className="prog-fill h-full bg-[var(--accent)] transition-all duration-300" 
-                        style={{ 
-                          width: `${Math.round((selectedOptions.filter(o => o !== null).length / activeTest.data.length) * 100)}%` 
-                        }}
-                      ></div>
-                    </div>
+            {/* Anti-cheat Pause Screen Overlay */}
+            {isTimerPaused && !isTestFinished && (
+              <div className="fixed inset-0 top-[50px] z-[100] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-4 text-center animate-fade-in">
+                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto border border-amber-500/20 text-2xl animate-pulse">
+                    ⏸️
                   </div>
-
-                  {/* Test quiz screen */}
-                  <div id="quiz-wrap" className="overflow-hidden relative bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 shadow-xl">
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={currentQuestionIndex}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        transition={{ duration: 0.2 }}
-                        className="q-card active space-y-6"
-                      >
-                        <div className="q-meta flex justify-between items-center text-xs pb-3 border-b border-[var(--border)]/40">
-                          <span className="q-num font-black text-[var(--accent)] uppercase tracking-wider">Question {currentQuestionIndex + 1} / {activeTest.data.length}</span>
-                          <span className="q-src font-mono text-[var(--text-secondary)] px-2 py-0.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-md">{activeTest.data[currentQuestionIndex].source}</span>
-                        </div>
-
-                        <p className="q-text text-base md:text-lg font-bold text-[var(--text-primary)] leading-relaxed select-none">
-                          {activeTest.data[currentQuestionIndex].q}
-                        </p>
-
-                        <div className="opts space-y-3">
-                          {activeTest.data[currentQuestionIndex].opts.map((option, idx) => {
-                            let optClass = "w-full flex items-center gap-3 p-4 rounded-2xl border text-left text-xs sm:text-sm font-bold transition-all cursor-pointer relative overflow-hidden ";
-                            const isSelected = selectedOptions[currentQuestionIndex] === idx;
-                            const isAnswered = questionAnswers[currentQuestionIndex] !== null;
-
-                            if (!examMode) {
-                              if (isAnswered) {
-                                if (idx === activeTest.data[currentQuestionIndex].ans) {
-                                  optClass += "bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-400";
-                                } else if (isSelected) {
-                                  optClass += "bg-rose-500/10 border-rose-500 text-rose-700 dark:text-rose-400";
-                                } else {
-                                  optClass += "bg-[var(--surface-2)] border-[var(--border)]/40 text-[var(--text-secondary)] opacity-60";
-                                }
-                              } else if (isSelected) {
-                                optClass += "bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] shadow-md";
-                              } else {
-                                optClass += "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-primary)] hover:border-[var(--primary)] hover:bg-[var(--surface)]";
-                              }
-                            } else {
-                              if (isSelected) {
-                                optClass += "bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] shadow-md";
-                              } else {
-                                optClass += "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-primary)] hover:border-[var(--primary)] hover:bg-[var(--surface)]";
-                              }
-                            }
-
-                            const L = ["A", "B", "C", "D"];
-
-                            return (
-                              <button 
-                                key={idx} 
-                                className={optClass}
-                                onClick={() => handleOptionSelect(idx)}
-                              >
-                                <span className={`w-7 h-7 rounded-lg font-black flex items-center justify-center shrink-0 border text-xs ${
-                                  isSelected 
-                                    ? "bg-[var(--accent)] border-[var(--accent)] text-white" 
-                                    : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-secondary)]"
-                                }`}>
-                                  {L[idx]}
-                                </span>
-                                <span className="flex-1 font-semibold">{option}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-
-                        {/* Feedback wrapper in practice mode */}
-                        {!examMode && questionAnswers[currentQuestionIndex] !== null && (() => {
-                          const q = activeTest.data[currentQuestionIndex];
-                          const aiState = aiRationales[q.q];
-                          return (
-                            <div className="mt-4 animate-fade-in space-y-4 pt-4 border-t border-[var(--border)]/40">
-                              <div className={`p-4 rounded-2xl border text-xs sm:text-sm font-semibold leading-relaxed ${
-                                questionAnswers[currentQuestionIndex] === 1 
-                                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400" 
-                                  : "bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400"
-                              }`}>
-                                <div className="font-black text-sm mb-1">
-                                  {questionAnswers[currentQuestionIndex] === 1 ? "✔ Correct Answer!" : "✘ Incorrect Attempt"}
-                                </div>
-                                <span style={{ whiteSpace: "pre-line" }}>{getDetailedExplain(q)}</span>
-                              </div>
-
-                              {/* AI Rationale Button & Panel */}
-                              <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl p-4 text-left">
-                                <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-                                  <span className="text-xs font-bold text-[var(--accent)] flex items-center gap-1.5">
-                                    ✨ AI Clinical Expert (Gemini Flash)
-                                  </span>
-                                  {!aiState?.text && !aiState?.loading && (
-                                    <button
-                                      onClick={() => generateAiRationale(q.q, q.opts, q.ans)}
-                                      className="bg-[var(--accent-soft)] hover:opacity-90 active:scale-95 text-[var(--accent)] font-extrabold text-[10px] px-3 py-1 rounded-lg transition-all cursor-pointer shadow-md border border-[var(--accent)]/30"
-                                    >
-                                      Generate Expert Clinical Rationale
-                                    </button>
-                                  )}
-                                </div>
-
-                                {aiState?.loading && (
-                                  <div className="py-4 flex flex-col items-center justify-center gap-2">
-                                    <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin"></div>
-                                    <span className="text-[10px] text-[var(--text-secondary)] animate-pulse font-medium">Analyzing parameters, Indian Nursing Council guidelines, & nursing protocols...</span>
-                                  </div>
-                                )}
-
-                                {aiState?.error && (
-                                  <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">⚠️ {aiState.error}. Offline high-yield fallback enabled.</p>
-                                )}
-
-                                {aiState?.text && (
-                                  <div className="text-xs text-[var(--text-secondary)] leading-relaxed space-y-2 mt-2 bg-[var(--surface)] p-3 rounded-xl border border-[var(--border)] select-text">
-                                    <div className="prose-slate max-w-none text-[var(--text-primary)]" style={{ whiteSpace: "pre-wrap" }}>
-                                      {aiState.text}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })()}
-
-                        {/* Navigation control footer */}
-                        <div className="flex items-center justify-between gap-4 pt-6 border-t border-[var(--border)]/40">
-                          <button 
-                            className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-xs font-black text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed transition-all"
-                            disabled={currentQuestionIndex === 0}
-                            onClick={handlePrevQuestion}
-                          >
-                            ← Prev
-                          </button>
-                          
-                          <button 
-                            className={`font-black text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer border flex items-center gap-1.5 ${
-                              reviewedQuestions[currentQuestionIndex] 
-                                ? "bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)]" 
-                                : "bg-[var(--surface-2)] hover:bg-[var(--surface)] border-[var(--border)] text-[var(--text-primary)]"
-                            }`}
-                            onClick={() => toggleMarkForReview(currentQuestionIndex)}
-                          >
-                            {reviewedQuestions[currentQuestionIndex] ? "🔖 Marked" : "🔖 Mark Review"}
-                          </button>
-
-                          <button 
-                            className="px-5 py-2.5 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-black text-xs cursor-pointer shadow-md hover:scale-[1.02] active:scale-95 transition-all"
-                            onClick={handleNextQuestion}
-                          >
-                            {currentQuestionIndex === activeTest.data.length - 1 ? "Next (Q1) →" : "Next →"}
-                          </button>
-                        </div>
-                      </motion.div>
-                    </AnimatePresence>
-                  </div>
-                </div>
-
-                {/* Right Side: Professional CBT Question Palette Panel (25-30% width on desktop) */}
-                <div className="lg:col-span-4 xl:col-span-3 bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-5 shadow-xl space-y-5 lg:sticky lg:top-20" id="cbt-palette-sidebar">
-                  {/* Timer & Candidate Profile block */}
-                  <div className="space-y-3 pb-4 border-b border-[var(--border)]/40">
-                    <div className="flex items-center justify-between bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl p-2.5">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--text-secondary)]">
-                        <Timer className="w-3.5 h-3.5 text-[var(--accent)]" />
-                        <span>Timer</span>
-                      </div>
-                      <span className={`text-xs font-mono font-black px-2 py-0.5 rounded-lg border ${timeLeft <= 120 ? "bg-red-500/10 text-red-500 border-red-500/30 animate-pulse" : "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--border)]"}`}>
-                        ⏱️ {formatTime(timeLeft)}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] flex items-center justify-center text-base font-bold shrink-0">
-                        👤
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-black text-[var(--text-primary)] truncate">Nursing Officer Candidate</div>
-                        <div className="text-[10px] text-[var(--text-secondary)] font-medium font-mono truncate">Exam: {activeTest.id.toUpperCase()}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Palette Question Indicator Stats (Legend) */}
-                  <div className="space-y-3">
-                    <div className="text-xs font-black text-[var(--text-primary)] uppercase tracking-widest">Question Palette</div>
-                    <div className="grid grid-cols-2 gap-2 text-[10px]">
-                      <div className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 p-2 rounded-xl">
-                        <span className="w-4 h-4 rounded-md bg-emerald-600 flex items-center justify-center text-[9px] font-black text-white">
-                          {selectedOptions.filter((o, idx) => o !== null && !reviewedQuestions[idx]).length}
-                        </span>
-                        <span className="font-bold">Answered</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20 p-2 rounded-xl">
-                        <span className="w-4 h-4 rounded-md bg-rose-600 flex items-center justify-center text-[9px] font-black text-white">
-                          {selectedOptions.filter((o, idx) => o === null && !reviewedQuestions[idx] && idx <= currentQuestionIndex).length}
-                        </span>
-                        <span className="font-bold font-sans">Not Ans</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/30 p-2 rounded-xl">
-                        <span className="w-4 h-4 rounded-md bg-[var(--accent)] flex items-center justify-center text-[9px] font-black text-white">
-                          {reviewedQuestions.filter(Boolean).length}
-                        </span>
-                        <span className="font-bold">Marked</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 bg-[var(--surface-2)] text-[var(--text-secondary)] border border-[var(--border)] p-2 rounded-xl">
-                        <span className="w-4 h-4 rounded-md bg-[var(--border)] flex items-center justify-center text-[9px] font-black text-[var(--text-primary)]">
-                          {activeTest.data.length - (currentQuestionIndex + 1)}
-                        </span>
-                        <span className="font-bold font-sans">Not Visited</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Palette Grid buttons */}
-                  <div className="space-y-2">
-                    <div className="text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider flex justify-between">
-                      <span>Select Question:</span>
-                      <span>Total: {activeTest.data.length}</span>
-                    </div>
-                    <div className="grid grid-cols-5 sm:grid-cols-6 lg:grid-cols-5 gap-1.5 max-h-56 overflow-y-auto pr-1">
-                      {activeTest.data.map((_, i) => {
-                        let btnClass = "w-full h-9 rounded-xl border font-bold text-xs flex items-center justify-center transition-all cursor-pointer hover:scale-[1.05] ";
-                        const isCurrent = currentQuestionIndex === i;
-                        const isReviewed = reviewedQuestions[i];
-                        const isAnswered = selectedOptions[i] !== null;
-
-                        if (isCurrent) {
-                          btnClass += "bg-[var(--primary)] border-[var(--primary)] text-white font-black ring-2 ring-[var(--primary)]/30";
-                        } else if (isReviewed) {
-                          btnClass += "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)] shadow-sm font-black";
-                        } else if (isAnswered) {
-                          btnClass += "bg-emerald-600 border-emerald-500 text-white shadow-sm font-black";
-                        } else if (i <= currentQuestionIndex) {
-                          btnClass += "bg-rose-600 border-rose-500 text-white font-black";
-                        } else {
-                          btnClass += "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-primary)] hover:border-[var(--primary)] font-bold";
-                        }
-
-                        return (
-                          <button 
-                            key={i} 
-                            className={btnClass}
-                            onClick={() => setCurrentQuestionIndex(i)}
-                            title={`Go to Question ${i + 1}`}
-                          >
-                            {i + 1}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* CBT Quick instructions panel */}
-                  <div className="bg-[var(--surface-2)] border border-[var(--border)]/50 rounded-2xl p-4 text-[10px] text-[var(--text-secondary)] space-y-2 leading-relaxed">
-                    <div className="font-extrabold text-[var(--text-primary)] flex items-center gap-1">
-                      <span>💡</span> CBT Navigator Instructions
-                    </div>
-                    <p className="font-sans text-[10px]">
-                      Navigate anytime by clicking on a question number from the palette grid. Save answers by selecting an option.
+                  <div>
+                    <h3 className="text-lg font-black text-[var(--text-primary)]">Test Paused</h3>
+                    <p className="text-xs text-[var(--text-secondary)] mt-1.5 leading-relaxed">
+                      Questions are blurred while the test is paused to preserve assessment integrity.
                     </p>
                   </div>
+                  <div className="pt-2">
+                    <button
+                      onClick={() => setIsTimerPaused(false)}
+                      className="w-full py-3 px-6 rounded-2xl bg-[var(--primary)] text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg hover:opacity-95 transition-all cursor-pointer active:scale-95"
+                    >
+                      <Play className="w-4 h-4 fill-white" />
+                      <span>Resume Test</span>
+                    </button>
+                  </div>
                 </div>
+              </div>
+            )}
+
+            {/* Test Content Grid */}
+            {!isTestFinished && (
+              <div className="max-w-5xl mx-auto px-2 sm:px-4 md:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4" id="test-main-grid">
+                
+                {/* NAVIGATOR (Above Question) */}
+                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-3 sm:p-4 shadow-sm space-y-2.5">
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2 font-black">
+                      <span className="text-[var(--primary)] text-xs sm:text-sm">
+                        Q {currentQuestionIndex + 1} / {activeTest.data.length}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase border ${
+                        examMode 
+                          ? "bg-red-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" 
+                          : "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]/30"
+                      }`}>
+                        {examMode ? "CBT Exam" : "Practice"}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => setShowPalette(!showPalette)}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--border)] border border-[var(--border)] text-[11px] font-bold text-[var(--text-secondary)] transition-all cursor-pointer"
+                    >
+                      <Grid className="w-3.5 h-3.5 text-[var(--accent)]" />
+                      <span>{showPalette ? "Hide Palette" : "Full Palette"}</span>
+                      <ChevronDown className={`w-3 h-3 transition-transform ${showPalette ? "rotate-180" : ""}`} />
+                    </button>
+                  </div>
+
+                  {/* Slim Progress Bar */}
+                  <div className="w-full h-1.5 bg-[var(--surface-2)] rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-[var(--accent)] transition-all duration-300 rounded-full" 
+                      style={{ width: `${Math.round((selectedOptions.filter(o => o !== null).length / activeTest.data.length) * 100)}%` }}
+                    />
+                  </div>
+
+                  {/* Horizontally Scrollable Question Number Strip */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none scroll-smooth">
+                    {activeTest.data.map((_, i) => {
+                      const isCurrent = currentQuestionIndex === i;
+                      const isReviewed = reviewedQuestions[i];
+                      const isAnswered = selectedOptions[i] !== null;
+
+                      let chipClass = "shrink-0 min-w-[32px] h-8 rounded-xl font-extrabold text-xs flex items-center justify-center transition-all cursor-pointer border ";
+                      if (isCurrent) {
+                        chipClass += "bg-[var(--primary)] border-[var(--primary)] text-white shadow-md ring-2 ring-[var(--primary)]/30 scale-105 z-10";
+                      } else if (isReviewed) {
+                        chipClass += "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]";
+                      } else if (isAnswered) {
+                        chipClass += "bg-emerald-600 border-emerald-500 text-white";
+                      } else if (i <= currentQuestionIndex) {
+                        chipClass += "bg-rose-600/90 border-rose-500 text-white";
+                      } else {
+                        chipClass += "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]";
+                      }
+
+                      return (
+                        <button
+                          key={i}
+                          className={chipClass}
+                          onClick={() => setCurrentQuestionIndex(i)}
+                        >
+                          {i + 1}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Collapsible Full Palette */}
+                  {showPalette && (
+                    <div className="pt-3 border-t border-[var(--border)]/50 animate-fade-in space-y-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
+                        <div className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 p-1.5 rounded-lg">
+                          <span className="w-3.5 h-3.5 rounded bg-emerald-600 text-white font-bold flex items-center justify-center text-[9px]">
+                            {selectedOptions.filter((o, idx) => o !== null && !reviewedQuestions[idx]).length}
+                          </span>
+                          <span className="font-bold">Answered</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20 p-1.5 rounded-lg">
+                          <span className="w-3.5 h-3.5 rounded bg-rose-600 text-white font-bold flex items-center justify-center text-[9px]">
+                            {selectedOptions.filter((o, idx) => o === null && !reviewedQuestions[idx] && idx <= currentQuestionIndex).length}
+                          </span>
+                          <span className="font-bold font-sans">Not Ans</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/30 p-1.5 rounded-lg">
+                          <span className="w-3.5 h-3.5 rounded bg-[var(--accent)] text-white font-bold flex items-center justify-center text-[9px]">
+                            {reviewedQuestions.filter(Boolean).length}
+                          </span>
+                          <span className="font-bold">Marked</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-[var(--surface-2)] text-[var(--text-secondary)] border border-[var(--border)] p-1.5 rounded-lg">
+                          <span className="w-3.5 h-3.5 rounded bg-[var(--border)] text-[var(--text-primary)] font-bold flex items-center justify-center text-[9px]">
+                            {activeTest.data.length - (currentQuestionIndex + 1)}
+                          </span>
+                          <span className="font-bold font-sans">Not Visited</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-6 sm:grid-cols-10 md:grid-cols-12 gap-1.5 max-h-48 overflow-y-auto pr-1">
+                        {activeTest.data.map((_, i) => {
+                          const isCurrent = currentQuestionIndex === i;
+                          const isReviewed = reviewedQuestions[i];
+                          const isAnswered = selectedOptions[i] !== null;
+
+                          let btnClass = "w-full h-8 rounded-lg border font-bold text-xs flex items-center justify-center transition-all cursor-pointer ";
+                          if (isCurrent) {
+                            btnClass += "bg-[var(--primary)] border-[var(--primary)] text-white font-black ring-2 ring-[var(--primary)]/30";
+                          } else if (isReviewed) {
+                            btnClass += "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)] font-black";
+                          } else if (isAnswered) {
+                            btnClass += "bg-emerald-600 border-emerald-500 text-white font-black";
+                          } else if (i <= currentQuestionIndex) {
+                            btnClass += "bg-rose-600 border-rose-500 text-white font-black";
+                          } else {
+                            btnClass += "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-primary)] font-semibold";
+                          }
+
+                          return (
+                            <button 
+                              key={i} 
+                              className={btnClass}
+                              onClick={() => {
+                                setCurrentQuestionIndex(i);
+                                setShowPalette(false);
+                              }}
+                            >
+                              {i + 1}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* QUESTION CARD (Full width & swipeable) */}
+                <div 
+                  id="quiz-wrap" 
+                  className="overflow-hidden relative bg-[var(--surface)] border border-[var(--border)] rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-md"
+                  onTouchStart={handleTouchStart}
+                  onTouchEnd={handleTouchEnd}
+                >
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={currentQuestionIndex}
+                      initial={{ opacity: 0, x: 15 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -15 }}
+                      transition={{ duration: 0.15 }}
+                      className="space-y-4 sm:space-y-5"
+                    >
+                      <div className="flex justify-between items-center text-xs pb-3 border-b border-[var(--border)]/40 gap-2">
+                        <span className="font-extrabold text-[var(--accent)] uppercase tracking-wide text-[11px] sm:text-xs">
+                          Question {currentQuestionIndex + 1} / {activeTest.data.length}
+                        </span>
+                        <span className="font-mono text-[10px] sm:text-[11px] text-[var(--text-secondary)] px-2 py-0.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-md truncate max-w-[180px]">
+                          {activeTest.data[currentQuestionIndex].source}
+                        </span>
+                      </div>
+
+                      <p className="text-sm sm:text-base md:text-lg font-bold text-[var(--text-primary)] leading-relaxed select-none">
+                        {activeTest.data[currentQuestionIndex].q}
+                      </p>
+
+                      <div className="opts space-y-2.5">
+                        {activeTest.data[currentQuestionIndex].opts.map((option, idx) => {
+                          let optClass = "w-full flex items-center gap-3 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border text-left text-xs sm:text-sm font-bold transition-all cursor-pointer relative overflow-hidden active:scale-[0.99] ";
+                          const isSelected = selectedOptions[currentQuestionIndex] === idx;
+                          const isAnswered = questionAnswers[currentQuestionIndex] !== null;
+
+                          if (!examMode) {
+                            if (isAnswered) {
+                              if (idx === activeTest.data[currentQuestionIndex].ans) {
+                                optClass += "bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-400";
+                              } else if (isSelected) {
+                                optClass += "bg-rose-500/10 border-rose-500 text-rose-700 dark:text-rose-400";
+                              } else {
+                                optClass += "bg-[var(--surface-2)] border-[var(--border)]/40 text-[var(--text-secondary)] opacity-60";
+                              }
+                            } else if (isSelected) {
+                              optClass += "bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] shadow-md";
+                            } else {
+                              optClass += "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-primary)] hover:border-[var(--primary)] hover:bg-[var(--surface)]";
+                            }
+                          } else {
+                            if (isSelected) {
+                              optClass += "bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] shadow-md";
+                            } else {
+                              optClass += "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-primary)] hover:border-[var(--primary)] hover:bg-[var(--surface)]";
+                            }
+                          }
+
+                          const L = ["A", "B", "C", "D"];
+
+                          return (
+                            <button 
+                              key={idx} 
+                              className={optClass}
+                              onClick={() => handleOptionSelect(idx)}
+                            >
+                              <span className={`w-7 h-7 rounded-lg font-black flex items-center justify-center shrink-0 border text-xs ${
+                                isSelected 
+                                  ? "bg-[var(--accent)] border-[var(--accent)] text-white" 
+                                  : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-secondary)]"
+                              }`}>
+                                {L[idx]}
+                              </span>
+                              <span className="flex-1 font-semibold leading-snug">{option}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Practice Mode Rationale */}
+                      {!examMode && questionAnswers[currentQuestionIndex] !== null && (() => {
+                        const q = activeTest.data[currentQuestionIndex];
+                        const aiState = aiRationales[q.q];
+                        return (
+                          <div className="mt-4 animate-fade-in space-y-3 pt-3 border-t border-[var(--border)]/40">
+                            <div className={`p-3.5 rounded-2xl border text-xs sm:text-sm font-semibold leading-relaxed ${
+                              questionAnswers[currentQuestionIndex] === 1 
+                                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400" 
+                                : "bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400"
+                            }`}>
+                              <div className="font-black text-sm mb-1">
+                                {questionAnswers[currentQuestionIndex] === 1 ? "✔ Correct Answer!" : "✘ Incorrect Attempt"}
+                              </div>
+                              <span style={{ whiteSpace: "pre-line" }}>{getDetailedExplain(q)}</span>
+                            </div>
+
+                            {/* AI Rationale Panel */}
+                            <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl p-3.5 text-left">
+                              <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                                <span className="text-xs font-bold text-[var(--accent)] flex items-center gap-1.5">
+                                  ✨ AI Clinical Expert (Gemini Flash)
+                                </span>
+                                {!aiState?.text && !aiState?.loading && (
+                                  <button
+                                    onClick={() => generateAiRationale(q.q, q.opts, q.ans)}
+                                    className="bg-[var(--accent-soft)] hover:opacity-90 active:scale-95 text-[var(--accent)] font-extrabold text-[10px] px-3 py-1 rounded-lg transition-all cursor-pointer shadow-sm border border-[var(--accent)]/30"
+                                  >
+                                    Generate Clinical Rationale
+                                  </button>
+                                )}
+                              </div>
+
+                              {aiState?.loading && (
+                                <div className="py-3 flex flex-col items-center justify-center gap-2">
+                                  <div className="w-4 h-4 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin"></div>
+                                  <span className="text-[10px] text-[var(--text-secondary)] animate-pulse font-medium">Analyzing parameters & nursing protocols...</span>
+                                </div>
+                              )}
+
+                              {aiState?.error && (
+                                <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">⚠️ {aiState.error}. Offline high-yield fallback enabled.</p>
+                              )}
+
+                              {aiState?.text && (
+                                <div className="text-xs text-[var(--text-secondary)] leading-relaxed space-y-2 mt-2 bg-[var(--surface)] p-3 rounded-xl border border-[var(--border)] select-text">
+                                  <div className="prose-slate max-w-none text-[var(--text-primary)]" style={{ whiteSpace: "pre-wrap" }}>
+                                    {aiState.text}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Mobile Gesture Hint */}
+                      <div className="text-[10px] text-center text-[var(--text-secondary)] font-medium pt-1 opacity-70 flex items-center justify-center gap-1 sm:hidden">
+                        <span>👈 Swipe left/right for next/prev question 👉</span>
+                      </div>
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+
+                {/* BOTTOM CONTROL BAR */}
+                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-2.5 sm:p-3 shadow-md flex items-center justify-between gap-2">
+                  <button 
+                    className="px-3 sm:px-4 py-2.5 rounded-xl border border-[var(--border)] text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed transition-all flex items-center gap-1"
+                    disabled={currentQuestionIndex === 0}
+                    onClick={handlePrevQuestion}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span>Prev</span>
+                  </button>
+                  
+                  <button 
+                    className={`font-bold text-xs px-3 sm:px-4 py-2.5 rounded-xl transition-all cursor-pointer border flex items-center gap-1.5 ${
+                      reviewedQuestions[currentQuestionIndex] 
+                        ? "bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] shadow-sm" 
+                        : "bg-[var(--surface-2)] hover:bg-[var(--surface)] border-[var(--border)] text-[var(--text-primary)]"
+                    }`}
+                    onClick={() => toggleMarkForReview(currentQuestionIndex)}
+                  >
+                    <Bookmark className="w-3.5 h-3.5" />
+                    <span>{reviewedQuestions[currentQuestionIndex] ? "Marked" : "Mark Review"}</span>
+                  </button>
+
+                  <button 
+                    className="px-4 py-2.5 rounded-xl bg-[var(--primary)] hover:opacity-95 text-white font-extrabold text-xs cursor-pointer shadow-md active:scale-95 transition-all flex items-center gap-1"
+                    onClick={handleNextQuestion}
+                  >
+                    <span>{currentQuestionIndex === activeTest.data.length - 1 ? "Next (Q1)" : "Next"}</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+
               </div>
             )}
 
