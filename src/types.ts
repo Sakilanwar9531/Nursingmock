@@ -72,6 +72,8 @@ export interface NursingUpdate {
   readTime: string;
   pdfUrl?: string;
   officialLink?: string;
+  authorName?: string;
+  authorAvatar?: string;
 }
 
 export interface ExamDef {

@@ -27,8 +27,10 @@ export function getAllAppRoutes(): string[] {
     '/updates',
     '/about',
     '/contact',
-    '/analytics',
     '/find-tests',
+    '/ncbt-one',
+    '/all-in-one',
+    '/current-affairs',
   ];
 
   // 1. Add Category/Profession landing routes
@@ -135,13 +137,6 @@ export function getSeoMetadata(urlPath: string): SeoMeta {
     };
   }
 
-  if (cleanPath === "/analytics") {
-    return {
-      title: "CBT Performance Analytics Dashboard & Rank Analytics | NCBT.in",
-      description: "Analyse your exam preparation with personalized diagnostic reporting of strengths, streak multipliers, accuracy rates, and time-management stats.",
-    };
-  }
-
   if (cleanPath === "/about") {
     return {
       title: "About Us — NCBT National Computer Based Test Platform | NCBT.in",
@@ -160,6 +155,20 @@ export function getSeoMetadata(urlPath: string): SeoMeta {
     return {
       title: "Find Exams & Mock Test Series | NCBT.in",
       description: "Search and filter through all Nursing, Pharmacist, Paramedical, Lab Technician, and Radiographer mock tests, PYQs, and subject-wise CBT series.",
+    };
+  }
+
+  if (cleanPath === "/ncbt-one" || cleanPath === "/all-in-one") {
+    return {
+      title: "NCBT One — All-in-One Distraction-Free Healthcare CBT Platform | NCBT.in",
+      description: "Access NCBT One: the ad-free, distraction-free CBT preparation hub for Nursing, Pharmacist, Physiotherapy, Lab Technician, Radiographer, OT & Critical Care exams.",
+    };
+  }
+
+  if (cleanPath === "/current-affairs") {
+    return {
+      title: "Daily Healthcare & National Current Affairs | NCBT.in",
+      description: "Daily healthcare current affairs, national health mission updates, WHO guidelines, and general awareness capsules for nursing and medical recruitment exams.",
     };
   }
 

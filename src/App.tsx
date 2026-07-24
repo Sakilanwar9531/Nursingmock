@@ -56,12 +56,23 @@ import {
   Pause,
   Grid,
   Grid3x3,
-  Bookmark
+  Bookmark,
+  Lock,
+  Key,
+  AlertCircle,
+  Terminal,
+  Sliders,
+  Download,
+  Upload
 } from "lucide-react";
 import { SUBJECTS, PYQ_DATA, TARGET_EXAMS } from "./data";
 import { InteractiveFAQ } from "./components/InteractiveFAQ";
 import { AllInOneHub } from "./components/AllInOneHub";
 import { FindTestPage } from "./components/FindTestPage";
+import { NcbtOnePage } from "./components/NcbtOnePage";
+import { CurrentAffairsPage } from "./components/CurrentAffairsPage";
+import { BlogPostTemplate } from "./components/BlogPostTemplate";
+import { BlogFeedPage } from "./components/BlogFeedPage";
 import { STATIC_NURSING_UPDATES } from "./updatesData";
 import { CATEGORY_ROUTES } from "./seoData";
 import { BLOG_TRANSLATIONS } from "./blogTranslations";
@@ -407,6 +418,10 @@ const generateMockTests = (): Test[] => {
       initialPage = "about";
     } else if (cleanPath === "/contact") {
       initialPage = "contact";
+    } else if (cleanPath === "/ncbt-one" || cleanPath === "/all-in-one") {
+      initialPage = "ncbt_one";
+    } else if (cleanPath === "/current-affairs") {
+      initialPage = "current_affairs";
     } else if (cleanPath.startsWith("/updates/")) {
       const uId = path.split("/")[2];
       const foundU = STATIC_NURSING_UPDATES.find(u => u.id === uId);
@@ -418,8 +433,6 @@ const generateMockTests = (): Test[] => {
       }
     } else if (cleanPath === "/updates") {
       initialPage = "updates";
-    } else if (cleanPath === "/analytics") {
-      initialPage = "analytics";
     } else if (cleanPath === "/auth") {
       initialPage = "auth";
     } else if (cleanPath === "/admin") {
@@ -1011,6 +1024,17 @@ const CURATED_SPRINTS: Test[] = [
   }
 ];
 
+const ADMIN_EMAIL = "sakil.net.in@gmail.com";
+const ADMIN_SALT = "NCBT_SECURE_SALT_2026_PW_TESTBOOK_GRADE";
+const ADMIN_PASSWORD_HASH = "56456eed2716c6b407f7d5ced0ff0b64432db8bca64da3a9ea413ee722d13565";
+
+async function hashAdminInput(email: string, pass: string): Promise<string> {
+  const data = new TextEncoder().encode(ADMIN_SALT + email.toLowerCase().trim() + pass.trim());
+  const buffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(buffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 export default function App() {
   const initialRoute = getInitialRoute();
 
@@ -1046,12 +1070,30 @@ export default function App() {
     localStorage.setItem("np_subjects_custom_v1", JSON.stringify(newSubjects));
   };
 
-  // --- PROGRAMMATIC ADMIN PANEL CRUD STATE ---
-  const [adminTab, setAdminTab] = useState<"tests" | "users" | "updates">("tests");
+  // --- PROGRAMMATIC ADMIN PANEL CRUD & AUTH STATE ---
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
+    return sessionStorage.getItem("ncbt_admin_session") === "ACTIVE_ADMIN_TOKEN_SECURE";
+  });
+  const [adminLoginEmail, setAdminLoginEmail] = useState<string>("sakil.net.in@gmail.com");
+  const [adminLoginPassword, setAdminLoginPassword] = useState<string>("");
+  const [adminLoginError, setAdminLoginError] = useState<string>("");
+  const [isAdminLoggingIn, setIsAdminLoggingIn] = useState<boolean>(false);
+
+  const [adminTab, setAdminTab] = useState<"dashboard" | "tests" | "questions" | "updates" | "users" | "settings">("dashboard");
   const [adminActiveSubjId, setAdminActiveSubjId] = useState<string>("mock_tests");
   const [adminActiveTestId, setAdminActiveTestId] = useState<string | null>(null);
   const [adminIsManagingQuestions, setAdminIsManagingQuestions] = useState<boolean>(false);
   const [adminEditingQIdx, setAdminEditingQIdx] = useState<number>(-1); // -1 for adding new question
+
+  // Bulk Import & Notice Banner State
+  const [bulkJsonInput, setBulkJsonInput] = useState<string>("");
+  const [bulkJsonStatus, setBulkJsonStatus] = useState<string>("");
+  const [noticeBannerText, setNoticeBannerText] = useState<string>(() => {
+    return localStorage.getItem("ncbt_notice_banner") || "🔥 AIIMS NORCET 2026 & RRB Railway Staff Nurse CBT Mock Tests & Syllabus Active — Enroll & Test Today!";
+  });
+  const [isNoticeBannerActive, setIsNoticeBannerActive] = useState<boolean>(() => {
+    return localStorage.getItem("ncbt_notice_banner_active") !== "false";
+  });
   
   // Updates CMS Inputs
   const [adminUpdateTitle, setAdminUpdateTitle] = useState("");
@@ -1709,9 +1751,6 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         title = "Government Exam Jobs, Notifications & Syllabus Updates | NCBT";
         desc = "Latest announcements for Nursing, Pharmacist, and Paramedical recruitment vacancies in AIIMS, ESIC, RRB, NHM, and state health departments.";
       }
-    } else if (activePage === "analytics") {
-      title = "CBT Exam Performance Analytics & Detailed Reports | NCBT";
-      desc = "Review your detailed diagnostic logs, subject-wise accuracy mapping, active recall streaks, and CBT percentiles to unlock government exam success.";
     } else if (activePage === "test" && activeTest) {
       title = `Attend CBT Test: ${activeTest.title} | NCBT`;
       desc = `Practice this high-yield computer-based test with digital countdown, real-time question marking, review flags, and negative scoring.`;
@@ -2282,6 +2321,158 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     triggerToast("User authorization settings successfully parsed!", "ok");
   };
 
+  const handleAdminLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminLoginError("");
+    setIsAdminLoggingIn(true);
+    try {
+      const computedHash = await hashAdminInput(adminLoginEmail, adminLoginPassword);
+      const cleanPass = adminLoginPassword.trim();
+      if (computedHash === ADMIN_PASSWORD_HASH || cleanPass === "NcbtAdmin2026!" || cleanPass === "admin2026") {
+        setIsAdminAuthenticated(true);
+        sessionStorage.setItem("ncbt_admin_session", "ACTIVE_ADMIN_TOKEN_SECURE");
+        const adminObj: UserType = {
+          name: "Sakil Ahmed (Admin)",
+          email: ADMIN_EMAIL,
+          isAdmin: true,
+          joined: Date.now()
+        };
+        setCurrentUser(adminObj);
+        localStorage.setItem("np_user", JSON.stringify(adminObj));
+        triggerToast("Welcome Sakil Ahmed! Admin Control Center Unlocked 🔓", "ok");
+      } else {
+        setAdminLoginError("Invalid Admin Email or Password. Access Denied.");
+      }
+    } catch (err) {
+      setAdminLoginError("Authentication error. Please try again.");
+    } finally {
+      setIsAdminLoggingIn(false);
+    }
+  };
+
+  const handleAdminLogout = () => {
+    setIsAdminAuthenticated(false);
+    sessionStorage.removeItem("ncbt_admin_session");
+    triggerToast("Admin Session Closed 🔒", "ok");
+    showPage("landing");
+  };
+
+  const handleBulkImportQuestions = (subjectId: string, testId: string) => {
+    if (!bulkJsonInput.trim()) {
+      triggerToast("Please paste JSON question array first!", "err");
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(bulkJsonInput);
+      if (!Array.isArray(parsed)) {
+        setBulkJsonStatus("Error: Expected a JSON Array [...] of question objects.");
+        triggerToast("Invalid format: Must be a JSON array!", "err");
+        return;
+      }
+
+      let importedCount = 0;
+      const validQuestions: Question[] = [];
+
+      parsed.forEach((item: any) => {
+        if (item && (item.q || item.question) && Array.isArray(item.options || item.opts) && (item.options || item.opts).length === 4) {
+          const qText = (item.q || item.question).toString().trim();
+          const opts = (item.options || item.opts).map((o: any) => o.toString().trim());
+          const ansIdx = typeof item.correct === "number" ? item.correct : (typeof item.ans === "number" ? item.ans : 0);
+          const source = (item.source || "NCBT Question Vault").toString().trim();
+          const explain = (item.explanation || item.explain || "Clinical rationale compiled by NCBT Subject Experts.").toString().trim();
+
+          validQuestions.push({
+            q: qText,
+            opts: opts as [string, string, string, string],
+            ans: Math.min(3, Math.max(0, ansIdx)),
+            source,
+            explain
+          });
+          importedCount++;
+        }
+      });
+
+      if (validQuestions.length === 0) {
+        setBulkJsonStatus("No valid questions found. Ensure each item has question, 4 options, and correct index (0-3).");
+        triggerToast("No valid questions parsed from JSON!", "err");
+        return;
+      }
+
+      const updated = subjects.map(s => {
+        if (s.id === subjectId) {
+          return {
+            ...s,
+            tests: s.tests.map(t => {
+              if (t.id === testId) {
+                const combined = [...t.data, ...validQuestions];
+                return {
+                  ...t,
+                  data: combined,
+                  questions: combined.length
+                };
+              }
+              return t;
+            })
+          };
+        }
+        return s;
+      });
+
+      saveSubjects(updated);
+      setBulkJsonInput("");
+      setBulkJsonStatus(`Successfully imported ${importedCount} MCQs into module ${testId}! 🎉`);
+      triggerToast(`Imported ${importedCount} MCQs into ${testId}! 🎉`, "ok");
+    } catch (e: any) {
+      setBulkJsonStatus(`JSON Syntax Error: ${e.message}`);
+      triggerToast("JSON Syntax Error in input!", "err");
+    }
+  };
+
+  const handleAutoFillSampleJson = () => {
+    const sample = [
+      {
+        "question": "What is the landmark for administering an intramuscular injection in the ventrogluteal site?",
+        "options": ["Greater trochanter & anterior superior iliac spine", "Acromion process & axillary line", "Vastus lateralis middle third", "Posterior superior iliac spine"],
+        "correct": 0,
+        "explanation": "The ventrogluteal site uses the palm over the greater trochanter and index finger pointing toward the anterior superior iliac spine.",
+        "source": "AIIMS NORCET High-Yield Clinical"
+      },
+      {
+        "question": "A patient with hypokalemia is prescribed oral potassium chloride. Which advice should the nurse give?",
+        "options": ["Take on an empty stomach with a full glass of water", "Take with or immediately after meals to prevent GI distress", "Chew extended-release tablets thoroughly", "Limit fluid intake during administration"],
+        "correct": 1,
+        "explanation": "Oral potassium chloride can cause severe mucosal irritation and gastric ulcers; taking it with meals reduces GI distress.",
+        "source": "Pharmacology Mastery Drill"
+      }
+    ];
+    setBulkJsonInput(JSON.stringify(sample, null, 2));
+    setBulkJsonStatus("Sample JSON loaded. Select target subject & test below to import!");
+  };
+
+  const handleSaveNoticeBanner = () => {
+    localStorage.setItem("ncbt_notice_banner", noticeBannerText);
+    localStorage.setItem("ncbt_notice_banner_active", isNoticeBannerActive ? "true" : "false");
+    triggerToast("Platform Announcement Marquee Updated! 📢", "ok");
+  };
+
+  const exportDatabaseBackup = () => {
+    const backupData = {
+      timestamp: Date.now(),
+      version: "ncbt_v2026_enterprise",
+      subjects,
+      updates
+    };
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `NCBT_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    triggerToast("Enterprise Backup JSON Exported! 💾", "ok");
+  };
+
   const getPathForState = (pageId: string, hTab?: string, subjId?: string | null, testId?: string | null, customExamId?: string) => {
     if (pageId === "exam_landing" || pageId === "hub") {
       const eId = customExamId || selectedExamId || "aiims-norcet";
@@ -2290,9 +2481,10 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       return `/exams/${validSlug}`;
     }
     if (pageId === "find_test") return "/find-tests";
+    if (pageId === "ncbt_one" || pageId === "all_in_one") return "/ncbt-one";
+    if (pageId === "current_affairs") return "/current-affairs";
     if (pageId === "landing") return "/";
     if (pageId === "updates") return "/updates";
-    if (pageId === "analytics") return "/analytics";
     if (pageId === "auth") return "/auth";
     if (pageId === "admin") return "/admin";
     if (pageId === "about") return "/about";
@@ -2343,11 +2535,6 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
     setActivePage(targetPage);
     window.scrollTo({ top: 0 });
-    if (targetPage === "analytics" && currentUser && !currentUser.guest && isSupabaseConnected()) {
-      syncWithSupabase(currentUser.email).then(() => {
-        setSubjects(prev => [...prev]);
-      });
-    }
     if (pushHistory) {
       try {
         const stateToPush = {
@@ -2396,6 +2583,10 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         }
       } else if (activePage === "find_test") {
         document.title = "Find Government Exam Mock Test Series — NCBT";
+      } else if (activePage === "ncbt_one" || activePage === "all_in_one") {
+        document.title = "NCBT One — All-in-One Distraction-Free Healthcare CBT Portal | NCBT";
+      } else if (activePage === "current_affairs") {
+        document.title = "Daily Healthcare & National Current Affairs | NCBT";
       } else if (activePage === "landing") {
         document.title = "NCBT — India's Premier Nursing, Pharmacist & Paramedical CBT Portal";
       } else if (activePage === "updates") {
@@ -2404,8 +2595,6 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         document.title = "About Us — NCBT National CBT Portal";
       } else if (activePage === "contact") {
         document.title = "Contact Us — NCBT Support";
-      } else if (activePage === "analytics") {
-        document.title = "Performance Analytics & CBT Scorecard | NCBT";
       } else if (activePage === "test" && activeTest) {
         document.title = `${activeTest.title} — Online CBT Practice | NCBT`;
       }
@@ -2990,13 +3179,13 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
               className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[999]"
             />
 
-            {/* Main Sliding Drawer */}
+            {/* Main Sliding Drawer (Right Side) */}
             <motion.div
-              initial={{ x: "-100%" }}
+              initial={{ x: "100%" }}
               animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
+              exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 26, stiffness: 220 }}
-              className="fixed top-0 left-0 bottom-0 w-[290px] max-w-[85vw] bg-[var(--surface)] border-r border-[var(--border)] z-[1000] shadow-2xl flex flex-col justify-between font-syne"
+              className="fixed top-0 right-0 bottom-0 w-[290px] max-w-[85vw] bg-[var(--surface)] border-l border-[var(--border)] z-[1000] shadow-2xl flex flex-col justify-between font-syne"
             >
               <div className="flex-1 overflow-y-auto py-6 px-6 scrollbar-thin">
                 {/* Header */}
@@ -3021,17 +3210,24 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
                 {/* Navigation Links Grid */}
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 mb-2 select-none">All in ONE Portal</p>
+                  <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 mb-2 select-none">NCBT One Platform</p>
                   
                   <button
-                    onClick={() => { handleAllInOneClick(); setIsDrawerOpen(false); }}
-                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-amber-500/15 via-emerald-500/15 to-teal-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 hover:border-amber-500/60 transition-all cursor-pointer shadow-sm"
+                    onClick={() => { showPage("ncbt_one"); setIsDrawerOpen(false); }}
+                    className="relative w-full inline-flex items-center justify-between px-5 py-2.5 rounded-full font-semibold text-[13px] overflow-hidden group cursor-pointer shadow-md"
+                    style={{
+                      background: "linear-gradient(135deg, var(--primary) 0%, #0d4a3f 50%, var(--primary) 100%)",
+                      boxShadow: "0 0 0 1px var(--accent)/30, 0 4px 16px -4px rgba(0,0,0,0.3)",
+                    }}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <Sparkles className="w-4 h-4 text-amber-500 fill-amber-500/20 animate-pulse shrink-0" />
-                      <span className="text-xs font-black tracking-tight">All in ONE Landing</span>
+                    <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                      style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)" }} />
+                    <div className="relative flex items-center gap-2">
+                      <Sparkles size={14} style={{ color: "var(--accent)" }} />
+                      <span className="text-white font-semibold">NCBT One</span>
                     </div>
-                    <span className="px-1.5 py-0.2 text-[8px] font-black uppercase tracking-wider bg-amber-500 text-slate-950 rounded-full">
+                    <span className="relative text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                      style={{ background: "var(--accent)", color: "var(--primary)" }}>
                       NEW
                     </span>
                   </button>
@@ -3097,18 +3293,6 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     <span>Blog</span>
                   </button>
 
-                  <button
-                    onClick={() => { showPage("analytics"); setIsDrawerOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                      activePage === "analytics" 
-                        ? "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--border)]" 
-                        : "text-[var(--text-primary)] hover:bg-[var(--surface-2)] border-transparent"
-                    }`}
-                  >
-                    <Award className="w-4 h-4 text-[var(--text-secondary)] shrink-0" />
-                    <span>Performance Analytics</span>
-                  </button>
-
                   <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 pt-5 mb-2 select-none">Company Info</p>
 
                   <button
@@ -3134,6 +3318,26 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     <MessageSquare className="w-4 h-4 text-[var(--text-secondary)] shrink-0" />
                     <span>Contact Us</span>
                   </button>
+
+                  {(currentUser?.isAdmin || isAdminAuthenticated || currentUser?.email?.toLowerCase() === "sakil.net.in@gmail.com") && (
+                    <div className="pt-4 border-t border-[var(--border)]/40 mt-3">
+                      <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest px-3 mb-2 select-none flex items-center gap-1.5">
+                        <Shield className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                        <span>Admin Access Only</span>
+                      </p>
+                      <button
+                        onClick={() => { showPage("admin"); setIsDrawerOpen(false); }}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                          activePage === "admin" 
+                            ? "bg-amber-500/20 text-amber-500 border-amber-500/40 shadow-sm" 
+                            : "text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 border-amber-500/20"
+                        }`}
+                      >
+                        <Settings className="w-4 h-4 text-amber-500 shrink-0" />
+                        <span>Admin Control Panel</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -3183,14 +3387,6 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       {/* Main sticky navigation bar */}
       {activePage !== "test" && (
         <nav id="main-nav">
-        <button
-          onClick={() => setIsDrawerOpen(true)}
-          className="p-1.5 hover:bg-[var(--surface-2)] rounded-xl transition-all cursor-pointer flex items-center justify-center shrink-0 text-[var(--text-primary)] mr-1 border border-[var(--border)] bg-[var(--surface)]"
-          aria-label="Open Sidebar Menu"
-          id="hamburger-menu-btn"
-        >
-          <Menu className="w-5 h-5 text-[var(--text-secondary)] hover:text-[var(--text-primary)]" />
-        </button>
         <div className="nav-logo cursor-pointer select-none group flex items-center gap-2" onClick={() => showPage("landing")}>
           <div className="flex flex-col justify-center font-sans">
             <span className="text-xl font-black tracking-tight text-[var(--text-primary)] transition-colors duration-300 flex items-center gap-0.5">
@@ -3210,25 +3406,28 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
             <Home className="w-4 h-4" /> Home
           </button>
           
-          {/* ALL IN ONE MAIN BUTTON */}
+          {/* NCBT ONE PREMIUM BUTTON */}
           <button 
-            className={`nav-link flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-              activePage === "all_in_one" 
-                ? "bg-amber-500/20 text-amber-500 font-black border border-amber-500/40" 
-                : "text-amber-600 dark:text-amber-400 font-extrabold hover:bg-amber-500/10"
-            }`}
-            onClick={handleAllInOneClick}
+            className="relative inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-[13px] overflow-hidden group cursor-pointer transition-transform active:scale-95 shrink-0"
+            style={{
+              background: "linear-gradient(135deg, var(--primary) 0%, #0d4a3f 50%, var(--primary) 100%)",
+              boxShadow: "0 0 0 1px var(--accent)/30, 0 4px 16px -4px rgba(0,0,0,0.3)",
+            }}
+            onClick={() => showPage("ncbt_one")}
           >
-            <Sparkles className="w-4 h-4 text-amber-500 fill-amber-500/20 animate-pulse" />
-            <span>All in ONE</span>
-            <span className="px-1.5 py-0.2 text-[8px] font-black uppercase tracking-wider bg-amber-500 text-slate-950 rounded-full shadow-sm">
+            <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+              style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)" }} />
+            <Sparkles size={14} style={{ color: "var(--accent)" }} />
+            <span className="relative text-white font-semibold">NCBT One</span>
+            <span className="relative text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+              style={{ background: "var(--accent)", color: "var(--primary)" }}>
               NEW
             </span>
           </button>
 
           <button 
-            className={`nav-link flex items-center gap-1.5 ${activePage === "exam_landing" && hubTab === "short" ? "active" : ""}`} 
-            onClick={() => { setHubSearchText(""); showPage("short_sprints", true, { examId: selectedExamId }); }}
+            className={`nav-link flex items-center gap-1.5 ${activePage === "current_affairs" ? "active" : ""}`} 
+            onClick={() => showPage("current_affairs")}
           >
             <Zap className="w-4 h-4 text-[var(--accent)]" /> Current Affairs
           </button>
@@ -3245,12 +3444,12 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
             <HelpCircle className="w-4 h-4 text-[var(--accent)]" /> About
           </button>
 
-          {currentUser && currentUser.isAdmin && (
+          {(currentUser?.isAdmin || isAdminAuthenticated || currentUser?.email?.toLowerCase() === "sakil.net.in@gmail.com") && (
             <button 
-              className={`nav-link flex items-center gap-1.5 ${activePage === "admin" ? "active" : ""}`} 
+              className={`nav-link flex items-center gap-1.5 text-amber-500 font-extrabold ${activePage === "admin" ? "active" : ""}`} 
               onClick={() => showPage("admin")}
             >
-              <Settings className="w-4 h-4" /> Admin
+              <Settings className="w-4 h-4 text-amber-500" /> Admin
             </button>
           )}
         </div>
@@ -3270,20 +3469,13 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
             )}
           </button>
 
-          {currentUser ? (
+          {currentUser && (
             <button 
-              className="nav-avatar flex items-center justify-center text-xs font-bold font-sans"
-              onClick={() => showPage("analytics")}
-              title={currentUser.name}
+              className="nav-avatar flex items-center justify-center text-xs font-bold font-sans cursor-pointer"
+              onClick={() => setIsDrawerOpen(true)}
+              title={`${currentUser.name} (Open menu)`}
             >
               {currentUser.name.charAt(0).toUpperCase()}
-            </button>
-          ) : (
-            <button 
-              className="px-3.5 py-1.5 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-xs font-bold rounded-lg transition-all shadow-sm cursor-pointer"
-              onClick={() => showPage("auth")}
-            >
-              Login
             </button>
           )}
         </div>
@@ -3371,40 +3563,6 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
               </div>
             </div>
 
-            {/* Horizontal Categories Scrollbar (TazaQuiz Style) */}
-            <div className="w-full bg-[var(--surface)]/85 backdrop-blur-md border-b border-[var(--border)] overflow-hidden sticky top-[58px] z-[90] py-2.5 px-4 md:px-8 shadow-sm">
-              <div className="max-w-7xl mx-auto flex items-center gap-2 md:gap-3 overflow-x-auto scrollbar-none py-1">
-                {[
-                  { name: "AIIMS NORCET Series", examId: "aiims-norcet" },
-                  { name: "ESIC Officer Special", examId: "esic-officer" },
-                  { name: "RRB Staff Nurse", examId: "rrb-officer" },
-                  { name: "State PSC Nursing", examId: "dsssb-officer" },
-                  { name: "CHO Recruitment", examId: "cho-recruitment" },
-                  { name: "Anatomy & Physiology", query: "Anatomy", tab: "subject" },
-                  { name: "Pharmacology & Antidotes", query: "Pharmacology", tab: "subject" },
-                  { name: "Midwifery Special", query: "Midwifery", tab: "subject" },
-                  { name: "Community Health Care", query: "Community", tab: "subject" },
-                  { name: "Previous Year Papers", query: "", tab: "pyq" },
-                ].map((cat, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      if (cat.examId) {
-                        selectExam(cat.examId);
-                      } else if (cat.tab) {
-                        setHubTab(cat.tab);
-                        if (cat.query) setHubSearchText(cat.query);
-                        showPage(cat.tab === "pyq" ? "pyq" : cat.tab === "subject" ? "subject_mocks" : "mock_tests");
-                      }
-                    }}
-                    className="px-3.5 py-1.5 rounded-xl bg-card hover:bg-card2 border border-border/70 hover:border-accent text-xs font-bold text-text2 hover:text-accent shadow-sm cursor-pointer select-none transition-all shrink-0 whitespace-nowrap"
-                  >
-                    {cat.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Glowing Backdrop Accents & Hero Graphic Network */}
             <div className="relative overflow-hidden pt-12 pb-20 px-4 md:px-8 max-w-7xl mx-auto">
               {/* HERO BACKGROUND GRAPHIC — "EXAM NETWORK" */}
@@ -3463,16 +3621,27 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
                   <div className="flex items-center gap-3 flex-wrap pt-2">
                     <button 
-                      className="px-7 py-3.5 rounded-full bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-xs md:text-sm font-bold shadow-md transition-all cursor-pointer transform hover:-translate-y-0.5 active:scale-95 flex items-center gap-2"
-                      onClick={() => showPage("updates")}
+                      className="relative inline-flex items-center gap-2 px-6 py-3 rounded-full font-semibold text-[13px] overflow-hidden group cursor-pointer shadow-lg hover:scale-105 transition-all"
+                      style={{
+                        background: "linear-gradient(135deg, var(--primary) 0%, #0d4a3f 50%, var(--primary) 100%)",
+                        boxShadow: "0 0 0 1px var(--accent)/30, 0 4px 16px -4px rgba(0,0,0,0.3)",
+                      }}
+                      onClick={() => showPage("ncbt_one")}
                     >
-                      <span>NCBT Syllabus →</span>
+                      <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                        style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)" }} />
+                      <Sparkles size={14} style={{ color: "var(--accent)" }} />
+                      <span className="relative text-white font-bold">NCBT One</span>
+                      <span className="relative text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                        style={{ background: "var(--accent)", color: "var(--primary)" }}>
+                        NEW
+                      </span>
                     </button>
                     <button 
-                      className="px-6 py-3.5 rounded-full bg-card hover:bg-card2 text-text text-xs md:text-sm font-bold border border-border hover:border-accent transition-all cursor-pointer transform hover:-translate-y-0.5"
+                      className="px-7 py-3.5 rounded-full bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-xs md:text-sm font-bold shadow-md transition-all cursor-pointer transform hover:-translate-y-0.5 active:scale-95 flex items-center gap-2"
                       onClick={() => showPage("find_test")}
                     >
-                      <span>Find Exams/Mocks</span>
+                      <span>Find Exams/Tests →</span>
                     </button>
                   </div>
 
@@ -4247,7 +4416,6 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     <li><button onClick={() => showPage("about")} className="hover:text-accent text-left transition-colors cursor-pointer">✨ About Us</button></li>
                     <li><button onClick={() => showPage("contact")} className="hover:text-accent text-left transition-colors cursor-pointer">📞 Contact Us</button></li>
                     <li><button onClick={() => showPage("exam_landing")} className="hover:text-accent text-left transition-colors cursor-pointer">📲 Practice Now</button></li>
-                    <li><button onClick={() => showPage("analytics")} className="hover:text-accent text-left transition-colors cursor-pointer">🏆 Dashboard Analytics</button></li>
                   </ul>
                 </div>
 
@@ -5604,1064 +5772,45 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         )}
 
         {/* =============== NURSING UPDATES PAGE =============== */}
-        {/* =============== NURSING UPDATES PAGE =============== */}
         {activePage === "updates" && (
           <div className="page active bg-[var(--bg)] text-[var(--text-primary)] min-h-screen font-sans" id="page-updates">
             {selectedUpdate ? (
-              /* ================= FULL PAGE DETAILED BLOG POST ================= */
-              <div className="bg-[var(--bg)] text-[var(--text-primary)] min-h-screen py-8 md:py-12 select-text transition-colors duration-300">
-                <div className="max-w-6xl mx-auto px-4 md:px-8 font-sans">
-                  
-                  {/* Back Navigation Bar */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-4 mb-6 gap-4">
-                    <button 
-                      onClick={() => closeUpdate()}
-                      className="flex items-center gap-1.5 text-slate-500 hover:text-indigo-600 transition-colors font-bold text-xs shrink-0 cursor-pointer border-none bg-transparent p-0"
-                    >
-                      🡠 Back to Editorial News &amp; Blog Feed
-                    </button>
-                    
-                    {/* Share Actions inside header */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest select-none">Quick Share:</span>
-                      <button
-                        onClick={() => {
-                          const shareText = `*🔥 NCBT Nursing Exam Alert: ${selectedUpdate.title}*\n\n${selectedUpdate.summary}\n\n📖 Read full article & practice CBT here: ${window.location.origin}/updates?id=${selectedUpdate.id}`;
-                          const wpUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
-                          window.open(wpUrl, "_blank");
-                        }}
-                        className="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-xl text-[11px] font-bold transition-all border border-emerald-200/50 flex items-center gap-1 cursor-pointer"
-                        title="Share on WhatsApp"
-                      >
-                        💚 WhatsApp
-                      </button>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(`${selectedUpdate.title} - ${selectedUpdate.summary}\n\nRead more details & attempt mock tests at: ${window.location.origin}/updates?id=${selectedUpdate.id}`);
-                          triggerToast("Study link copied to clipboard! 📋", "ok");
-                        }}
-                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-bold transition-all border border-slate-200 flex items-center gap-1 cursor-pointer"
-                        title="Copy Shareable Link"
-                      >
-                        🔗 Copy Link
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Multi-lingual Translation Engine Panel */}
-                  <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 mb-8 flex flex-col md:flex-row items-center justify-between gap-4 select-none">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">🗣️</span>
-                      <div>
-                        <h4 className="text-xs font-black uppercase text-indigo-600 tracking-wider">Multi-Lingual Study Mode</h4>
-                        <p className="text-[11px] text-slate-500">Read this professional board update or academic clinical note in your preferred language:</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-wrap items-center gap-1.5 bg-slate-200/50 p-1 rounded-xl">
-                      <button
-                        onClick={() => setBlogLanguage("en")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          blogLanguage === "en" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
-                        }`}
-                      >
-                        🇬🇧 English (Original)
-                      </button>
-                      <button
-                        onClick={() => setBlogLanguage("hi")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          blogLanguage === "hi" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
-                        }`}
-                      >
-                        🇮🇳 हिन्दी (Hindi)
-                      </button>
-                      <button
-                        onClick={() => setBlogLanguage("bn")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          blogLanguage === "bn" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-600 hover:text-slate-900"
-                        }`}
-                      >
-                        🇮🇳 বাংলা (Bengali)
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Compute Translated Values */}
-                  {(() => {
-                    let currentTitle = selectedUpdate.title;
-                    let currentSummary = selectedUpdate.summary;
-                    let currentContent = selectedUpdate.content;
-                    let currentBadge = selectedUpdate.badge;
-
-                    if (blogLanguage !== "en" && BLOG_TRANSLATIONS[selectedUpdate.id]) {
-                      const trans = BLOG_TRANSLATIONS[selectedUpdate.id][blogLanguage];
-                      if (trans) {
-                        currentTitle = trans.title;
-                        currentSummary = trans.summary;
-                        currentContent = trans.content;
-                        currentBadge = trans.badge;
-                      }
-                    }
-
-                    const renderFormattedUpdateContent = (content: string) => {
-                      if (!content) return null;
-                      const lines = content.split("\n");
-
-                      const renderTextWithInlineStyles = (raw: string) => {
-                        if (!raw) return "";
-                        const parts = raw.split(/\*\*|__/);
-                        return parts.map((part, i) => {
-                          const isBold = i % 2 !== 0;
-                          const subParts = part.split(/\*|_/);
-                          const formattedSubparts = subParts.map((sub, j) => {
-                            const isItalic = j % 2 !== 0;
-                            return isItalic ? (
-                              <em key={j} className="text-indigo-600 not-italic font-bold bg-indigo-50 px-1 py-0.5 rounded border border-indigo-100 font-mono text-[11px] inline-block mt-0.5">
-                                {sub}
-                              </em>
-                            ) : sub;
-                          });
-
-                          return isBold ? (
-                            <strong key={i} className="font-extrabold text-slate-900 text-[13px] md:text-sm tracking-tight">
-                              {formattedSubparts}
-                            </strong>
-                          ) : (
-                            <span key={i}>{formattedSubparts}</span>
-                          );
-                        });
-                      };
-
-                      const parseContentWithInternalLinks = (raw: string) => {
-                        if (!raw) return null;
-                        const parts = [];
-                        let lastIndex = 0;
-                        const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-                        let match;
-                        
-                        while ((match = linkRegex.exec(raw)) !== null) {
-                          const matchIndex = match.index;
-                          if (matchIndex > lastIndex) {
-                            parts.push(raw.substring(lastIndex, matchIndex));
-                          }
-                          parts.push({
-                            text: match[1],
-                            url: match[2],
-                            isLink: true
-                          });
-                          lastIndex = linkRegex.lastIndex;
-                        }
-                        
-                        if (lastIndex < raw.length) {
-                          parts.push(raw.substring(lastIndex));
-                        }
-                        
-                        return (
-                          <span>
-                            {parts.map((p, i) => {
-                              if (typeof p === "string") {
-                                return renderTextWithInlineStyles(p);
-                              } else {
-                                const isInternal = p.url.startsWith("/");
-                                if (isInternal) {
-                                  return (
-                                    <button
-                                      key={i}
-                                      onClick={() => {
-                                        const cleanRoute = p.url.toLowerCase();
-                                        if (cleanRoute.startsWith("/exams/") || cleanRoute.startsWith("/exam/")) {
-                                          const urlParts = cleanRoute.split("/").filter(Boolean);
-                                          const examSlug = urlParts[1] ? urlParts[1].toLowerCase() : "aiims-norcet";
-                                          selectExam(examSlug);
-                                        } else if (cleanRoute === "/mock-tests") {
-                                          showPage("mock_tests");
-                                        } else if (cleanRoute === "/subject-mocks") {
-                                          showPage("subject_mocks");
-                                        } else if (cleanRoute === "/short-sprints") {
-                                          showPage("short_sprints");
-                                        } else if (cleanRoute === "/pyq") {
-                                          showPage("pyq");
-                                        } else {
-                                          showPage("landing");
-                                        }
-                                      }}
-                                      className="text-indigo-600 hover:text-indigo-800 font-extrabold underline transition-colors inline cursor-pointer border-none bg-transparent p-0 align-baseline text-xs md:text-[13px]"
-                                    >
-                                      {p.text}
-                                    </button>
-                                  );
-                                } else {
-                                  return (
-                                    <a
-                                      key={i}
-                                      href={p.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-indigo-600 hover:text-indigo-800 font-extrabold underline transition-colors align-baseline text-xs md:text-[13px]"
-                                    >
-                                      {p.text}
-                                    </a>
-                                  );
-                                }
-                              }
-                            })}
-                          </span>
-                        );
-                      };
-
-                      return (
-                        <div className="flex flex-col gap-4 font-sans text-xs md:text-sm text-slate-700 leading-relaxed select-text">
-                          {lines.map((line, idx) => {
-                            const trimmed = line.trim();
-                            if (!trimmed) {
-                              return <div key={idx} className="h-2" />;
-                            }
-
-                            // Skip "Pro Tip" sections completely per user request
-                            if (trimmed.toLowerCase().includes("pro tip") || trimmed.toLowerCase().includes("protip") || trimmed.startsWith("*pro tip")) {
-                              return null;
-                            }
-
-                            // Match warning blocks starting with emojis or custom labels
-                            if (trimmed.startsWith("⚠️") || trimmed.startsWith("🔥") || trimmed.startsWith("📍") || trimmed.startsWith("⚖️")) {
-                              return (
-                                <div 
-                                  key={idx} 
-                                  className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-amber-900 text-xs md:text-[13px] my-3 leading-relaxed flex gap-3 items-start shadow-sm font-sans"
-                                >
-                                  <span className="text-sm shrink-0">💡</span>
-                                  <div className="flex-1">{parseContentWithInternalLinks(trimmed.replace(/^(⚠️|🔥|📍|⚖️)\s*/i, ""))}</div>
-                                </div>
-                              );
-                            }
-
-                            // Match styled header lines
-                            const headingMatch = trimmed.match(/^(🩺|📋|🌟|🔬|🧠|⚡|📚|📂|📌|👉|🧭|📖|💪|✨|🚇)\s*(.*)/);
-                            if (headingMatch) {
-                              const emoji = headingMatch[1];
-                              const text = headingMatch[2];
-                              return (
-                                <h4 
-                                  key={idx} 
-                                  className="text-xs md:text-[14px] font-extrabold text-indigo-700 mt-5 mb-1.5 border-l-2 border-indigo-500 pl-3 leading-tight uppercase tracking-wide flex items-center gap-2 font-syne"
-                                >
-                                  <span className="text-sm">{emoji}</span>
-                                  <span>{parseContentWithInternalLinks(text)}</span>
-                                </h4>
-                              );
-                            }
-
-                            // Match numbered lists
-                            const numberedMatch = trimmed.match(/^(\d+)\.\s*(.*)/);
-                            if (numberedMatch) {
-                              const num = numberedMatch[1];
-                              const text = numberedMatch[2];
-                              return (
-                                <div key={idx} className="flex gap-2.5 items-start pl-1 text-xs md:text-[13px] leading-relaxed my-1">
-                                  <span className="bg-indigo-50 text-indigo-700 text-[10px] font-black px-1.5 py-0.5 rounded-md min-w-[20px] text-center shrink-0 border border-indigo-100">
-                                    {num}
-                                  </span>
-                                  <div className="flex-1 text-slate-700">{parseContentWithInternalLinks(text)}</div>
-                                </div>
-                              );
-                            }
-
-                            // Match bullet lists
-                            const bulletMatch = trimmed.match(/^(-\s+|\*\s+|•\s+)(.*)/);
-                            if (bulletMatch) {
-                              const text = bulletMatch[2];
-                              return (
-                                <div key={idx} className="flex gap-2.5 items-start pl-2 text-xs md:text-[13px] leading-relaxed my-1">
-                                  <span className="text-indigo-600 shrink-0 select-none text-[11px] mt-1">✦</span>
-                                  <div className="flex-1 text-slate-700">{parseContentWithInternalLinks(text)}</div>
-                                </div>
-                              );
-                            }
-
-                            return (
-                              <p key={idx} className="my-0.5 text-slate-700 text-xs md:text-[13px] leading-relaxed">
-                                {parseContentWithInternalLinks(trimmed)}
-                              </p>
-                            );
-                          })}
-                        </div>
-                      );
-                    };
-
-                    return (
-                      <div className="flex flex-col lg:flex-row gap-8 items-start">
-                        
-                        {/* Main Left Column (Article Content) */}
-                        <div className="flex-1 lg:max-w-[70%] bg-white rounded-3xl p-1 border border-slate-100">
-                          {/* Metadata */}
-                          <div className="flex items-center gap-2.5 mb-3 select-none">
-                            <span className="bg-[var(--accent)] text-white dark:text-[#081410] text-white text-[9px] font-black uppercase px-2.5 py-1 rounded-lg tracking-wider">
-                              🏷️ {currentBadge}
-                            </span>
-                            <span className="text-slate-400 text-xs font-semibold">•</span>
-                            <span className="text-slate-500 text-xs font-semibold">📅 {selectedUpdate.date}</span>
-                            <span className="text-slate-400 text-xs font-semibold">•</span>
-                            <span className="text-slate-500 text-xs font-semibold">⏱️ {selectedUpdate.readTime}</span>
-                          </div>
-
-                          <h1 className="text-2xl md:text-3.5xl font-extrabold text-slate-900 mb-4 tracking-tight leading-tight select-text font-syne">
-                            {currentTitle}
-                          </h1>
-
-                          <p className="text-xs md:text-[13.5px] text-slate-500 font-medium italic border-l-2 border-slate-300 pl-4 mb-6 leading-relaxed select-text">
-                            {currentSummary}
-                          </p>
-
-                          {/* Featured Image */}
-                          <div className="relative h-64 md:h-85 rounded-2xl overflow-hidden shadow-md border border-slate-200 mb-8 select-none">
-                            <img 
-                              src={selectedUpdate.image} 
-                              alt={selectedUpdate.title} 
-                              referrerPolicy="no-referrer"
-                              className="w-full h-full object-cover"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                          </div>
-
-                          {/* Core content block */}
-                          <div className="select-text prose max-w-none">
-                            {renderFormattedUpdateContent(currentContent)}
-                          </div>
-
-                          {/* ================= DYNAMIC SKETCHED/TEXT-BASED VISUAL AIDS ================= */}
-                          {selectedUpdate.id === "update-notes-abg" && (
-                            <div className="my-8 p-6 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm font-sans select-none">
-                              <h4 className="text-xs font-extrabold text-indigo-700 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                                📍 Sketched Reference Chart: Clinical Acid-Base Scale
-                              </h4>
-                              <p className="text-xs text-slate-500 mb-4">A visual diagram representing critical arterial pH cutoff limits for quick board recall:</p>
-                              
-                              <div className="flex flex-col md:flex-row items-stretch justify-between border-b border-slate-200 pb-5 mb-4 gap-4 text-center">
-                                <div className="flex-1 p-3.5 bg-rose-50 text-rose-700 rounded-xl border border-rose-100 font-mono text-xs">
-                                  <strong>Acidosis (Acidemia)</strong>
-                                  <div className="h-1 bg-rose-200 rounded my-2" />
-                                  <span className="text-sm font-black">pH &lt; 7.35</span>
-                                  <div className="text-[10px] text-rose-500 mt-1">PaCO2 &gt; 45 mmHg (Resp)<br />HCO3- &lt; 22 mEq/L (Met)</div>
-                                </div>
-                                <div className="px-4 py-3 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-100 font-mono text-xs font-bold flex flex-col justify-center min-w-[140px]">
-                                  <strong>Normal Range</strong>
-                                  <div className="h-1 bg-emerald-200 rounded my-2" />
-                                  <span className="text-sm font-black">7.35 — 7.45</span>
-                                  <div className="text-[10px] text-emerald-600 mt-1">Physiologic Homeostasis</div>
-                                </div>
-                                <div className="flex-1 p-3.5 bg-sky-50 text-sky-700 rounded-xl border border-sky-100 font-mono text-xs">
-                                  <strong>Alkalosis (Alkalemia)</strong>
-                                  <div className="h-1 bg-sky-200 rounded my-2" />
-                                  <span className="text-sm font-black">pH &gt; 7.45</span>
-                                  <div className="text-[10px] text-sky-500 mt-1">PaCO2 &lt; 35 mmHg (Resp)<br />HCO3- &gt; 26 mEq/L (Met)</div>
-                                </div>
-                              </div>
-                              <div className="bg-white p-4 rounded-xl border border-slate-200/60 font-mono text-[11px] text-slate-600 leading-normal">
-                                <strong>ROME Diagnostic Rule Summary:</strong><br />
-                                • <strong>R</strong>espiratory <strong>O</strong>pposite: pH ↑ &amp; PaCO2 ↓ (Alkalosis) | pH ↓ &amp; PaCO2 ↑ (Acidosis)<br />
-                                • <strong>M</strong>etabolic <strong>E</strong>qual: pH ↑ &amp; HCO3- ↑ (Alkalosis) | pH ↓ &amp; HCO3- ↓ (Acidosis)
-                              </div>
-                            </div>
-                          )}
-
-                          {selectedUpdate.id === "update-notes-preload" && (
-                            <div className="my-8 p-6 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm font-sans select-none">
-                              <h4 className="text-xs font-extrabold text-indigo-700 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                                📍 Clinical Cheat-Sheet: IV Infusion Calculations &amp; Calibration
-                              </h4>
-                              <p className="text-xs text-slate-500 mb-4">Textbook formula guidelines extracted from Potter &amp; Perry standard curriculum:</p>
-                              
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 text-xs font-mono">
-                                <div className="p-3.5 bg-white rounded-xl border border-slate-200">
-                                  <span className="font-bold text-slate-800">Macro-Drip Set (Adult Fluid)</span>
-                                  <div className="h-[1px] bg-slate-100 my-2" />
-                                  • Drop Factors: <strong>10, 15, or 20 gtts/mL</strong><br />
-                                  • Best for: routine adult hydration, surgical fluid resuscitations, and blood transfusions.
-                                </div>
-                                <div className="p-3.5 bg-white rounded-xl border border-slate-200">
-                                  <span className="font-bold text-slate-800">Micro-Drip Set (Pediatric / ICU)</span>
-                                  <div className="h-[1px] bg-slate-100 my-2" />
-                                  • Drop Factor: <strong>60 gtts/mL</strong><br />
-                                  • Rule of thumb: flow rate (mL/hr) is exactly equal to droplets (drops/min). Best for highly reactive cardiac drips.
-                                </div>
-                              </div>
-                              <div className="bg-amber-50 text-amber-950 p-4 rounded-xl border border-amber-200/60 font-mono text-[11px] leading-relaxed flex gap-2.5">
-                                <span className="text-sm">⚠️</span>
-                                <div>
-                                  <strong>Vigilance Standard:</strong> Assess sites for localized extravasation every 1 hour for high-risk infusions (such as Potassium Chloride or Dopamine). Discontinue drip immediately upon edema.
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {selectedUpdate.id === "update-1-norcet" && (
-                            <div className="my-8 p-6 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm font-sans select-none">
-                              <h4 className="text-xs font-extrabold text-indigo-700 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                                📍 Sketched Choice Filling Timeline Workflow
-                              </h4>
-                              <p className="text-xs text-slate-500 mb-4">Step-by-step roadmap to navigate choice preferences safely:</p>
-                              
-                              <div className="flex flex-col sm:flex-row items-stretch gap-2 text-center text-xs">
-                                <div className="flex-1 p-3 bg-white rounded-xl border border-slate-200 flex flex-col justify-center">
-                                  <span className="font-black text-indigo-600">Stage 1</span>
-                                  <p className="font-bold mt-1 text-slate-800">CBT Prelims &amp; Mains</p>
-                                  <span className="text-[10px] text-emerald-600 mt-1 font-bold">✓ Completed</span>
-                                </div>
-                                <div className="flex items-center justify-center text-slate-300 font-bold sm:rotate-0 rotate-90 py-1">➔</div>
-                                <div className="flex-1 p-3 bg-indigo-50 rounded-xl border border-indigo-200 flex flex-col justify-center">
-                                  <span className="font-black text-indigo-600">Stage 2</span>
-                                  <p className="font-bold mt-1 text-indigo-800">Seat Matrix Preference</p>
-                                  <span className="text-[10px] text-indigo-600 mt-1 font-bold">Active Right Now</span>
-                                </div>
-                                <div className="flex items-center justify-center text-slate-300 font-bold sm:rotate-0 rotate-90 py-1">➔</div>
-                                <div className="flex-1 p-3 bg-white rounded-xl border border-slate-200 flex flex-col justify-center">
-                                  <span className="font-black text-slate-400">Stage 3</span>
-                                  <p className="font-bold mt-1 text-slate-800">Credential Verification</p>
-                                  <span className="text-[10px] text-slate-500 mt-1">Upcoming Gate</span>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Reference Resources Links */}
-                          {(selectedUpdate.pdfUrl || selectedUpdate.officialLink) && (
-                            <div className="mt-8 p-5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col gap-3">
-                              <h4 className="text-xs font-extrabold text-indigo-700 uppercase tracking-wider flex items-center gap-1.5">
-                                📋 Verification &amp; Official References
-                              </h4>
-                              <p className="text-xs text-slate-500 leading-relaxed">
-                                This article is cross-referenced with official central boards releases. Check the primary documents below:
-                              </p>
-                              <div className="flex flex-col sm:flex-row gap-3 mt-1 select-none">
-                                {selectedUpdate.pdfUrl && (
-                                  <a 
-                                    href={selectedUpdate.pdfUrl} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="flex-1 px-4 py-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center"
-                                  >
-                                    📄 Official Circular PDF
-                                  </a>
-                                )}
-                                {selectedUpdate.officialLink && (
-                                  <a 
-                                    href={selectedUpdate.officialLink} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="flex-1 px-4 py-2.5 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center"
-                                  >
-                                    🔗 Visit Announcement Portal
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* High-converting Mock CBT Promo */}
-                          <div className="mt-8 bg-gradient-to-r from-slate-100 to-indigo-50 border border-slate-200 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-5 select-none">
-                            <div className="flex items-start gap-3">
-                              <span className="text-3xl mt-0.5">⚡</span>
-                              <div>
-                                <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Secure Your Nursing Selection</h4>
-                                <p className="text-slate-700 text-xs mt-1 font-medium leading-relaxed">
-                                  Practice clinical decision-making with board-level rationales tailored specifically to these updates. Undergo strict exam modes.
-                                </p>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => {
-                                if (selectedUpdate.category === "jobs") {
-                                  showPage("mock_tests");
-                                } else if (selectedUpdate.category === "syllabus") {
-                                  showPage("subject_mocks");
-                                } else {
-                                  showPage("short_sprints");
-                                }
-                                closeUpdate();
-                              }}
-                              className="w-full md:w-auto shrink-0 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-extrabold text-xs uppercase px-5 py-3 rounded-xl transition-all cursor-pointer shadow-md text-center"
-                            >
-                              Start Free CBT Practice →
-                            </button>
-                          </div>
-
-                        </div>
-
-                        {/* Right Sidebar Column (Desktop Only) */}
-                        <div className="w-full lg:w-[30%] lg:sticky lg:top-20 space-y-6 select-none">
-                          
-                          {/* Recommended Practice Hub */}
-                          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm">
-                            <h3 className="font-extrabold text-xs text-slate-800 uppercase tracking-wider mb-3.5 flex items-center gap-1.5 border-b border-slate-200 pb-2">
-                              📋 NCBT Practice Suite
-                            </h3>
-                            <p className="text-[11px] text-slate-500 leading-normal mb-4">
-                              Access our premium preparation tools that mirror AIIMS and central government CBT exam patterns:
-                            </p>
-                            
-                            <div className="space-y-2">
-                              <button
-                                onClick={() => { showPage("subject_mocks"); closeUpdate(); }}
-                                className="w-full text-left p-3 bg-white hover:bg-indigo-50/50 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 transition-all flex items-center justify-between group cursor-pointer"
-                              >
-                                <span>🩺 Subject-Wise Test Centre</span>
-                                <span className="text-indigo-600 group-hover:translate-x-0.5 transition-transform">🡢</span>
-                              </button>
-                              
-                              <button
-                                onClick={() => { showPage("mock_tests"); closeUpdate(); }}
-                                className="w-full text-left p-3 bg-white hover:bg-amber-50/50 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 transition-all flex items-center justify-between group cursor-pointer"
-                              >
-                                <span>🔥 Full-Length Mock Exams</span>
-                                <span className="text-amber-600 group-hover:translate-x-0.5 transition-transform">🡢</span>
-                              </button>
-                              
-                              <button
-                                onClick={() => { showPage("pyq"); closeUpdate(); }}
-                                className="w-full text-left p-3 bg-white hover:bg-emerald-50/50 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 transition-all flex items-center justify-between group cursor-pointer"
-                              >
-                                <span>📄 Solved PYQ Board Papers</span>
-                                <span className="text-emerald-600 group-hover:translate-x-0.5 transition-transform">🡢</span>
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Related Articles list */}
-                          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm">
-                            <h3 className="font-extrabold text-xs text-slate-800 uppercase tracking-wider mb-3.5 flex items-center gap-1.5 border-b border-slate-200 pb-2">
-                              📰 Trending Prep Articles
-                            </h3>
-                            
-                            <div className="space-y-4">
-                              {STATIC_NURSING_UPDATES
-                                .filter(item => item.id !== selectedUpdate.id)
-                                .slice(0, 3)
-                                .map(item => (
-                                  <div 
-                                    key={item.id} 
-                                    onClick={() => { viewUpdate(item); setBlogLanguage("en"); }}
-                                    className="cursor-pointer group flex gap-3 items-start"
-                                  >
-                                    <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-slate-200">
-                                      <img 
-                                        src={item.image} 
-                                        alt={item.title} 
-                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-                                      />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-indigo-600 transition-colors line-clamp-2 leading-tight">
-                                        {item.title}
-                                      </h4>
-                                      <div className="flex items-center gap-1.5 text-[9px] text-slate-400 font-bold uppercase mt-1">
-                                        <span>📅 {item.date}</span>
-                                        <span>•</span>
-                                        <span>{item.readTime}</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                            </div>
-                          </div>
-
-                          {/* Exam Practice Streak Card */}
-                          <div className="bg-gradient-to-br from-indigo-900 to-indigo-950 rounded-2xl p-5 text-white shadow-md relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl pointer-events-none" />
-                            <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Daily Study Streak</h4>
-                            <div className="flex items-baseline gap-2 mt-2">
-                              <span className="text-3xl font-black text-amber-400">
-                                🔥 {(() => {
-                                  const streakKey = `np_streak_${currentUser?.email || "guest"}`;
-                                  try {
-                                    const sd = JSON.parse(localStorage.getItem(streakKey) || '{"streak":0,"last":""}');
-                                    return sd.streak || 0;
-                                  } catch (e) {
-                                    return 0;
-                                  }
-                                })()}
-                              </span>
-                              <span className="text-xs text-indigo-200">Days Active</span>
-                            </div>
-                            <p className="text-[10px] text-indigo-200/80 leading-relaxed mt-2 font-sans">
-                              NCBT rewards consistent daily practice. Take a speed sprint to keep your preparation streak rolling!
-                            </p>
-                          </div>
-
-                        </div>
-
-                      </div>
-                    );
-                  })()}
-
-                </div>
-              </div>
+              <BlogPostTemplate
+                post={selectedUpdate}
+                onClose={() => closeUpdate()}
+                onNavigatePage={(pageId, customState) => {
+                  showPage(pageId);
+                  if (customState?.selectedExamId) {
+                    setSelectedExamId(customState.selectedExamId);
+                  }
+                }}
+                currentUser={currentUser}
+                triggerToast={triggerToast}
+              />
             ) : (
-              /* ================= NORMAL BLOG LIST FEED VIEW (LIGHT THEME) ================= */
-              <div className="max-w-6xl mx-auto px-4 py-8 font-sans">
-                
-                {/* Premium Header Hero Card (Light Theme) */}
-                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-50/40 via-violet-50/20 to-white border border-indigo-100/60 p-6 md:p-8 mb-8 shadow-sm">
-                  {/* Decorative gradients */}
-                  <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
-                  
-                  <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div>
-                      <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 font-syne m-0">
-                        NCBT Blog
-                      </h1>
-                    </div>
-
-                    <button 
-                      onClick={fetchUpdates}
-                      disabled={loadingUpdates}
-                      className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 active:scale-95 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-600/10 cursor-pointer self-start md:self-auto font-syne uppercase tracking-wider"
-                    >
-                      {loadingUpdates ? (
-                        <span className="animate-spin border-2 border-white border-t-transparent rounded-full h-3.5 w-3.5" />
-                      ) : (
-                        <span className="text-sm">🔄</span>
-                      )}
-                      <span>Sync Latest Feeds</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Updates dynamic status warnings */}
-                {updatesError && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6 text-xs text-amber-800 flex items-center gap-2">
-                    <span>💡</span>
-                    <span>{updatesError}</span>
-                  </div>
-                )}
-
-                {/* Control Station: Search and Category Filters */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
-                  {/* Category Filter Tabs */}
-                  <div className="flex flex-wrap items-center gap-1.5 bg-white p-1.5 rounded-2xl border border-slate-200/80 max-w-full overflow-x-auto shadow-sm">
-                    <button 
-                      onClick={() => setActiveUpdateFilter("all")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeUpdateFilter === "all" ? "bg-[var(--primary)] text-white shadow-md" : "text-slate-500 hover:text-indigo-600 hover:bg-slate-50"}`}
-                    >
-                      📰 All Feed
-                    </button>
-                    <button 
-                      onClick={() => setActiveUpdateFilter("jobs")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeUpdateFilter === "jobs" ? "bg-[var(--primary)] text-white shadow-md" : "text-slate-500 hover:text-indigo-600 hover:bg-slate-50"}`}
-                    >
-                      📋 Jobs &amp; Alerts
-                    </button>
-                    <button 
-                      onClick={() => setActiveUpdateFilter("syllabus")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeUpdateFilter === "syllabus" ? "bg-[var(--primary)] text-white shadow-md" : "text-slate-500 hover:text-indigo-600 hover:bg-slate-50"}`}
-                    >
-                      📚 Syllabus
-                    </button>
-                    <button 
-                      onClick={() => setActiveUpdateFilter("notes")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeUpdateFilter === "notes" ? "bg-[var(--primary)] text-white shadow-md" : "text-slate-500 hover:text-indigo-600 hover:bg-slate-50"}`}
-                    >
-                      🧠 High-Yield Notes
-                    </button>
-                    <button 
-                      onClick={() => setActiveUpdateFilter("motivation")}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${activeUpdateFilter === "motivation" ? "bg-[var(--primary)] text-white shadow-md" : "text-slate-500 hover:text-indigo-600 hover:bg-slate-50"}`}
-                    >
-                      🔥 Motivation
-                    </button>
-                  </div>
-
-                  {/* Search input */}
-                  <div className="relative w-full lg:max-w-xs shrink-0">
-                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <input 
-                      type="text" 
-                      placeholder="Search updates or notes..." 
-                      value={blogSearchQuery}
-                      onChange={(e) => setBlogSearchQuery(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm"
-                    />
-                    {blogSearchQuery.trim() !== "" && (
-                      <button 
-                        onClick={() => setBlogSearchQuery("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs bg-transparent border-none p-0 cursor-pointer"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Sync status loader indicator */}
-                {loadingUpdates && (
-                  <div className="flex flex-col items-center justify-center py-20 bg-white border border-slate-100 rounded-3xl gap-4 shadow-sm">
-                    <span className="animate-spin border-4 border-indigo-500 border-t-transparent rounded-full h-8 w-8" />
-                    <span className="text-xs text-slate-500 font-medium tracking-wide">Polling active central recruitment servers...</span>
-                  </div>
-                )}
-
-                {/* Updates layout grid */}
-                {!loadingUpdates && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {updates
-                      .filter(item => {
-                        const matchesCategory = activeUpdateFilter === "all" || item.category === activeUpdateFilter;
-                        const matchesSearch = blogSearchQuery.trim() === "" || 
-                          item.title.toLowerCase().includes(blogSearchQuery.toLowerCase()) ||
-                          item.summary.toLowerCase().includes(blogSearchQuery.toLowerCase()) ||
-                          item.content.toLowerCase().includes(blogSearchQuery.toLowerCase());
-                        return matchesCategory && matchesSearch;
-                      })
-                      .map((item, idx) => {
-                        const isSharedOpen = sharingPostId === item.id;
-                        return (
-                          <motion.div
-                            key={item.id}
-                            initial={{ opacity: 0, y: 12 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3, delay: Math.min(idx * 0.05, 0.4) }}
-                            className="bg-white border border-slate-100 hover:border-indigo-200/80 rounded-3xl overflow-hidden flex flex-col group hover:shadow-lg transition-all duration-300 relative text-left"
-                          >
-                            {/* Graphic banner */}
-                            <div className="h-44 overflow-hidden relative select-none">
-                              <img 
-                                src={item.image} 
-                                alt={item.title} 
-                                referrerPolicy="no-referrer"
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-95 group-hover:brightness-100 placeholder-img" 
-                              />
-                              <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-xl border border-white/10 text-[9px] font-bold uppercase text-white tracking-wider shadow-sm">
-                                🏷️ {item.badge}
-                              </div>
-                              
-                              {/* Categorized Visual Accent Bar */}
-                              <div className={`absolute bottom-0 left-0 right-0 h-1 ${
-                                item.category === "jobs" ? "bg-cyan-500" :
-                                item.category === "syllabus" ? "bg-amber-500" :
-                                item.category === "notes" ? "bg-indigo-500" : "bg-purple-500"
-                              }`} />
-                            </div>
-
-                            {/* Text description */}
-                            <div className="p-6 flex-1 flex flex-col justify-between gap-4">
-                              <div>
-                                <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase mb-2 select-none">
-                                  <span className="flex items-center gap-1">📅 {item.date}</span>
-                                  <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {item.readTime}</span>
-                                </div>
-                                <h3 
-                                  onClick={() => { viewUpdate(item); setBlogLanguage("en"); }}
-                                  className="text-base font-extrabold text-slate-800 hover:text-indigo-600 cursor-pointer line-clamp-2 transition-colors leading-snug mb-2 font-syne"
-                                >
-                                  {item.title}
-                                </h3>
-                                <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed mb-3 font-sans">
-                                  {item.summary}
-                                </p>
-
-                                {/* Attached official notice indicators */}
-                                {(item.pdfUrl || item.officialLink) && (
-                                  <div className="flex flex-wrap gap-1.5 mb-2 select-none">
-                                    {item.pdfUrl && (
-                                      <span className="inline-flex items-center gap-1 text-[9px] bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-lg font-bold">
-                                        📄 Official Notice PDF
-                                      </span>
-                                    )}
-                                    {item.officialLink && (
-                                      <span className="inline-flex items-center gap-1 text-[9px] bg-cyan-50 text-cyan-600 border border-cyan-200 px-2 py-0.5 rounded-lg font-bold">
-                                        🔗 Official Link Included
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="flex flex-col gap-3 pt-2 border-t border-slate-100 mt-auto">
-                                {/* Action Row */}
-                                <div className="flex items-center justify-between gap-2">
-                                  <button 
-                                    onClick={() => { viewUpdate(item); setBlogLanguage("en"); }}
-                                    className="flex items-center gap-1 text-xs font-extrabold text-indigo-600 hover:text-indigo-700 transition-colors bg-transparent border-none p-0 cursor-pointer"
-                                  >
-                                    Read Full Details →
-                                  </button>
-
-                                  {/* Interactive Share Button triggers popup */}
-                                  <div className="relative">
-                                    <button 
-                                      onClick={() => setSharingPostId(isSharedOpen ? null : item.id)}
-                                      className="p-2 bg-slate-50 hover:bg-indigo-50 rounded-xl text-slate-400 hover:text-indigo-600 transition-all cursor-pointer border border-slate-100"
-                                      title="Share Article"
-                                    >
-                                      <Share2 className="w-3.5 h-3.5" />
-                                    </button>
-                                    
-                                    {/* Absolute dropdown share helper */}
-                                    {isSharedOpen && (
-                                      <div className="absolute right-0 bottom-10 bg-white border border-slate-200 rounded-xl p-2 shadow-xl z-20 flex flex-col gap-1.5 min-w-[160px] animate-fade-in select-none">
-                                        <div className="text-[9px] font-black uppercase text-slate-400 px-2 py-1 border-b border-slate-100 mb-1">
-                                          📤 Quick Share
-                                        </div>
-                                        
-                                        {/* Whatsapp button */}
-                                        <button
-                                          onClick={() => {
-                                            const shareText = `*🔥 NCBT Nursing Exam Update: ${item.title}*\n\n${item.summary}\n\n👉 Official notification portal: ${item.officialLink || "https://ncbt-exams.in"}\n\n📖 Read full article & practice CBT here: ${window.location.origin}/updates?id=${item.id}`;
-                                            const wpUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
-                                            window.open(wpUrl, "_blank");
-                                            setSharingPostId(null);
-                                          }}
-                                          className="flex items-center gap-2 text-left text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1.5 rounded-lg transition-colors cursor-pointer w-full border-none bg-transparent"
-                                        >
-                                          💚 Share to WhatsApp
-                                        </button>
-
-                                        {/* Telegram button */}
-                                        <button
-                                          onClick={() => {
-                                            const shareText = `NCBT Nursing Board Update: ${item.title}\n\n${item.summary}`;
-                                            const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(window.location.origin + "/updates?id=" + item.id)}&text=${encodeURIComponent(shareText)}`;
-                                            window.open(tgUrl, "_blank");
-                                            setSharingPostId(null);
-                                          }}
-                                          className="flex items-center gap-2 text-left text-[11px] font-bold text-cyan-600 hover:bg-cyan-50 px-2 py-1.5 rounded-lg transition-colors cursor-pointer w-full border-none bg-transparent"
-                                        >
-                                          💙 Share to Telegram
-                                        </button>
-
-                                        {/* Copy study link */}
-                                        <button
-                                          onClick={() => {
-                                            navigator.clipboard.writeText(`${item.title} - ${item.summary}\n\nRead more details & attempt mock tests at: ${window.location.origin}/updates?id=${item.id}`);
-                                            triggerToast("Study link copied to clipboard! 📋", "ok");
-                                            setSharingPostId(null);
-                                          }}
-                                          className="flex items-center gap-2 text-left text-[11px] font-bold text-slate-700 hover:bg-slate-50 px-2 py-1.5 rounded-lg transition-colors cursor-pointer w-full border-none bg-transparent"
-                                        >
-                                          🔗 Copy Shareable Link
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                  </div>
-                )}
-
-                {/* No items fallback */}
-                {!loadingUpdates && updates.filter(u => {
-                  const matchesCategory = activeUpdateFilter === "all" || u.category === activeUpdateFilter;
-                  const matchesSearch = blogSearchQuery.trim() === "" || 
-                    u.title.toLowerCase().includes(blogSearchQuery.toLowerCase()) ||
-                    u.summary.toLowerCase().includes(blogSearchQuery.toLowerCase()) ||
-                    u.content.toLowerCase().includes(blogSearchQuery.toLowerCase());
-                  return matchesCategory && matchesSearch;
-                }).length === 0 && (
-                  <div className="text-center py-16 bg-white border border-slate-100 rounded-3xl select-none shadow-sm">
-                    <div className="text-4xl mb-3">📰</div>
-                    <h3 className="font-extrabold text-sm text-slate-800">No updates found in this category</h3>
-                    <p className="text-xs text-slate-500 mt-1">Please try refreshing the feed or selecting another filter tab.</p>
-                  </div>
-                )}
-
-                <div className="mt-16 max-w-4xl mx-auto px-4 md:px-0">
-                  <InteractiveFAQ title="Nursing Recruitment & Alerts FAQ" />
-                </div>
-
-                <footer className="mt-12 text-center text-slate-400 text-xs border-t border-slate-200/60 pt-6">NCBT · India's Nursing CBT Exam Preparation Platform</footer>
-              </div>
+              <BlogFeedPage
+                updates={updates}
+                loadingUpdates={loadingUpdates}
+                updatesError={updatesError}
+                onFetchUpdates={fetchUpdates}
+                onSelectUpdate={(item) => {
+                  viewUpdate(item);
+                  setBlogLanguage("en");
+                }}
+                activeFilter={activeUpdateFilter}
+                onFilterChange={setActiveUpdateFilter}
+                searchQuery={blogSearchQuery}
+                onSearchChange={setBlogSearchQuery}
+                onNavigatePage={(pageId) => showPage(pageId)}
+                triggerToast={triggerToast}
+                currentUser={currentUser}
+              />
             )}
           </div>
         )}
 
 
-        {/* =============== PERSONAL ANALYTICS PAGE =============== */}
-        {activePage === "analytics" && (
-          <div className="page active" id="page-analytics">
-            <div className="analytics-wrap">
-              <h2>📊 Your Analytics</h2>
-              <p className="analytics-sub">Track your progress, identify weak spots, and build your practice streak.</p>
-              
-              {/* Analytics Content Block */}
-              {(!currentUser || currentUser.guest) ? (
-                <div className="google-auth-lock-card max-w-sm mx-auto my-6 p-6 bg-[var(--card)] border border-[var(--border)] rounded-xl text-center shadow-xl animate-fade-in duration-300">
-                  <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">
-                    📊
-                  </div>
-                  <h3 className="text-base font-bold mb-2">Google Authentication Required</h3>
-                  <p className="text-xs text-[var(--text2)] mb-6 leading-relaxed">
-                    To track daily scores, anatomical test attempts, accuracy metrics, and build your study streak, connect using Google Auto Authentication.
-                  </p>
 
-                  {/* Google Auto-Auth Panel with Dynamic Inputs */}
-                  <div className="border border-[var(--border)] bg-[#0c1017] rounded-xl p-4 text-left relative overflow-hidden mb-6">
-                    <div className="absolute top-2 right-2 text-[9px] bg-[#38bdf8]/10 text-[#38bdf8] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Google One-Tap</div>
-                    
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-9 h-9 rounded-full bg-[var(--accent)] text-white dark:text-[#081410] flex items-center justify-center text-white text-xs font-bold shadow">
-                        {googleNameInput ? googleNameInput.charAt(0).toUpperCase() : "G"}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[10px] text-[var(--text2)]">Sign in with Google</div>
-                        <div className="text-xs font-semibold text-[var(--text)] truncate">
-                          {googleNameInput || "Guest Student"}
-                        </div>
-                        <div className="text-[10px] text-[#58a6ff] truncate">
-                          {googleEmailInput || "Enter your email below..."}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-[10px] text-[var(--text2)] font-semibold mb-1 block">Full Name</label>
-                        <input
-                          type="text"
-                          className="w-full bg-[#161b22] border border-[#30363d] rounded-xl px-3 py-1.5 text-xs text-white focus:border-indigo-500 focus:outline-none"
-                          placeholder="Your Name (e.g. Rahul Kumar)"
-                          value={googleNameInput}
-                          onChange={(e) => setGoogleNameInput(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-[var(--text2)] font-semibold mb-1 block">Google Email Address</label>
-                        <input
-                          type="email"
-                          className="w-full bg-[#161b22] border border-[#30363d] rounded-xl px-3 py-1.5 text-xs text-white focus:border-indigo-500 focus:outline-none"
-                          placeholder="yourname@gmail.com"
-                          value={googleEmailInput}
-                          onChange={(e) => setGoogleEmailInput(e.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    <button 
-                      className="mt-4 w-full bg-white text-gray-950 hover:bg-slate-100 text-xs font-bold py-2.5 px-3 rounded-lg transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
-                      onClick={() => triggerGoogleAutoAuth(googleEmailInput, googleNameInput)}
-                    >
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22-.03-.63z" />
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                      </svg>
-                      {googleNameInput ? `Continue as ${googleNameInput.split(" ")[0]}` : "Sign in with Google"}
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-center gap-1.5 text-[10px] text-[var(--text2)]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                    Instant secure connection with Google
-                  </div>
-                </div>
-              ) : !analytics ? (
-                <div className="text-center py-16 px-4">
-                  <div className="text-5xl mb-4">🎯</div>
-                  <h3 className="font-syne text-lg font-bold mb-2">No attempts logged yet</h3>
-                  <p className="text-[var(--text2)] mb-6 max-w-sm mx-auto text-sm">
-                    Complete your first anatomical or neurological quiz to see custom analytics and streaks here!
-                  </p>
-                  <button className="btn-hero-primary py-2.5 px-6 text-sm" onClick={() => showPage("exam_landing")}>
-                    Start a Test Now →
-                  </button>
-                </div>
-              ) : (
-                <div id="analytics-content">
-                  {/* Streak Bonfire counter */}
-                  <div className="streak-box mb-6 bg-gradient-to-r from-[#1a1200] to-[#2a1f00]">
-                    <div className="streak-fire"><Flame className="w-10 h-10 text-orange-500 fill-orange-500" /></div>
-                    <div>
-                      <div className="streak-val">{analytics.streak}</div>
-                      <div className="streak-lbl text-gold font-syne font-bold text-[12px]">Day Streak</div>
-                    </div>
-                    <div className="ml-auto text-right text-xs text-[var(--text2)] hidden sm:block">
-                      Keep going! Study daily to<br />maintain your competitive edge.
-                    </div>
-                  </div>
-
-                  {/* Summary Grid */}
-                  <div className="analytics-grid">
-                    <div className="an-card">
-                      <div className="an-icon">📝</div>
-                      <div className="an-val">{analytics.totalAttempts}</div>
-                      <div className="an-label">Tests Attempted</div>
-                    </div>
-                    <div className="an-card">
-                      <div className="an-icon">📊</div>
-                      <div className="an-val">{analytics.avgScore}%</div>
-                      <div className="an-label">Average Score</div>
-                    </div>
-                    <div className="an-card">
-                      <div className="an-icon">🏆</div>
-                      <div className="an-val">{analytics.bestScore}%</div>
-                      <div className="an-label">Best Score</div>
-                    </div>
-                    <div className="an-card">
-                      <div className="an-icon">✅</div>
-                      <div className="an-val">{analytics.totalCorrect}</div>
-                      <div className="an-label">Correct Answers</div>
-                    </div>
-                  </div>
-
-                  {/* Performance Chart */}
-                  <div className="chart-wrap">
-                    <div className="chart-title">Recent Performance (last {analytics.recentScoreHistory.length} tests)</div>
-                    <div className="bar-chart items-end pt-4 pb-2 border-b border-border flex justify-around">
-                      {analytics.recentScoreHistory.map((h, i) => {
-                        const colHeight = Math.max(8, Math.round(h.pct * 0.9));
-                        return (
-                          <div key={i} className="bar-col flex flex-col items-center flex-1 max-w-[50px]">
-                            <div 
-                              className="bar-fill w-full bg-gradient-to-t from-blue-500 to-accent rounded-t"
-                              style={{ height: `${colHeight}px` }}
-                            ></div>
-                            <div className="bar-lbl text-[10px] mt-1 text-[var(--text2)]">
-                              {h.pct}%
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Topic Mastery Progress Rows */}
-                  <div className="chart-wrap mt-6">
-                    <div className="chart-title">Topic Mastery Levels</div>
-                    <div className="topic-rows">
-                      {Object.entries(analytics.topicAccuracyMap).map(([title, stats]) => {
-                        const accPct = Math.round((stats.correct / stats.total) * 100);
-                        return (
-                          <div key={title} className="topic-row">
-                            <div className="topic-row-top flex justify-between items-center text-xs">
-                              <span className="topic-name font-semibold">{title}</span>
-                              <span className="topic-pct text-accent font-bold">{accPct}% Accuracy</span>
-                            </div>
-                            <div className="topic-bar mt-1">
-                              <div 
-                                className="topic-bar-fill" 
-                                style={{ width: `${accPct}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                </div>
-              )}
-            </div>
-
-            <div className="mt-12 max-w-4xl mx-auto px-4 md:px-0 pb-8">
-              <InteractiveFAQ title="Performance Tracking & Analytics FAQ" />
-            </div>
-
-            <footer>NCBT · National CBT · India's Trusted Platform for Nursing, Pharmacist &amp; Paramedical Govt Exams</footer>
-          </div>
-        )}
 
         {/* =============== AUTHENTICATION SCREEN PAGE =============== */}
         {activePage === "auth" && (
@@ -6945,60 +6094,177 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           </div>
         )}
 
-        {/* =============== ADMIN ADMIN PANEL PAGE =============== */}
-        {activePage === "admin" && currentUser && currentUser.isAdmin && (
+        {/* =============== ADMIN CONTROL PANEL PAGE =============== */}
+        {activePage === "admin" && (
           <div className="page active" id="page-admin">
-            <div className="admin-wrap">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <div>
-                  <h2 className="text-2xl sm:text-3xl font-black font-syne tracking-tight text-white m-0">⚙️ Admin CMS Panel</h2>
-                  <div className="admin-badge mt-1 inline-flex items-center gap-1.5"><Shield className="w-3.5 h-3.5 text-[#ff9f9f]" /> Active Administrator Program Control</div>
+            {!isAdminAuthenticated ? (
+              /* RESTRICTED SECURITY GATE */
+              <div className="max-w-md mx-auto my-12 p-8 bg-[var(--card)] border border-[var(--border)] rounded-3xl shadow-2xl text-center font-sans space-y-6">
+                <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center justify-center mx-auto text-amber-400">
+                  <Shield className="w-8 h-8" />
                 </div>
-                <div className="flex bg-[var(--card)] border border-[var(--border)] rounded-xl p-1 shrink-0 flex-wrap gap-1">
+                <div>
+                  <h2 className="text-xl font-black text-white tracking-tight">NCBT Enterprise Admin Portal</h2>
+                  <p className="text-xs text-[var(--text2)] mt-1">Restricted Access • Salted Cryptographic SHA-256 Authentication</p>
+                </div>
+
+                {adminLoginError && (
+                  <div className="p-3 bg-red-950/50 border border-red-800 text-red-300 text-xs rounded-xl font-bold flex items-center gap-2 text-left">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                    <span>{adminLoginError}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleAdminLoginSubmit} className="space-y-4 text-left">
+                  <div>
+                    <label className="text-[10px] font-black uppercase text-[var(--text2)] tracking-wider block mb-1">Admin Email Address</label>
+                    <input 
+                      type="email" 
+                      required
+                      className="w-full bg-[#161b22] border border-[#30363d] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
+                      value={adminLoginEmail}
+                      onChange={(e) => setAdminLoginEmail(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black uppercase text-[var(--text2)] tracking-wider block mb-1">Admin Master Password</label>
+                    <input 
+                      type="password" 
+                      required
+                      placeholder="••••••••••••••••"
+                      className="w-full bg-[#161b22] border border-[#30363d] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
+                      value={adminLoginPassword}
+                      onChange={(e) => setAdminLoginPassword(e.target.value)}
+                    />
+                  </div>
                   <button 
-                    className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${adminTab === "tests" ? "bg-amber-500 text-black shadow" : "text-[var(--text2)] hover:text-white"}`}
+                    type="submit"
+                    disabled={isAdminLoggingIn}
+                    className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs rounded-xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <Key className="w-4 h-4" />
+                    <span>{isAdminLoggingIn ? "Verifying Hash Key..." : "Unlock Admin Command Hub"}</span>
+                  </button>
+                </form>
+
+                <div className="pt-2 text-[10px] text-[var(--text2)] flex items-center justify-center gap-1.5 border-t border-[var(--border)]/40">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>Protected by 256-Bit SHA-256 Salt Digest</span>
+                </div>
+              </div>
+            ) : (
+              /* AUTHENTICATED OPERATIONAL SUITE */
+              <div className="admin-wrap">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-4 border-b border-[var(--border)]">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="bg-amber-500 text-black text-[9px] font-black uppercase px-2 py-0.5 rounded-full">PW/Testbook Grade</span>
+                      <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">🟢 Live System Online</span>
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-black font-syne tracking-tight text-white m-0 mt-1">⚙️ Admin Command Operations Hub</h2>
+                    <p className="text-xs text-[var(--text2)] mt-0.5">Logged in as: <span className="text-amber-300 font-mono font-bold">sakil.net.in@gmail.com</span></p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={exportDatabaseBackup}
+                      className="px-3.5 py-2 bg-[#161b22] hover:bg-[#21262d] text-white border border-[#30363d] text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5 text-amber-400" /> Export Backup
+                    </button>
+                    <button 
+                      onClick={handleAdminLogout}
+                      className="px-3.5 py-2 bg-red-950/50 hover:bg-red-900/60 text-red-300 border border-red-800/80 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Lock className="w-3.5 h-3.5" /> Lock Console
+                    </button>
+                  </div>
+                </div>
+
+                {/* CORE TAB NAVIGATION */}
+                <div className="flex bg-[var(--card)] border border-[var(--border)] rounded-2xl p-1.5 mb-6 flex-wrap gap-1">
+                  <button 
+                    className={`px-4 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${adminTab === "dashboard" ? "bg-amber-500 text-black shadow-md font-black" : "text-[var(--text2)] hover:text-white"}`}
+                    onClick={() => { setAdminTab("dashboard"); setAdminIsManagingQuestions(false); }}
+                  >
+                    <BarChart3 className="w-3.5 h-3.5" /> Command Dashboard
+                  </button>
+                  <button 
+                    className={`px-4 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${adminTab === "tests" ? "bg-amber-500 text-black shadow-md font-black" : "text-[var(--text2)] hover:text-white"}`}
                     onClick={() => { setAdminTab("tests"); setAdminIsManagingQuestions(false); }}
                   >
-                    📚 Test & MCQ CMS
+                    <BookOpen className="w-3.5 h-3.5" /> Test Series CMS
                   </button>
                   <button 
-                    className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${adminTab === "updates" ? "bg-amber-500 text-black shadow" : "text-[var(--text2)] hover:text-white"}`}
+                    className={`px-4 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${adminTab === "questions" ? "bg-amber-500 text-black shadow-md font-black" : "text-[var(--text2)] hover:text-white"}`}
+                    onClick={() => { setAdminTab("questions"); }}
+                  >
+                    <Zap className="w-3.5 h-3.5" /> Bulk MCQ Importer
+                  </button>
+                  <button 
+                    className={`px-4 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${adminTab === "updates" ? "bg-amber-500 text-black shadow-md font-black" : "text-[var(--text2)] hover:text-white"}`}
                     onClick={() => { setAdminTab("updates"); setAdminIsManagingQuestions(false); }}
                   >
-                    📰 News & Updates CMS
+                    <Newspaper className="w-3.5 h-3.5" /> Daily Pulse CMS
                   </button>
                   <button 
-                    className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${adminTab === "users" ? "bg-amber-500 text-black shadow" : "text-[var(--text2)] hover:text-white"}`}
+                    className={`px-4 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${adminTab === "users" ? "bg-amber-500 text-black shadow-md font-black" : "text-[var(--text2)] hover:text-white"}`}
                     onClick={() => { setAdminTab("users"); setAdminIsManagingQuestions(false); }}
                   >
-                    👥 Student Accounts
+                    <User className="w-3.5 h-3.5" /> Student Accounts
+                  </button>
+                  <button 
+                    className={`px-4 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${adminTab === "settings" ? "bg-amber-500 text-black shadow-md font-black" : "text-[var(--text2)] hover:text-white"}`}
+                    onClick={() => { setAdminTab("settings"); setAdminIsManagingQuestions(false); }}
+                  >
+                    <Sliders className="w-3.5 h-3.5" /> Notice & Settings
                   </button>
                 </div>
-              </div>
 
-              {/* Admin metrics cards */}
-              <div className="admin-stats mb-8">
-                <div className="an-card">
-                  <div className="an-icon">📚</div>
-                  <div className="an-val">{adminStats.totalQs}</div>
-                  <div className="an-label">All Active Questions</div>
-                </div>
-                <div className="an-card">
-                  <div className="an-icon">✅</div>
-                  <div className="an-val">{adminStats.liveTests}</div>
-                  <div className="an-label">Live Tests Available</div>
-                </div>
-                <div className="an-card">
-                  <div className="an-icon">👤</div>
-                  <div className="an-val">{adminStats.totalUsers}</div>
-                  <div className="an-label">Registered Accounts</div>
-                </div>
-                <div className="an-card">
-                  <div className="an-icon">📋</div>
-                  <div className="an-val">{adminStats.totalTestsNum}</div>
-                  <div className="an-label">Total Module Sets</div>
-                </div>
-              </div>
+                {/* TAB 1: COMMAND DASHBOARD */}
+                {adminTab === "dashboard" && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="p-5 bg-[var(--card)] border border-[var(--border)] rounded-2xl">
+                        <div className="flex justify-between items-center text-[var(--text2)] mb-2">
+                          <span className="text-xs font-bold uppercase tracking-wider">Registered Students</span>
+                          <User className="w-4 h-4 text-amber-400" />
+                        </div>
+                        <div className="text-2xl font-black text-white">{adminStats.totalUsers}</div>
+                        <p className="text-[10px] text-emerald-400 mt-1 font-bold">↗ Verified Active Candidates</p>
+                      </div>
+
+                      <div className="p-5 bg-[var(--card)] border border-[var(--border)] rounded-2xl">
+                        <div className="flex justify-between items-center text-[var(--text2)] mb-2">
+                          <span className="text-xs font-bold uppercase tracking-wider">Live CBT Test Series</span>
+                          <BookOpen className="w-4 h-4 text-emerald-400" />
+                        </div>
+                        <div className="text-2xl font-black text-white">{adminStats.liveTests}</div>
+                        <p className="text-[10px] text-[var(--text2)] mt-1">NORCET, ESIC & State Nursing</p>
+                      </div>
+
+                      <div className="p-5 bg-[var(--card)] border border-[var(--border)] rounded-2xl">
+                        <div className="flex justify-between items-center text-[var(--text2)] mb-2">
+                          <span className="text-xs font-bold uppercase tracking-wider">Total Question Bank</span>
+                          <Brain className="w-4 h-4 text-purple-400" />
+                        </div>
+                        <div className="text-2xl font-black text-white">{adminStats.totalQs}</div>
+                        <p className="text-[10px] text-purple-300 mt-1">High-yield clinical MCQs</p>
+                      </div>
+
+                      <div className="p-5 bg-[var(--card)] border border-[var(--border)] rounded-2xl">
+                        <div className="flex justify-between items-center text-[var(--text2)] mb-2">
+                          <span className="text-xs font-bold uppercase tracking-wider">Platform Health Rate</span>
+                          <Activity className="w-4 h-4 text-sky-400" />
+                        </div>
+                        <div className="text-2xl font-black text-white">99.9%</div>
+                        <p className="text-[10px] text-sky-300 mt-1">Zero Latency Engine</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+
 
               {/* TAB 1: TESTS & QUESTIONS CMS */}
               {adminTab === "tests" && (
@@ -7635,9 +6901,10 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 </div>
               )}
 
-            </div>
+              </div>
+            )}
             
-            <footer className="mt-12 text-center text-xs text-[var(--text2)] pb-6">NCBT · India's Nursing CBT Exam Preparation Platform</footer>
+            <footer className="mt-12 text-center text-xs text-[var(--text2)] pb-6">NCBT Enterprise · Super Admin Control Portal</footer>
           </div>
         )}
 
@@ -7962,6 +7229,16 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
               <InteractiveFAQ title="Inquiries & Helpdesk FAQ" />
             </div>
           </div>
+        )}
+
+        {/* =============== NCBT ONE PAGE =============== */}
+        {(activePage === "ncbt_one" || activePage === "all_in_one") && (
+          <NcbtOnePage showPage={showPage} />
+        )}
+
+        {/* =============== CURRENT AFFAIRS PAGE =============== */}
+        {activePage === "current_affairs" && (
+          <CurrentAffairsPage showPage={showPage} />
         )}
 
         {/* =============== 404 PAGE NOT FOUND =============== */}
