@@ -55,6 +55,7 @@ import {
   Play,
   Pause,
   Grid,
+  Grid3x3,
   Bookmark
 } from "lucide-react";
 import { SUBJECTS, PYQ_DATA, TARGET_EXAMS } from "./data";
@@ -1180,10 +1181,42 @@ export default function App() {
   );
   const [correctCount, setCorrectCount] = useState<number>(0);
   const [timeLeft, setTimeLeft] = useState<number>(initialRoute.test ? initialRoute.test.mins * 60 : 0);
+  const [questionTimesSpent, setQuestionTimesSpent] = useState<number[]>(
+    initialRoute.test ? new Array(initialRoute.test.data.length).fill(0) : []
+  );
   const [isTestFinished, setIsTestFinished] = useState<boolean>(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState<boolean>(false);
   const [isTimerPaused, setIsTimerPaused] = useState<boolean>(false);
-  const [showPalette, setShowPalette] = useState<boolean>(false);
+  const [showPalette, setShowPalette] = useState<boolean>(true);
+
+  // Format per-question time spent
+  const formatQuestionTime = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
+
+  // Test chip strip ref & auto-scroll effect
+  const chipStripRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (activePage === "test" && chipStripRef.current) {
+      if (currentQuestionIndex < 5) {
+        // Until question 5, slider will not move
+        chipStripRef.current.scrollTo({ left: 0, behavior: "smooth" });
+      } else {
+        // After q 5, slider moves keeping 5 previous question numbers visible on left
+        const targetIndex = currentQuestionIndex - 5;
+        const targetEl = document.getElementById(`q-chip-${targetIndex}`);
+        if (targetEl && chipStripRef.current) {
+          const containerLeft = chipStripRef.current.getBoundingClientRect().left;
+          const targetLeft = targetEl.getBoundingClientRect().left;
+          const scrollOffset = targetLeft - containerLeft + chipStripRef.current.scrollLeft;
+          chipStripRef.current.scrollTo({ left: Math.max(0, scrollOffset), behavior: "smooth" });
+        }
+      }
+    }
+  }, [currentQuestionIndex, activePage]);
 
   // Swipe Gesture Refs & Touch Handlers
   const touchStartXRef = useRef<number | null>(null);
@@ -1725,12 +1758,19 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           }
           return prev - 1;
         });
+
+        setQuestionTimesSpent(prev => {
+          if (!prev || prev.length === 0) return prev;
+          const copy = [...prev];
+          copy[currentQuestionIndex] = (copy[currentQuestionIndex] || 0) + 1;
+          return copy;
+        });
       }, 1000);
     }
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [activePage, isTestFinished, isTimerPaused, timeLeft]);
+  }, [activePage, isTestFinished, isTimerPaused, timeLeft, currentQuestionIndex]);
 
   // Synchronizes local storage with Supabase database for dynamic cloud backup
   const syncWithSupabase = async (userEmail: string) => {
@@ -2443,14 +2483,42 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     setSelectedOptions(new Array(test.data.length).fill(null));
     setQuestionAnswers(new Array(test.data.length).fill(null));
     setReviewedQuestions(new Array(test.data.length).fill(false));
+    setQuestionTimesSpent(new Array(test.data.length).fill(0));
     setCorrectCount(0);
     setTimeLeft(test.mins * 60);
     setIsTestFinished(false);
     setShowFinishConfirm(false);
     setIsTimerPaused(false);
-    setShowPalette(false);
+    setShowPalette(true);
     showPage("test", true, { subjectId, testId });
     triggerToast(`Good luck on your mock! 📖`, "ok");
+  };
+
+  const handleSaveAndExitTest = () => {
+    if (!activeTest) return;
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+
+    const pauseState = {
+      testId: activeTest.id,
+      subjectId: activeSubjectId,
+      currentQuestionIndex,
+      selectedOptions,
+      questionAnswers,
+      reviewedQuestions,
+      correctCount,
+      timeLeft,
+      questionTimesSpent,
+      examMode,
+      activeTest,
+      timestamp: Date.now()
+    };
+
+    const userKey = `np_paused_test_${currentUser?.email || "guest"}`;
+    localStorage.setItem(userKey, JSON.stringify(pauseState));
+
+    setIsTimerPaused(false);
+    triggerToast("⏸️ Test progress saved in memory! You can resume anytime.", "ok");
+    showPage("hub");
   };
 
   const triggerTestInit = (subjectId: string, testId: string) => {
@@ -2651,9 +2719,10 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
   const handleOptionSelect = (optionIndex: number) => {
     if (!activeTest) return;
     const currentQuestion = activeTest.data[currentQuestionIndex];
+    const previousSelection = selectedOptions[currentQuestionIndex];
     
     if (!examMode) {
-      // In practice mode, double action is restricted
+      // In practice mode
       if (questionAnswers[currentQuestionIndex] !== null) return;
       
       const isCorrect = optionIndex === currentQuestion.ans;
@@ -2669,32 +2738,62 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         setCorrectCount(prev => prev + 1);
       }
     } else {
-      // In exam mode, students can toggle their answers freely
-      const previousSelection = selectedOptions[currentQuestionIndex];
+      // In exam mode, re-clicking selected option deselects it
       const updatedSelected = [...selectedOptions];
-      updatedSelected[currentQuestionIndex] = optionIndex;
-      setSelectedOptions(updatedSelected);
-
       const updatedAnswers = [...questionAnswers];
-      updatedAnswers[currentQuestionIndex] = optionIndex === currentQuestion.ans ? 1 : -1;
-      setQuestionAnswers(updatedAnswers);
 
-      if (previousSelection === null) {
-        // First selection of this question
-        if (optionIndex === currentQuestion.ans) {
-          setCorrectCount(prev => prev + 1);
+      if (previousSelection === optionIndex) {
+        // Deselect current option
+        updatedSelected[currentQuestionIndex] = null;
+        updatedAnswers[currentQuestionIndex] = null;
+        if (previousSelection === currentQuestion.ans) {
+          setCorrectCount(prev => prev - 1);
         }
       } else {
-        // Changed selection
-        const wasCorrect = previousSelection === currentQuestion.ans;
-        const nowCorrect = optionIndex === currentQuestion.ans;
-        if (wasCorrect && !nowCorrect) {
-          setCorrectCount(prev => prev - 1);
-        } else if (!wasCorrect && nowCorrect) {
-          setCorrectCount(prev => prev + 1);
+        // Select new option
+        updatedSelected[currentQuestionIndex] = optionIndex;
+        updatedAnswers[currentQuestionIndex] = optionIndex === currentQuestion.ans ? 1 : -1;
+
+        if (previousSelection === null) {
+          if (optionIndex === currentQuestion.ans) {
+            setCorrectCount(prev => prev + 1);
+          }
+        } else {
+          const wasCorrect = previousSelection === currentQuestion.ans;
+          const nowCorrect = optionIndex === currentQuestion.ans;
+          if (wasCorrect && !nowCorrect) {
+            setCorrectCount(prev => prev - 1);
+          } else if (!wasCorrect && nowCorrect) {
+            setCorrectCount(prev => prev + 1);
+          }
         }
       }
+      setSelectedOptions(updatedSelected);
+      setQuestionAnswers(updatedAnswers);
     }
+  };
+
+  const handleClearSelection = () => {
+    if (!activeTest) return;
+    const currentQuestion = activeTest.data[currentQuestionIndex];
+    const previousSelection = selectedOptions[currentQuestionIndex];
+    if (previousSelection === null) return;
+
+    const updatedSelected = [...selectedOptions];
+    const updatedAnswers = [...questionAnswers];
+    updatedSelected[currentQuestionIndex] = null;
+    updatedAnswers[currentQuestionIndex] = null;
+
+    if (previousSelection === currentQuestion.ans) {
+      setCorrectCount(prev => prev - 1);
+    }
+    setSelectedOptions(updatedSelected);
+    setQuestionAnswers(updatedAnswers);
+  };
+
+  const handleMarkAndNext = () => {
+    toggleMarkForReview(currentQuestionIndex);
+    handleNextQuestion();
   };
 
   const toggleMarkForReview = (index: number) => {
@@ -4214,290 +4313,156 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         {activePage === "test" && activeTest && (
           <div className="page active" id="page-test">
             
-            {/* Topbar inside test (Compact single row) */}
-            <div className="test-topbar bg-[var(--surface)] border-b border-[var(--border)] sticky top-0 z-[110] shadow-sm" id="test-screen-topbar">
-              <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <button 
-                    className="back-btn shrink-0 cursor-pointer text-xs font-bold px-2.5 py-1.5 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--border)] text-[var(--text-primary)] transition-all flex items-center gap-1 border border-[var(--border)]" 
-                    onClick={goHub}
-                  >
-                    <ArrowLeft className="w-3.5 h-3.5" />
-                    <span>Back</span>
-                  </button>
-                  <span className="hidden sm:inline-block text-[var(--border)] font-normal">|</span>
-                  <span className="topbar-title text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate max-w-[120px] xs:max-w-[180px] sm:max-w-xs md:max-w-md">
-                    {activeTest.title}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  {!isTestFinished && (
-                    <div className={`timer-pill flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--surface-2)] border text-xs font-mono font-extrabold text-[var(--text-primary)] transition-colors ${
-                      timeLeft <= 120 ? "text-red-500 border-red-500/40 bg-red-500/10 animate-pulse" : "border-[var(--border)]"
-                    }`}>
-                      <span className={`w-2 h-2 rounded-full ${isTimerPaused ? "bg-amber-500" : timeLeft <= 120 ? "bg-red-500 animate-ping" : "bg-emerald-500 animate-pulse"}`} />
-                      <span>{formatTime(timeLeft)}</span>
-                      <button
-                        onClick={() => setIsTimerPaused(!isTimerPaused)}
-                        className="p-1 hover:bg-[var(--border)] rounded-full transition-colors cursor-pointer text-[var(--text-secondary)] hover:text-[var(--text-primary)] ml-0.5"
-                        title={isTimerPaused ? "Resume Timer" : "Pause Timer"}
-                      >
-                        {isTimerPaused ? <Play className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500" /> : <Pause className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />}
-                      </button>
-                    </div>
-                  )}
-
-                  {!isTestFinished && (
-                    <button 
-                      className="bg-[var(--danger)] hover:opacity-90 text-white font-extrabold text-xs px-3 sm:px-4 py-1.5 rounded-xl transition-all flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer shrink-0"
-                      onClick={() => setShowFinishConfirm(true)}
-                      title="Submit and finish test"
-                    >
-                      <span>🏁</span>
-                      <span className="hidden xs:inline">Submit</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
             {/* Anti-cheat Pause Screen Overlay */}
             {isTimerPaused && !isTestFinished && (
               <div className="fixed inset-0 top-[50px] z-[100] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-4 text-center animate-fade-in">
-                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl space-y-4">
-                  <div className="w-16 h-16 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto border border-amber-500/20 text-2xl animate-pulse">
+                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl space-y-5">
+                  <div className="w-16 h-16 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center mx-auto border border-blue-500/20 text-2xl animate-pulse">
                     ⏸️
                   </div>
                   <div>
                     <h3 className="text-lg font-black text-[var(--text-primary)]">Test Paused</h3>
                     <p className="text-xs text-[var(--text-secondary)] mt-1.5 leading-relaxed">
-                      Questions are blurred while the test is paused to preserve assessment integrity.
+                      Questions are hidden while the test is paused. Resume to continue or save progress to exit.
                     </p>
                   </div>
-                  <div className="pt-2">
+                  <div className="flex flex-col gap-2.5 pt-2">
                     <button
                       onClick={() => setIsTimerPaused(false)}
-                      className="w-full py-3 px-6 rounded-2xl bg-[var(--primary)] text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg hover:opacity-95 transition-all cursor-pointer active:scale-95"
+                      className="w-full py-3 px-6 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer active:scale-95"
                     >
                       <Play className="w-4 h-4 fill-white" />
                       <span>Resume Test</span>
+                    </button>
+                    <button
+                      onClick={handleSaveAndExitTest}
+                      className="w-full py-2.5 px-6 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] hover:bg-[var(--surface)] text-[var(--text-primary)] font-bold text-xs transition-colors cursor-pointer"
+                    >
+                      💾 Save & Exit
                     </button>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Test Content Grid */}
+            {/* Test Content Container */}
             {!isTestFinished && (
-              <div className="max-w-5xl mx-auto px-2 sm:px-4 md:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4" id="test-main-grid">
-                
-                {/* NAVIGATOR (Above Question) */}
-                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-3 sm:p-4 shadow-sm space-y-2.5">
-                  <div className="flex items-center justify-between gap-2 text-xs">
-                    <div className="flex items-center gap-2 font-black">
-                      <span className="text-[var(--primary)] text-xs sm:text-sm">
-                        Q {currentQuestionIndex + 1} / {activeTest.data.length}
+              <div className="max-w-3xl mx-auto min-h-screen flex flex-col justify-between">
+                <div>
+                  {/* HEADER / NAVIGATOR SECTION (EXACT 2 ROWS, NO DUPLICATION) */}
+                  <div className="sticky top-0 z-40 bg-[var(--surface)] border-b border-[var(--border)] shadow-sm">
+                    {/* ROW 1 — single header */}
+                    <div className="flex items-center gap-2 px-3 py-2">
+                      <button onClick={goHub} className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-[var(--surface-2)] text-[var(--text-primary)] cursor-pointer hover:bg-[var(--border)] transition-colors">
+                        <ArrowLeft size={16} />
+                      </button>
+
+                      <span className="flex-1 min-w-0 truncate text-[13px] font-semibold text-[var(--text-primary)]">
+                        {activeTest.title}
                       </span>
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase border ${
-                        examMode 
-                          ? "bg-red-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" 
-                          : "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]/30"
-                      }`}>
-                        {examMode ? "CBT Exam" : "Practice"}
-                      </span>
-                    </div>
 
-                    <button
-                      onClick={() => setShowPalette(!showPalette)}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--border)] border border-[var(--border)] text-[11px] font-bold text-[var(--text-secondary)] transition-all cursor-pointer"
-                    >
-                      <Grid className="w-3.5 h-3.5 text-[var(--accent)]" />
-                      <span>{showPalette ? "Hide Palette" : "Full Palette"}</span>
-                      <ChevronDown className={`w-3 h-3 transition-transform ${showPalette ? "rotate-180" : ""}`} />
-                    </button>
-                  </div>
-
-                  {/* Slim Progress Bar */}
-                  <div className="w-full h-1.5 bg-[var(--surface-2)] rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-[var(--accent)] transition-all duration-300 rounded-full" 
-                      style={{ width: `${Math.round((selectedOptions.filter(o => o !== null).length / activeTest.data.length) * 100)}%` }}
-                    />
-                  </div>
-
-                  {/* Horizontally Scrollable Question Number Strip */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none scroll-smooth">
-                    {activeTest.data.map((_, i) => {
-                      const isCurrent = currentQuestionIndex === i;
-                      const isReviewed = reviewedQuestions[i];
-                      const isAnswered = selectedOptions[i] !== null;
-
-                      let chipClass = "shrink-0 min-w-[32px] h-8 rounded-xl font-extrabold text-xs flex items-center justify-center transition-all cursor-pointer border ";
-                      if (isCurrent) {
-                        chipClass += "bg-[var(--primary)] border-[var(--primary)] text-white shadow-md ring-2 ring-[var(--primary)]/30 scale-105 z-10";
-                      } else if (isReviewed) {
-                        chipClass += "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]";
-                      } else if (isAnswered) {
-                        chipClass += "bg-emerald-600 border-emerald-500 text-white";
-                      } else if (i <= currentQuestionIndex) {
-                        chipClass += "bg-rose-600/90 border-rose-500 text-white";
-                      } else {
-                        chipClass += "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]";
-                      }
-
-                      return (
-                        <button
-                          key={i}
-                          className={chipClass}
-                          onClick={() => setCurrentQuestionIndex(i)}
+                      {/* Timer Capsule with Pause button safely on the LEFT */}
+                      <div className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--surface-2)] border border-[var(--border)] text-[12px] font-mono font-bold text-[var(--text-primary)] shadow-sm">
+                        <button 
+                          onClick={() => setIsTimerPaused(true)} 
+                          className="p-0.5 rounded-full hover:bg-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer flex items-center justify-center"
+                          title="Pause Test"
                         >
-                          {i + 1}
+                          <Pause size={12} />
                         </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Collapsible Full Palette */}
-                  {showPalette && (
-                    <div className="pt-3 border-t border-[var(--border)]/50 animate-fade-in space-y-3">
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
-                        <div className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 p-1.5 rounded-lg">
-                          <span className="w-3.5 h-3.5 rounded bg-emerald-600 text-white font-bold flex items-center justify-center text-[9px]">
-                            {selectedOptions.filter((o, idx) => o !== null && !reviewedQuestions[idx]).length}
-                          </span>
-                          <span className="font-bold">Answered</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20 p-1.5 rounded-lg">
-                          <span className="w-3.5 h-3.5 rounded bg-rose-600 text-white font-bold flex items-center justify-center text-[9px]">
-                            {selectedOptions.filter((o, idx) => o === null && !reviewedQuestions[idx] && idx <= currentQuestionIndex).length}
-                          </span>
-                          <span className="font-bold font-sans">Not Ans</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/30 p-1.5 rounded-lg">
-                          <span className="w-3.5 h-3.5 rounded bg-[var(--accent)] text-white font-bold flex items-center justify-center text-[9px]">
-                            {reviewedQuestions.filter(Boolean).length}
-                          </span>
-                          <span className="font-bold">Marked</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 bg-[var(--surface-2)] text-[var(--text-secondary)] border border-[var(--border)] p-1.5 rounded-lg">
-                          <span className="w-3.5 h-3.5 rounded bg-[var(--border)] text-[var(--text-primary)] font-bold flex items-center justify-center text-[9px]">
-                            {activeTest.data.length - (currentQuestionIndex + 1)}
-                          </span>
-                          <span className="font-bold font-sans">Not Visited</span>
-                        </div>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5" />
+                        <span>{formatTime(timeLeft)}</span>
                       </div>
 
-                      <div className="grid grid-cols-6 sm:grid-cols-10 md:grid-cols-12 gap-1.5 max-h-48 overflow-y-auto pr-1">
-                        {activeTest.data.map((_, i) => {
-                          const isCurrent = currentQuestionIndex === i;
-                          const isReviewed = reviewedQuestions[i];
-                          const isAnswered = selectedOptions[i] !== null;
+                      <button onClick={() => setShowFinishConfirm(true)} className="shrink-0 px-3.5 py-1.5 rounded-full bg-red-500/90 hover:bg-red-500 text-white text-[12px] font-bold cursor-pointer transition-colors shadow-sm">
+                        Submit
+                      </button>
+                    </div>
 
-                          let btnClass = "w-full h-8 rounded-lg border font-bold text-xs flex items-center justify-center transition-all cursor-pointer ";
+                    {/* ROW 2 — Auto-scrolling chip strip (no squished question number label) */}
+                    <div className="px-3 pb-2 pt-0.5">
+                      <div ref={chipStripRef} className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth py-1">
+                        {activeTest.data.map((q, i) => {
+                          const isAnswered = selectedOptions[i] !== null;
+                          const isMarked = reviewedQuestions[i];
+                          const isCurrent = i === currentQuestionIndex;
+
+                          const base = "shrink-0 min-w-[32px] h-8 px-2 flex items-center justify-center rounded-xl text-[12px] font-bold border cursor-pointer transition-all";
+                          let style = "bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border)]";
+
+                          if (isAnswered) {
+                            style = "bg-blue-600 text-white border-blue-600 shadow-sm";
+                          } else if (isMarked) {
+                            style = "bg-pink-500/20 text-pink-500 border-pink-500/50";
+                          }
+
                           if (isCurrent) {
-                            btnClass += "bg-[var(--primary)] border-[var(--primary)] text-white font-black ring-2 ring-[var(--primary)]/30";
-                          } else if (isReviewed) {
-                            btnClass += "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)] font-black";
-                          } else if (isAnswered) {
-                            btnClass += "bg-emerald-600 border-emerald-500 text-white font-black";
-                          } else if (i <= currentQuestionIndex) {
-                            btnClass += "bg-rose-600 border-rose-500 text-white font-black";
-                          } else {
-                            btnClass += "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-primary)] font-semibold";
+                            style += " ring-2 ring-blue-500 font-black scale-105 z-10 shadow-md";
                           }
 
                           return (
-                            <button 
-                              key={i} 
-                              className={btnClass}
-                              onClick={() => {
-                                setCurrentQuestionIndex(i);
-                                setShowPalette(false);
-                              }}
-                            >
+                            <button key={i} id={`q-chip-${i}`} onClick={() => setCurrentQuestionIndex(i)} className={`${base} ${style}`}>
                               {i + 1}
                             </button>
                           );
                         })}
                       </div>
                     </div>
-                  )}
-                </div>
+                  </div>
 
-                {/* QUESTION CARD (Full width & swipeable) */}
-                <div 
-                  id="quiz-wrap" 
-                  className="overflow-hidden relative bg-[var(--surface)] border border-[var(--border)] rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-md"
-                  onTouchStart={handleTouchStart}
-                  onTouchEnd={handleTouchEnd}
-                >
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={currentQuestionIndex}
-                      initial={{ opacity: 0, x: 15 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -15 }}
-                      transition={{ duration: 0.15 }}
-                      className="space-y-4 sm:space-y-5"
+                  {/* QUESTION CARD — CLEAN, FRESH, UNSTUCK LAYOUT */}
+                  <div className="px-3 sm:px-4 py-3">
+                    <div 
+                      className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm"
+                      onTouchStart={handleTouchStart}
+                      onTouchEnd={handleTouchEnd}
                     >
-                      <div className="flex justify-between items-center text-xs pb-3 border-b border-[var(--border)]/40 gap-2">
-                        <span className="font-extrabold text-[var(--accent)] uppercase tracking-wide text-[11px] sm:text-xs">
-                          Question {currentQuestionIndex + 1} / {activeTest.data.length}
-                        </span>
-                        <span className="font-mono text-[10px] sm:text-[11px] text-[var(--text-secondary)] px-2 py-0.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-md truncate max-w-[180px]">
-                          {activeTest.data[currentQuestionIndex].source}
-                        </span>
+                      {/* Q Badge + Exam Name & Year + Live Per-Question Stopwatch */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="shrink-0 bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 px-2.5 py-0.5 rounded-lg text-[12px] font-extrabold tracking-wide">
+                            Q {currentQuestionIndex + 1} / {activeTest.data.length}
+                          </span>
+                          <span className="text-[12px] sm:text-[13px] font-medium italic text-[var(--text-secondary)] truncate">
+                            {activeTest.data[currentQuestionIndex].source || activeTest.title}
+                          </span>
+                        </div>
+
+                        {/* Per-question Time Taken */}
+                        <div className="shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--surface-2)] text-[11px] font-mono font-bold text-[var(--text-primary)] border border-[var(--border)]" title="Time spent on this question">
+                          <span className="text-blue-500 text-[10px]">⏱️</span>
+                          <span>{formatQuestionTime(questionTimesSpent[currentQuestionIndex] || 0)}</span>
+                        </div>
                       </div>
 
-                      <p className="text-sm sm:text-base md:text-lg font-bold text-[var(--text-primary)] leading-relaxed select-none">
+                      {/* Question Text */}
+                      <p className="text-[15px] sm:text-[16px] font-bold text-[var(--text-primary)] leading-relaxed select-none my-2">
                         {activeTest.data[currentQuestionIndex].q}
                       </p>
 
-                      <div className="opts space-y-2.5">
-                        {activeTest.data[currentQuestionIndex].opts.map((option, idx) => {
-                          let optClass = "w-full flex items-center gap-3 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border text-left text-xs sm:text-sm font-bold transition-all cursor-pointer relative overflow-hidden active:scale-[0.99] ";
+                      {/* Options List (A, B, C, D) */}
+                      <div className="flex flex-col gap-2.5">
+                        {activeTest.data[currentQuestionIndex].opts.map((opt, idx) => {
                           const isSelected = selectedOptions[currentQuestionIndex] === idx;
-                          const isAnswered = questionAnswers[currentQuestionIndex] !== null;
-
-                          if (!examMode) {
-                            if (isAnswered) {
-                              if (idx === activeTest.data[currentQuestionIndex].ans) {
-                                optClass += "bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-400";
-                              } else if (isSelected) {
-                                optClass += "bg-rose-500/10 border-rose-500 text-rose-700 dark:text-rose-400";
-                              } else {
-                                optClass += "bg-[var(--surface-2)] border-[var(--border)]/40 text-[var(--text-secondary)] opacity-60";
-                              }
-                            } else if (isSelected) {
-                              optClass += "bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] shadow-md";
-                            } else {
-                              optClass += "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-primary)] hover:border-[var(--primary)] hover:bg-[var(--surface)]";
-                            }
-                          } else {
-                            if (isSelected) {
-                              optClass += "bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] shadow-md";
-                            } else {
-                              optClass += "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-primary)] hover:border-[var(--primary)] hover:bg-[var(--surface)]";
-                            }
-                          }
-
-                          const L = ["A", "B", "C", "D"];
-
+                          const optionLetter = String.fromCharCode(65 + idx);
                           return (
-                            <button 
-                              key={idx} 
-                              className={optClass}
+                            <button
+                              key={idx}
                               onClick={() => handleOptionSelect(idx)}
+                              className={`flex items-center gap-3 px-3.5 py-3 rounded-xl border text-[13px] sm:text-[14px] text-left transition-all cursor-pointer active:scale-[0.99] ${
+                                isSelected
+                                  ? "border-blue-500 bg-blue-500/10 text-[var(--text-primary)] font-bold shadow-sm ring-1 ring-blue-500/40"
+                                  : "border-[var(--border)] bg-[var(--surface-2)]/40 text-[var(--text-primary)] hover:bg-[var(--surface-2)] font-medium"
+                              }`}
                             >
-                              <span className={`w-7 h-7 rounded-lg font-black flex items-center justify-center shrink-0 border text-xs ${
-                                isSelected 
-                                  ? "bg-[var(--accent)] border-[var(--accent)] text-white" 
-                                  : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-secondary)]"
+                              <span className={`shrink-0 w-6 h-6 flex items-center justify-center rounded-lg text-[11px] font-bold border transition-colors ${
+                                isSelected
+                                  ? "bg-blue-600 text-white border-blue-600"
+                                  : "bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border)]"
                               }`}>
-                                {L[idx]}
+                                {optionLetter}
                               </span>
-                              <span className="flex-1 font-semibold leading-snug">{option}</span>
+                              <span className="flex-1 leading-snug">{opt}</span>
                             </button>
                           );
                         })}
@@ -4508,10 +4473,10 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                         const q = activeTest.data[currentQuestionIndex];
                         const aiState = aiRationales[q.q];
                         return (
-                          <div className="mt-4 animate-fade-in space-y-3 pt-3 border-t border-[var(--border)]/40">
-                            <div className={`p-3.5 rounded-2xl border text-xs sm:text-sm font-semibold leading-relaxed ${
+                          <div className="mt-3 animate-fade-in space-y-3 pt-3 border-t border-[var(--border)]/40">
+                            <div className={`p-3 rounded-xl border text-xs sm:text-sm font-semibold leading-relaxed ${
                               questionAnswers[currentQuestionIndex] === 1 
-                                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400" 
+                                ? "bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400" 
                                 : "bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400"
                             }`}>
                               <div className="font-black text-sm mb-1">
@@ -4520,85 +4485,87 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                               <span style={{ whiteSpace: "pre-line" }}>{getDetailedExplain(q)}</span>
                             </div>
 
-                            {/* AI Rationale Panel */}
-                            <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl p-3.5 text-left">
-                              <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-                                <span className="text-xs font-bold text-[var(--accent)] flex items-center gap-1.5">
-                                  ✨ AI Clinical Expert (Gemini Flash)
-                                </span>
-                                {!aiState?.text && !aiState?.loading && (
-                                  <button
-                                    onClick={() => generateAiRationale(q.q, q.opts, q.ans)}
-                                    className="bg-[var(--accent-soft)] hover:opacity-90 active:scale-95 text-[var(--accent)] font-extrabold text-[10px] px-3 py-1 rounded-lg transition-all cursor-pointer shadow-sm border border-[var(--accent)]/30"
-                                  >
-                                    Generate Clinical Rationale
-                                  </button>
-                                )}
-                              </div>
-
-                              {aiState?.loading && (
-                                <div className="py-3 flex flex-col items-center justify-center gap-2">
-                                  <div className="w-4 h-4 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin"></div>
-                                  <span className="text-[10px] text-[var(--text-secondary)] animate-pulse font-medium">Analyzing parameters & nursing protocols...</span>
-                                </div>
-                              )}
-
-                              {aiState?.error && (
-                                <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">⚠️ {aiState.error}. Offline high-yield fallback enabled.</p>
-                              )}
-
-                              {aiState?.text && (
-                                <div className="text-xs text-[var(--text-secondary)] leading-relaxed space-y-2 mt-2 bg-[var(--surface)] p-3 rounded-xl border border-[var(--border)] select-text">
-                                  <div className="prose-slate max-w-none text-[var(--text-primary)]" style={{ whiteSpace: "pre-wrap" }}>
-                                    {aiState.text}
-                                  </div>
-                                </div>
+                          {/* AI Rationale Panel */}
+                          <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl p-3.5 text-left">
+                            <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                              <span className="text-xs font-bold text-[var(--accent)] flex items-center gap-1.5">
+                                ✨ AI Clinical Expert (Gemini Flash)
+                              </span>
+                              {!aiState?.text && !aiState?.loading && (
+                                <button
+                                  onClick={() => generateAiRationale(q.q, q.opts, q.ans)}
+                                  className="bg-[var(--accent-soft)] hover:opacity-90 active:scale-95 text-[var(--accent)] font-extrabold text-[10px] px-3 py-1 rounded-lg transition-all cursor-pointer shadow-sm border border-[var(--accent)]/30"
+                                >
+                                  Generate Clinical Rationale
+                                </button>
                               )}
                             </div>
+
+                            {aiState?.loading && (
+                              <div className="py-3 flex flex-col items-center justify-center gap-2">
+                                <div className="w-4 h-4 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin"></div>
+                                <span className="text-[10px] text-[var(--text-secondary)] animate-pulse font-medium">Analyzing parameters & nursing protocols...</span>
+                              </div>
+                            )}
+
+                            {aiState?.error && (
+                              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">⚠️ {aiState.error}. Offline high-yield fallback enabled.</p>
+                            )}
+
+                            {aiState?.text && (
+                              <div className="text-xs text-[var(--text-secondary)] leading-relaxed space-y-2 mt-2 bg-[var(--surface)] p-3 rounded-xl border border-[var(--border)] select-text">
+                                <div className="prose-slate max-w-none text-[var(--text-primary)]" style={{ whiteSpace: "pre-wrap" }}>
+                                  {aiState.text}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        );
-                      })()}
-
-                      {/* Mobile Gesture Hint */}
-                      <div className="text-[10px] text-center text-[var(--text-secondary)] font-medium pt-1 opacity-70 flex items-center justify-center gap-1 sm:hidden">
-                        <span>👈 Swipe left/right for next/prev question 👉</span>
-                      </div>
-                    </motion.div>
-                  </AnimatePresence>
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
+              </div>
 
-                {/* BOTTOM CONTROL BAR */}
-                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-2.5 sm:p-3 shadow-md flex items-center justify-between gap-2">
-                  <button 
-                    className="px-3 sm:px-4 py-2.5 rounded-xl border border-[var(--border)] text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed transition-all flex items-center gap-1"
-                    disabled={currentQuestionIndex === 0}
-                    onClick={handlePrevQuestion}
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    <span>Prev</span>
-                  </button>
-                  
-                  <button 
-                    className={`font-bold text-xs px-3 sm:px-4 py-2.5 rounded-xl transition-all cursor-pointer border flex items-center gap-1.5 ${
-                      reviewedQuestions[currentQuestionIndex] 
-                        ? "bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] shadow-sm" 
-                        : "bg-[var(--surface-2)] hover:bg-[var(--surface)] border-[var(--border)] text-[var(--text-primary)]"
-                    }`}
-                    onClick={() => toggleMarkForReview(currentQuestionIndex)}
-                  >
-                    <Bookmark className="w-3.5 h-3.5" />
-                    <span>{reviewedQuestions[currentQuestionIndex] ? "Marked" : "Mark Review"}</span>
-                  </button>
+                {/* BOTTOM BAR — COMPACT CBT BUTTONS */}
+                <div className="sticky bottom-0 z-40 bg-[var(--surface)]/95 backdrop-blur-md border-t border-[var(--border)] px-3 py-2">
+                  <div className="flex items-center justify-center gap-1.5 max-w-md mx-auto">
+                    {/* Prev icon button */}
+                    <button 
+                      onClick={handlePrevQuestion}
+                      disabled={currentQuestionIndex === 0}
+                      className="px-2.5 py-1.5 rounded-lg border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--surface-2)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer text-xs font-bold shrink-0"
+                      title="Previous Question"
+                    >
+                      ←
+                    </button>
 
-                  <button 
-                    className="px-4 py-2.5 rounded-xl bg-[var(--primary)] hover:opacity-95 text-white font-extrabold text-xs cursor-pointer shadow-md active:scale-95 transition-all flex items-center gap-1"
-                    onClick={handleNextQuestion}
-                  >
-                    <span>{currentQuestionIndex === activeTest.data.length - 1 ? "Next (Q1)" : "Next"}</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
+                    {/* Mark & Next */}
+                    <button 
+                      onClick={handleMarkAndNext}
+                      className="px-3 py-1.5 max-w-[105px] w-full rounded-lg border border-[var(--text-primary)]/80 text-[var(--text-primary)] hover:bg-[var(--surface-2)] font-semibold text-[11px] sm:text-[12px] transition-colors cursor-pointer text-center truncate"
+                    >
+                      Mark & Next
+                    </button>
+
+                    {/* Clear */}
+                    <button 
+                      onClick={handleClearSelection}
+                      disabled={selectedOptions[currentQuestionIndex] === null}
+                      className="px-3 py-1.5 max-w-[75px] w-full rounded-lg border border-[var(--text-primary)]/80 text-[var(--text-primary)] hover:bg-[var(--surface-2)] disabled:opacity-40 disabled:cursor-not-allowed font-semibold text-[11px] sm:text-[12px] transition-colors cursor-pointer text-center truncate"
+                    >
+                      Clear
+                    </button>
+
+                    {/* Save & Next */}
+                    <button 
+                      onClick={handleNextQuestion}
+                      className="px-3 py-1.5 max-w-[105px] w-full rounded-lg bg-blue-500 hover:bg-blue-600 active:scale-95 text-white font-semibold text-[11px] sm:text-[12px] shadow-sm transition-all cursor-pointer text-center truncate"
+                    >
+                      Save & Next
+                    </button>
+                  </div>
                 </div>
-
               </div>
             )}
 
