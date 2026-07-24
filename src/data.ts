@@ -1444,7 +1444,7 @@ export const TARGET_EXAMS: ExamDef[] = [
   {
     id: "aiims-norcet",
     name: "AIIMS NORCET",
-    fullName: "AIIMS NORCET Complete Course",
+    fullName: "AIIMS NORCET CBT Test Series",
     badge: "HOT",
     category: "Nursing",
     desc: "Prepare for AIIMS Nursing Officer Recruitment Common Eligibility Test with full syllabus CBT mocks, clinical scenario drills & PYQs.",
@@ -1454,7 +1454,7 @@ export const TARGET_EXAMS: ExamDef[] = [
   {
     id: "wbhrb-grade2",
     name: "WBHRB Staff Nurse",
-    fullName: "WBHRB Staff Nurse Grade II Series",
+    fullName: "WBHRB Staff Nurse Grade II Test Series",
     badge: "TRENDING",
     category: "Nursing",
     desc: "Targeted West Bengal Health Recruitment Board Grade II exam preparation with localized state syllabus and viva-voce practice.",
@@ -1464,7 +1464,7 @@ export const TARGET_EXAMS: ExamDef[] = [
   {
     id: "esic-officer",
     name: "ESIC Nursing Officer",
-    fullName: "ESIC Nursing Officer Complete Package",
+    fullName: "ESIC Nursing Officer Test Series",
     badge: "HOT",
     category: "Nursing",
     desc: "Employees' State Insurance Corporation nursing officer mocks balancing clinical nursing subjects and general aptitude.",
@@ -1474,7 +1474,7 @@ export const TARGET_EXAMS: ExamDef[] = [
   {
     id: "rrb-officer",
     name: "RRB Staff Nurse",
-    fullName: "RRB Staff Nurse Complete (CBT 1 + CBT 2)",
+    fullName: "RRB Staff Nurse Test Series (CBT 1 + CBT 2)",
     badge: "POPULAR",
     category: "Nursing",
     desc: "Railway Recruitment Board nursing practice with arithmetic, general science, technical nursing, and speed drills.",
@@ -1494,7 +1494,7 @@ export const TARGET_EXAMS: ExamDef[] = [
   {
     id: "dsssb-officer",
     name: "DSSSB Staff Nurse",
-    fullName: "DSSSB Selection POST Complete Course",
+    fullName: "DSSSB Selection POST CBT Test Series",
     badge: "HOT",
     category: "Nursing",
     desc: "Delhi Subordinate Services Selection Board nursing officer prep papers following actual question weightage and timing.",
@@ -1504,7 +1504,7 @@ export const TARGET_EXAMS: ExamDef[] = [
   {
     id: "sgpgi-jipmer",
     name: "SGPGI & JIPMER Nursing",
-    fullName: "SGPGI & JIPMER Nursing Officer Exam",
+    fullName: "SGPGI & JIPMER Nursing Officer Exam Series",
     badge: "NEW",
     category: "Nursing",
     desc: "Sanjay Gandhi PGI and JIPMER Nursing Officer specialized question bank and high-intensity speed sprints.",
@@ -1516,7 +1516,7 @@ export const TARGET_EXAMS: ExamDef[] = [
   {
     id: "rrb-pharmacist",
     name: "RRB Pharmacist",
-    fullName: "RRB Pharmacist Grade III Complete Course",
+    fullName: "RRB Pharmacist Grade III Test Series",
     badge: "HOT",
     category: "Pharmacist",
     desc: "Complete CBT preparation for Railway Pharmacist exams including Pharmaceutics, Pharmacology, Pharmacognosy & Aptitude.",
@@ -1526,7 +1526,7 @@ export const TARGET_EXAMS: ExamDef[] = [
   {
     id: "esic-pharmacist",
     name: "ESIC Pharmacist",
-    fullName: "ESIC Pharmacist Recruitment Package",
+    fullName: "ESIC Pharmacist Test Series",
     badge: "POPULAR",
     category: "Pharmacist",
     desc: "ESIC Pharmacist CBT mock test series covering hospital pharmacy, drug store management, and clinical jurisprudence.",
@@ -1546,7 +1546,7 @@ export const TARGET_EXAMS: ExamDef[] = [
   {
     id: "drug-inspector",
     name: "Drug Inspector Exam",
-    fullName: "Drug Inspector Officer Complete Suite",
+    fullName: "Drug Inspector Officer Test Suite",
     badge: "GOVT POST",
     category: "Pharmacist",
     desc: "Central & State Drug Inspector Officer exam suite focusing on Drugs & Cosmetics Act, quality control, and analysis.",
@@ -1556,7 +1556,7 @@ export const TARGET_EXAMS: ExamDef[] = [
   {
     id: "cghs-pharmacist",
     name: "CGHS Pharmacist",
-    fullName: "CGHS & Central Govt Pharmacist Exam",
+    fullName: "CGHS & Central Govt Pharmacist Test Series",
     badge: "NEW",
     category: "Pharmacist",
     desc: "Central Government Health Scheme Pharmacist mock test series for all central dispensary recruitment tests.",
@@ -1568,7 +1568,7 @@ export const TARGET_EXAMS: ExamDef[] = [
   {
     id: "ot-technician",
     name: "Surgical OT Tech",
-    fullName: "Surgical OT Technician Complete Course",
+    fullName: "Surgical OT Technician Test Series",
     badge: "HOT",
     category: "Paramedical",
     desc: "Operation Theatre Assistant & Technician exam papers covering sterilization, surgical instruments, and anesthesia basics.",
@@ -1578,7 +1578,7 @@ export const TARGET_EXAMS: ExamDef[] = [
   {
     id: "ophthalmic-assistant",
     name: "Ophthalmic Assistant",
-    fullName: "Ophthalmic Technician & Optometry Prep",
+    fullName: "Ophthalmic Technician & Optometry Prep Series",
     badge: "POPULAR",
     category: "Paramedical",
     desc: "Eye care technician, refractionist, and ophthalmic assistant recruitment mocks for government health departments.",
@@ -1600,7 +1600,7 @@ export const TARGET_EXAMS: ExamDef[] = [
   {
     id: "dmlt-labtech",
     name: "DMLT Pathology Tech",
-    fullName: "DMLT & Clinical Pathology Complete Prep",
+    fullName: "DMLT & Clinical Pathology Test Series",
     badge: "HOT",
     category: "Lab Tech",
     desc: "Comprehensive lab technician exam prep covering Hematology, Microbiology, Biochemistry, and Histopathology.",
@@ -1610,7 +1610,7 @@ export const TARGET_EXAMS: ExamDef[] = [
   {
     id: "aiims-labtech",
     name: "AIIMS Lab Technician",
-    fullName: "AIIMS Lab Technician Grade II Course",
+    fullName: "AIIMS Lab Technician Grade II Test Series",
     badge: "POPULAR",
     category: "Lab Tech",
     desc: "AIIMS hospital laboratory technician CBT drills with clinical case studies and automated analyzer MCQs.",
@@ -1620,7 +1620,7 @@ export const TARGET_EXAMS: ExamDef[] = [
   {
     id: "rrb-labtech",
     name: "RRB Pathology Assistant",
-    fullName: "RRB Lab Superintendent & Technician",
+    fullName: "RRB Lab Superintendent & Technician Series",
     badge: "TRENDING",
     category: "Lab Tech",
     desc: "Railway recruitment board laboratory assistant exams with general science, technical pathology, and reasoning.",
@@ -1632,7 +1632,7 @@ export const TARGET_EXAMS: ExamDef[] = [
   {
     id: "radiographer-cbt",
     name: "Radiographer & X-Ray",
-    fullName: "Radiographer & X-Ray Tech Complete Course",
+    fullName: "Radiographer & X-Ray Tech Test Series",
     badge: "HOT",
     category: "Radiographer",
     desc: "Radiation physics, darkroom techniques, radiographic positioning, and safety procedures exam suite.",

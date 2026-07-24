@@ -34,7 +34,6 @@ export const FindTestPage: React.FC<FindTestPageProps> = ({
     { id: "Paramedical", label: "Paramedical Exams", icon: "🔬" },
     { id: "Lab Tech", label: "Lab Technician", icon: "🧪" },
     { id: "Radiographer", label: "Radiographer", icon: "📸" },
-    { id: "Medical Officer", label: "Medical Officer & Govt", icon: "👨‍⚕️" },
     { id: "all", label: "All Course Exams", icon: "🌐" }
   ];
 
@@ -47,8 +46,11 @@ export const FindTestPage: React.FC<FindTestPageProps> = ({
       exam.desc.toLowerCase().includes(q) ||
       exam.category.toLowerCase().includes(q);
 
-    if (selectedCategory !== "all") {
-      const catMatches = exam.category.toLowerCase() === selectedCategory.toLowerCase();
+    if (selectedCategory && selectedCategory !== "all") {
+      const normCat = selectedCategory.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const examCat = exam.category.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const examName = exam.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const catMatches = examCat.includes(normCat) || normCat.includes(examCat) || examName.includes(normCat);
       return matchesSearch && catMatches;
     }
 
@@ -63,15 +65,15 @@ export const FindTestPage: React.FC<FindTestPageProps> = ({
         <div className="max-w-4xl mx-auto space-y-6 relative z-10">
           
           <div className="space-y-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-black uppercase tracking-wider">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/15 border border-sky-500/30 text-sky-400 text-[11px] font-black uppercase tracking-wider">
               <Sparkles className="w-3.5 h-3.5" />
               <span>Official Test Series Portal</span>
             </span>
             <h1 className="text-2xl md:text-4xl font-black text-white tracking-tight leading-tight">
-              Find Your <span className="text-teal-400">Perfect Mock Test</span> Series in Seconds
+              Find Your <span className="text-sky-400">Perfect Mock Test</span> Series in Seconds
             </h1>
             <p className="text-xs md:text-sm text-slate-300 max-w-2xl mx-auto font-medium">
-              Search top government healthcare competitive exams across Nursing, Pharmacist, Paramedical, Lab Tech & Medical Officer.
+              Search top government healthcare competitive exams across Nursing, Pharmacist, Paramedical &amp; Lab Tech.
             </p>
           </div>
 
@@ -137,11 +139,11 @@ export const FindTestPage: React.FC<FindTestPageProps> = ({
       <div className="w-full bg-[var(--surface-2)] border-b border-[var(--border)] py-2.5 px-4">
         <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-bold text-[var(--text-secondary)]">
           <span className="flex items-center gap-1.5">
-            <span className="text-emerald-500 font-black">5000+</span> Mock Tests
+            <span className="text-sky-500 font-black">5000+</span> Mock Tests
           </span>
           <span className="text-[var(--border)] hidden sm:inline">•</span>
           <span className="flex items-center gap-1.5">
-            <span className="text-amber-500 font-black">Upto 10 Yrs</span> PYQ Papers
+            <span className="text-[var(--primary)] font-black">Upto 10 Yrs</span> PYQ Papers
           </span>
           <span className="text-[var(--border)] hidden sm:inline">•</span>
           <span className="flex items-center gap-1.5">
@@ -149,22 +151,22 @@ export const FindTestPage: React.FC<FindTestPageProps> = ({
           </span>
           <span className="text-[var(--border)] hidden sm:inline">•</span>
           <span className="flex items-center gap-1.5">
-            <span className="text-teal-500 font-black">100%</span> Free Access
+            <span className="text-sky-500 font-black">100%</span> Free Access
           </span>
         </div>
       </div>
 
-      {/* EXAM COURSE CARDS GRID (TAZAQUIZ / TESTBOOK STYLE) */}
+      {/* EXAM COURSE CARDS GRID */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pt-8 space-y-6">
         
         {/* CATEGORY HEADER TITLE */}
         <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
           <div className="flex items-center gap-2">
-            <Award className="w-5 h-5 text-emerald-500" />
+            <Award className="w-5 h-5 text-sky-500" />
             <h2 className="text-base sm:text-lg font-black text-[var(--text-primary)]">
               {selectedCategory === "all" ? "All Government Exam Series" : `${selectedCategory} Mock Test Series`}
             </h2>
-            <span className="text-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 rounded-full">
+            <span className="text-xs font-bold bg-sky-500/15 text-sky-600 dark:text-sky-400 px-2.5 py-0.5 rounded-full">
               {filteredExams.length} Series Available
             </span>
           </div>
@@ -172,7 +174,7 @@ export const FindTestPage: React.FC<FindTestPageProps> = ({
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-bold cursor-pointer"
+              className="text-xs text-sky-600 dark:text-sky-400 hover:underline font-bold cursor-pointer"
             >
               Clear Search Filter ✕
             </button>
@@ -189,7 +191,7 @@ export const FindTestPage: React.FC<FindTestPageProps> = ({
             </p>
             <button
               onClick={() => { setSelectedCategory("all"); setSearchQuery(""); }}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold text-xs cursor-pointer hover:bg-emerald-500 transition-all shadow-md"
+              className="px-4 py-2 bg-[var(--primary)] text-white rounded-xl font-bold text-xs cursor-pointer hover:bg-[var(--primary-hover)] transition-all shadow-md"
             >
               Show All Course Exams
             </button>
@@ -205,7 +207,7 @@ export const FindTestPage: React.FC<FindTestPageProps> = ({
                     onSelectExam(exam.id);
                   }
                 }}
-                className="bg-[var(--surface)] border border-[var(--border)] hover:border-emerald-500/60 rounded-2xl p-5 text-center flex flex-col items-center justify-between space-y-4 transition-all duration-200 cursor-pointer group shadow-sm hover:shadow-md relative overflow-hidden"
+                className="bg-[var(--surface)] border border-[var(--border)] hover:border-sky-500/60 rounded-2xl p-5 text-center flex flex-col items-center justify-between space-y-4 transition-all duration-200 cursor-pointer group shadow-sm hover:shadow-md relative overflow-hidden"
               >
                 {/* BADGE IN TOP RIGHT CORNER */}
                 <div className="w-full flex items-center justify-between">
@@ -213,20 +215,20 @@ export const FindTestPage: React.FC<FindTestPageProps> = ({
                     {exam.category}
                   </span>
                   {exam.badge && (
-                    <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-amber-500 text-slate-950 shadow-xs">
+                    <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-[var(--primary)] text-white shadow-xs">
                       🔥 {exam.badge}
                     </span>
                   )}
                 </div>
 
-                {/* EXAM LOGO / ICON BOX (MATCHING ATTACHED DESIGN) */}
+                {/* EXAM LOGO / ICON BOX */}
                 <div className="w-16 h-16 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center text-3xl shadow-inner group-hover:scale-105 transition-transform duration-200">
                   {exam.icon || "📋"}
                 </div>
 
                 {/* EXAM NAME & SUBTITLE */}
                 <div className="space-y-1 w-full">
-                  <h3 className="text-sm font-extrabold text-[var(--text-primary)] group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-2">
+                  <h3 className="text-sm font-extrabold text-[var(--text-primary)] group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors line-clamp-2">
                     {exam.fullName}
                   </h3>
                   <p className="text-[11px] font-bold text-[var(--text-secondary)]">
@@ -238,7 +240,7 @@ export const FindTestPage: React.FC<FindTestPageProps> = ({
                 </div>
 
                 {/* CLICK TO OPEN LANDING PAGE ACTION BUTTON */}
-                <div className="w-full pt-2 border-t border-[var(--border)]/60 flex items-center justify-center gap-1.5 text-xs font-extrabold text-emerald-600 dark:text-emerald-400 group-hover:translate-x-0.5 transition-transform">
+                <div className="w-full pt-2 border-t border-[var(--border)]/60 flex items-center justify-center gap-1.5 text-xs font-extrabold text-sky-600 dark:text-sky-400 group-hover:translate-x-0.5 transition-transform">
                   <span>Explore Test Series</span>
                   <ChevronRight className="w-4 h-4" />
                 </div>

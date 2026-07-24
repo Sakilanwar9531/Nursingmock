@@ -559,23 +559,23 @@ export const AllInOneHub: React.FC<AllInOneHubProps> = ({
               <Flame className="w-4 h-4 text-amber-500" />
               <span>Recommended Active Practice Tests ({availableMocks.length})</span>
             </h3>
-            <span className="text-xs font-bold text-emerald-500">100% Free Access</span>
+            <span className="text-xs font-bold text-sky-400">100% Free Access</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {availableMocks.map((test) => (
               <div 
                 key={test.id}
-                className="bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl p-4 flex flex-col justify-between hover:border-emerald-500/50 transition-all group"
+                className="bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl p-4 flex flex-col justify-between hover:border-sky-500/50 transition-all group"
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xl">{test.icon || "📋"}</span>
-                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500">
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-400">
                       {test.ready ? "READY" : "UPCOMING"}
                     </span>
                   </div>
-                  <h4 className="text-sm font-bold text-[var(--text-primary)] group-hover:text-emerald-500 transition-colors">
+                  <h4 className="text-sm font-bold text-[var(--text-primary)] group-hover:text-sky-400 transition-colors">
                     {test.title}
                   </h4>
                   <p className="text-xs text-[var(--text-secondary)] line-clamp-2">
@@ -589,7 +589,7 @@ export const AllInOneHub: React.FC<AllInOneHubProps> = ({
                   </span>
                   <button
                     onClick={() => onStartTest("mock_tests", test.id)}
-                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold transition-all cursor-pointer shadow-sm"
+                    className="px-3 py-1.5 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-xs font-extrabold transition-all cursor-pointer shadow-sm"
                   >
                     Start Test
                   </button>

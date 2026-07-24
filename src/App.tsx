@@ -49,6 +49,7 @@ import {
   Sparkles,
   ChevronRight,
   ArrowRight,
+  ArrowUpRight,
   ArrowLeft,
   ChevronLeft,
   ChevronDown,
@@ -63,10 +64,18 @@ import {
   Terminal,
   Sliders,
   Download,
-  Upload
+  Upload,
+  FlaskConical,
+  Radio,
+  Syringe,
+  HeartPulse,
+  Activity,
+  Droplets,
+  Heart
 } from "lucide-react";
 import { SUBJECTS, PYQ_DATA, TARGET_EXAMS } from "./data";
 import { InteractiveFAQ } from "./components/InteractiveFAQ";
+import CadreGrid from "./components/CadreGrid";
 import { AllInOneHub } from "./components/AllInOneHub";
 import { FindTestPage } from "./components/FindTestPage";
 import { NcbtOnePage } from "./components/NcbtOnePage";
@@ -3179,13 +3188,13 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
               className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[999]"
             />
 
-            {/* Main Sliding Drawer (Right Side) */}
+            {/* Main Sliding Drawer (Left Side) */}
             <motion.div
-              initial={{ x: "100%" }}
+              initial={{ x: "-100%" }}
               animate={{ x: 0 }}
-              exit={{ x: "100%" }}
+              exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 26, stiffness: 220 }}
-              className="fixed top-0 right-0 bottom-0 w-[290px] max-w-[85vw] bg-[var(--surface)] border-l border-[var(--border)] z-[1000] shadow-2xl flex flex-col justify-between font-syne"
+              className="fixed top-0 left-0 bottom-0 w-[290px] max-w-[85vw] bg-[var(--surface)] border-r border-[var(--border)] z-[1000] shadow-2xl flex flex-col justify-between font-syne"
             >
               <div className="flex-1 overflow-y-auto py-6 px-6 scrollbar-thin">
                 {/* Header */}
@@ -3195,9 +3204,9 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     onClick={() => { showPage("landing"); setIsDrawerOpen(false); }}
                   >
                     <span className="text-xl font-extrabold tracking-tight text-[var(--text)] group-hover:text-[var(--accent)] transition-colors">
-                      <span className="text-amber-500">N</span>CBT
+                      <span className="text-[var(--primary)]">N</span>CBT
                     </span>
-                    <span className="text-xl font-black text-[var(--green)]">.in</span>
+                    <span className="text-xl font-black text-sky-500">.in</span>
                   </div>
                   <button
                     onClick={() => setIsDrawerOpen(false)}
@@ -3210,25 +3219,27 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
                 {/* Navigation Links Grid */}
                 <div className="space-y-1">
+                  <button
+                    onClick={() => { showPage("landing"); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border mb-2 ${
+                      activePage === "landing" 
+                        ? "bg-[var(--primary)]/15 text-[var(--primary)] border-[var(--primary)]/40 shadow-sm" 
+                        : "text-[var(--text-primary)] hover:bg-[var(--surface-2)] border-transparent"
+                    }`}
+                  >
+                    <Home className="w-4 h-4 text-[var(--primary)] shrink-0" />
+                    <span>Home</span>
+                  </button>
+
                   <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 mb-2 select-none">NCBT One Platform</p>
                   
                   <button
                     onClick={() => { showPage("ncbt_one"); setIsDrawerOpen(false); }}
-                    className="relative w-full inline-flex items-center justify-between px-5 py-2.5 rounded-full font-semibold text-[13px] overflow-hidden group cursor-pointer shadow-md"
-                    style={{
-                      background: "linear-gradient(135deg, var(--primary) 0%, #0d4a3f 50%, var(--primary) 100%)",
-                      boxShadow: "0 0 0 1px var(--accent)/30, 0 4px 16px -4px rgba(0,0,0,0.3)",
-                    }}
+                    className="w-full inline-flex items-center justify-between px-5 py-2.5 rounded-full font-extrabold text-[15px] tracking-wide text-white bg-black hover:bg-zinc-900 border-2 border-amber-400 shadow-md transition-all cursor-pointer"
                   >
-                    <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                      style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)" }} />
-                    <div className="relative flex items-center gap-2">
-                      <Sparkles size={14} style={{ color: "var(--accent)" }} />
-                      <span className="text-white font-semibold">NCBT One</span>
-                    </div>
-                    <span className="relative text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                      style={{ background: "var(--accent)", color: "var(--primary)" }}>
-                      NEW
+                    <span>NCBT ONE</span>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-400 text-black uppercase">
+                      Pass
                     </span>
                   </button>
 
@@ -3236,21 +3247,25 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     onClick={() => { showPage("find_test"); setIsDrawerOpen(false); }}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-all cursor-pointer border border-transparent hover:border-[var(--border)]"
                   >
-                    <Search className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <Search className="w-4 h-4 text-[var(--primary)] shrink-0" />
                     <span>Find Exams/Mocks</span>
                   </button>
 
-                  <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 pt-4 mb-2 select-none">Course Categories</p>
+                  <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 pt-4 mb-2 select-none">Profession Category</p>
                   
                   <div className="space-y-1">
                     {[
-                      { id: "Nursing", name: "Nursing", icon: "🩺", desc: "NORCET, WBHRB, ESIC, RRB, CHO" },
-                      { id: "Pharmacist", name: "Pharmacist", icon: "💊", desc: "RRB, ESIC, WBHRB, Drug Inspector" },
-                      { id: "Paramedical", name: "Paramedical", icon: "🔬", desc: "Surgical OT Tech, Ophthalmic, Dialysis" },
-                      { id: "Lab Tech", name: "Lab Technician", icon: "🧪", desc: "DMLT, AIIMS, RRB Pathology" },
-                      { id: "Radiographer", name: "Radiographer", icon: "📸", desc: "X-Ray, CT/MRI, Radiation Physics" },
-                      { id: "Medical Officer", name: "Medical Officer & Govt", icon: "👨‍⚕️", desc: "CHO Medical, UPSC CMS, State Health" },
+                      { id: "nursing", name: "Nursing Officer", icon: Stethoscope, desc: "NORCET, WBHRB, ESIC, RRB, CHO" },
+                      { id: "pharmacist", name: "Pharmacist", icon: Pill, desc: "RRB, ESIC, WBHRB, Drug Inspector" },
+                      { id: "lab-technician", name: "Lab Technician", icon: FlaskConical, desc: "DMLT, AIIMS, RRB Pathology" },
+                      { id: "radiographer", name: "Radiographer", icon: Radio, desc: "X-Ray, CT/MRI, Radiation Physics" },
+                      { id: "ot-technician", name: "OT Technician", icon: Syringe, desc: "Surgical OT, Anesthesia Tech" },
+                      { id: "cho", name: "CHO (Community Health)", icon: HeartPulse, desc: "State Health, NHM Recruitment" },
+                      { id: "physiotherapist", name: "Physiotherapist", icon: Activity, desc: "BPT, Central Govt Exams" },
+                      { id: "dialysis-tech", name: "Dialysis Technician", icon: Droplets, desc: "Renal Care, Clinical Tech" },
+                      { id: "ecg-technician", name: "ECG Technician", icon: Heart, desc: "Cardiology, Diagnostic Tech" },
                     ].map((cat) => {
+                      const IconComp = cat.icon;
                       const isSelected = activePage === "find_test" && findTestCategory.toLowerCase() === cat.id.toLowerCase();
                       return (
                         <button
@@ -3260,14 +3275,16 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                             showPage("find_test");
                             setIsDrawerOpen(false);
                           }}
-                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
                             isSelected
-                              ? "bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--accent)] shadow-sm"
+                              ? "bg-[var(--primary)]/15 border-[var(--primary)] text-[var(--primary)] shadow-sm"
                               : "text-[var(--text-primary)] hover:bg-[var(--surface-2)] border-transparent hover:border-[var(--border)]"
                           }`}
                         >
                           <div className="flex items-center gap-2.5">
-                            <span className="text-base">{cat.icon}</span>
+                            <div className="p-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] shrink-0">
+                              <IconComp className="w-3.5 h-3.5 text-[var(--primary)]" />
+                            </div>
                             <div className="text-left">
                               <p className="leading-tight font-bold">{cat.name}</p>
                               <p className="text-[9px] text-[var(--text-secondary)] font-medium">{cat.desc}</p>
@@ -3387,14 +3404,26 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       {/* Main sticky navigation bar */}
       {activePage !== "test" && (
         <nav id="main-nav">
-        <div className="nav-logo cursor-pointer select-none group flex items-center gap-2" onClick={() => showPage("landing")}>
-          <div className="flex flex-col justify-center font-sans">
-            <span className="text-xl font-black tracking-tight text-[var(--text-primary)] transition-colors duration-300 flex items-center gap-0.5">
-              <span className="text-[var(--primary)]">N</span>CBT
-            </span>
-            <span className="text-[8px] font-bold tracking-widest text-[var(--text-secondary)] uppercase -mt-1 opacity-80">
-              National CBT
-            </span>
+        <div className="flex items-center gap-2">
+          {/* Hamburger Menu Sidebar Button */}
+          <button
+            onClick={() => setIsDrawerOpen(true)}
+            className="p-2 text-[var(--text-primary)] hover:bg-[var(--surface-2)] rounded-xl cursor-pointer flex items-center justify-center transition-colors border border-transparent hover:border-[var(--border)]"
+            aria-label="Open Sidebar Menu"
+            title="Open Menu"
+          >
+            <Menu className="w-5 h-5 text-[var(--text-primary)]" />
+          </button>
+
+          <div className="nav-logo cursor-pointer select-none group flex items-center gap-2" onClick={() => showPage("landing")}>
+            <div className="flex flex-col justify-center font-sans">
+              <span className="text-xl font-black tracking-tight text-[var(--text-primary)] transition-colors duration-300 flex items-center gap-0.5">
+                <span className="text-[var(--primary)]">N</span>CBT
+              </span>
+              <span className="text-[8px] font-bold tracking-widest text-[var(--text-secondary)] uppercase -mt-1 opacity-80">
+                National CBT
+              </span>
+            </div>
           </div>
         </div>
 
@@ -3406,23 +3435,18 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
             <Home className="w-4 h-4" /> Home
           </button>
           
-          {/* NCBT ONE PREMIUM BUTTON */}
+          {/* NCBT ONE PREMIUM GLOSSY GOLDEN BUTTON */}
           <button 
-            className="relative inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-[13px] overflow-hidden group cursor-pointer transition-transform active:scale-95 shrink-0"
-            style={{
-              background: "linear-gradient(135deg, var(--primary) 0%, #0d4a3f 50%, var(--primary) 100%)",
-              boxShadow: "0 0 0 1px var(--accent)/30, 0 4px 16px -4px rgba(0,0,0,0.3)",
-            }}
+            className="relative inline-flex items-center gap-2 px-4 py-1.5 rounded-xl font-black text-xs uppercase text-white bg-black hover:bg-zinc-900 border border-amber-400/90 shadow-[0_0_12px_rgba(245,158,11,0.35)] hover:shadow-[0_0_18px_rgba(245,158,11,0.55)] transition-all cursor-pointer overflow-hidden group shrink-0"
             onClick={() => showPage("ncbt_one")}
           >
-            <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-              style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)" }} />
-            <Sparkles size={14} style={{ color: "var(--accent)" }} />
-            <span className="relative text-white font-semibold">NCBT One</span>
-            <span className="relative text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-              style={{ background: "var(--accent)", color: "var(--primary)" }}>
-              NEW
+            <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-amber-200/35 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none" />
+            <span className="relative z-10 font-black text-amber-300 tracking-wider text-xs border-b border-amber-400/80 pb-0.5">
+              NCBT ONE
             </span>
+            <div className="relative z-10 -mr-1 -mt-0.5 p-0.5 bg-white text-black rounded-tr-md rounded-bl-sm border border-amber-400 shadow-sm flex items-center justify-center shrink-0">
+              <ArrowUpRight className="w-3 h-3 text-black stroke-[3]" />
+            </div>
           </button>
 
           <button 
@@ -3468,16 +3492,6 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
               <Sun className="w-4 h-4 text-amber-500" />
             )}
           </button>
-
-          {currentUser && (
-            <button 
-              className="nav-avatar flex items-center justify-center text-xs font-bold font-sans cursor-pointer"
-              onClick={() => setIsDrawerOpen(true)}
-              title={`${currentUser.name} (Open menu)`}
-            >
-              {currentUser.name.charAt(0).toUpperCase()}
-            </button>
-          )}
         </div>
 
         {/* Navigate dropdown has been removed per design specifications */}
@@ -3612,7 +3626,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   </div>
 
                   <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-text tracking-tight leading-[1.12]">
-                    India's Trusted Platform for <span className="hero-highlight font-serif italic font-normal">Nursing</span>, <span className="hero-highlight font-serif italic font-normal">Pharmacist</span> &amp; <span className="hero-highlight font-serif italic font-normal">Paramedical</span> Government Exam Preparation
+                    India's Trusted Platform for <span className="text-sky-400 font-display font-black tracking-tight">Nursing</span>, <span className="text-sky-400 font-display font-black tracking-tight">Pharmacist</span> &amp; <span className="text-sky-400 font-display font-black tracking-tight">Paramedical</span> Government Exam Preparation
                   </h1>
 
                   <p className="text-sm md:text-base text-text2 leading-relaxed font-sans max-w-2xl">
@@ -3620,42 +3634,27 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   </p>
 
                   <div className="flex items-center gap-3 flex-wrap pt-2">
-                    <button 
-                      className="relative inline-flex items-center gap-2 px-6 py-3 rounded-full font-semibold text-[13px] overflow-hidden group cursor-pointer shadow-lg hover:scale-105 transition-all"
-                      style={{
-                        background: "linear-gradient(135deg, var(--primary) 0%, #0d4a3f 50%, var(--primary) 100%)",
-                        boxShadow: "0 0 0 1px var(--accent)/30, 0 4px 16px -4px rgba(0,0,0,0.3)",
-                      }}
-                      onClick={() => showPage("ncbt_one")}
-                    >
-                      <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                        style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)" }} />
-                      <Sparkles size={14} style={{ color: "var(--accent)" }} />
-                      <span className="relative text-white font-bold">NCBT One</span>
-                      <span className="relative text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                        style={{ background: "var(--accent)", color: "var(--primary)" }}>
-                        NEW
-                      </span>
-                    </button>
-                    <button 
-                      className="px-7 py-3.5 rounded-full bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-xs md:text-sm font-bold shadow-md transition-all cursor-pointer transform hover:-translate-y-0.5 active:scale-95 flex items-center gap-2"
+                    {/* FIND EXAMS/TESTS — search icon, dark green border */}
+                    <button
                       onClick={() => showPage("find_test")}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-full text-[14px] font-semibold transition-transform active:scale-[0.97] hover:-translate-y-0.5 cursor-pointer"
+                      style={{
+                        background: "var(--surface)",
+                        border: "2px solid var(--primary)",
+                        color: "var(--text-primary)",
+                      }}
                     >
-                      <span>Find Exams/Tests →</span>
+                      <Search size={16} style={{ color: "var(--primary)" }} />
+                      Find Exams/Tests
                     </button>
-                  </div>
 
-                  {/* Avatar Stack Trusted Indicator */}
-                  <div className="flex items-center gap-3 pt-4 flex-wrap">
-                    <div className="flex -space-x-2">
-                      <span className="w-8 h-8 rounded-full border-2 border-[var(--border)] bg-[var(--info)] flex items-center justify-center text-[10px] font-bold text-white shadow-sm">P</span>
-                      <span className="w-8 h-8 rounded-full border-2 border-[var(--border)] bg-[var(--accent)] flex items-center justify-center text-[10px] font-bold text-white shadow-sm">A</span>
-                      <span className="w-8 h-8 rounded-full border-2 border-[var(--border)] bg-[var(--primary)] flex items-center justify-center text-[10px] font-bold text-white shadow-sm">S</span>
-                      <span className="w-8 h-8 rounded-full border-2 border-[var(--border)] bg-[var(--info)] flex items-center justify-center text-[10px] font-bold text-white shadow-sm">M</span>
-                    </div>
-                    <p className="text-xs text-text2 flex items-center gap-1 flex-wrap">
-                      Trusted by <strong className="text-text font-mono">50,000+</strong> <span className="text-text2">Government Exam Aspirants across India</span> • <span className="text-amber-500 font-bold inline-flex items-center gap-1"><Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" /> <span className="font-mono">4.9</span> Rating</span>
-                    </p>
+                    {/* NCBT ONE — normal size pill button, black box with golden border & bold white text */}
+                    <button 
+                      onClick={() => showPage("ncbt_one")}
+                      className="inline-flex items-center justify-center px-5 py-2.5 rounded-full text-[15px] font-extrabold tracking-wide text-white bg-black hover:bg-zinc-900 border-2 border-amber-400 shadow-md hover:-translate-y-0.5 active:scale-[0.97] transition-all cursor-pointer"
+                    >
+                      NCBT ONE
+                    </button>
                   </div>
                 </div>
 
@@ -3669,29 +3668,29 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                         <span className="status-dot"></span>
                         <span className="text-[10px] text-text3 font-mono">PORTAL_LIVE_CONNECT.SYS</span>
                       </div>
-                      <span className="text-[9px] bg-accent/15 text-accent border border-accent/20 px-2 py-0.5 rounded font-black font-mono">
+                      <span className="text-[9px] bg-sky-500/15 text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded font-black font-mono">
                         CBT v2.6
                       </span>
                     </div>
 
-                    {/* Cute Pulse Graph Drawing with CSS */}
+                    {/* Pulse Graph */}
                     <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 space-y-2.5 relative">
                       <div className="flex items-center justify-between text-[10px] text-text3 font-mono">
                         <span>LIVE PERFORMANCE METRIC</span>
-                        <span className="text-green-400 flex items-center gap-1 font-bold"><span className="status-dot"></span> STABLE</span>
+                        <span className="text-sky-400 flex items-center gap-1 font-bold"><span className="status-dot"></span> STABLE</span>
                       </div>
                       <div className="h-12 flex items-end gap-1 px-1 pt-2">
                         {[40, 20, 60, 30, 80, 50, 95, 45, 75, 60, 90].map((h, i) => (
                           <div 
                             key={i} 
                             style={{ height: `${h}%` }} 
-                            className={`flex-1 rounded-t ${i === 6 ? 'bg-amber-500' : 'bg-accent/60'} transition-all`}
+                            className={`flex-1 rounded-t ${i === 6 ? 'bg-[var(--primary)]' : 'bg-sky-500/60'} transition-all`}
                           ></div>
                         ))}
                       </div>
                       <div className="flex items-center justify-between text-[11px] font-bold">
                         <span className="text-text">Mock Average Accuracy</span>
-                        <span className="text-accent">88.4% (99th Pct)</span>
+                        <span className="text-[var(--primary)]">88.4% (99th Pct)</span>
                       </div>
                     </div>
 
@@ -3717,111 +3716,9 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
               </div>
 
-              {/* INTERACTIVE PORTAL GRID ON MOBILE & LAPTOP CAROUSEL */}
-              <div className="mt-16 relative z-10 w-full max-w-5xl mx-auto">
-                <div className="absolute inset-0 bg-gradient-to-t from-accent/5 to-transparent rounded-3xl filter blur-3xl pointer-events-none"></div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 50, scale: 0.98 }}
-                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                  viewport={{ once: true, margin: "-100px" }}
-                  transition={{ duration: 0.7, ease: "easeOut" }}
-                  className="bg-card border border-border rounded-3xl overflow-hidden shadow-2xl relative"
-                >
-                  {/* Browser Mock Header */}
-                  <div className="bg-card2 border-b border-border px-4 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-                      <span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
-                      <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
-                      <span className="ml-2 text-[10px] text-text3 font-mono tracking-wider hidden sm:inline">CBT-PORTAL-ACTIVE.IN</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] bg-green-500/10 text-green-500 border border-green-500/20 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider">
-                        ● LIVE NOW
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Inside Mockup Layout */}
-                  <div className="p-6 md:p-8 space-y-6">
-                    {/* Mockup Top Highlights */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="bg-card2 border border-border p-3.5 rounded-2xl flex items-center gap-3">
-                        <ClipboardList className="w-5 h-5 text-[var(--primary)] shrink-0" />
-                        <div>
-                          <h4 className="text-xs font-black text-text uppercase tracking-wider">1.5 Lakh+</h4>
-                          <p className="text-[10px] text-text2">Total Mock Tests Completed</p>
-                        </div>
-                      </div>
-                      <div className="bg-card2 border border-border p-3.5 rounded-2xl flex items-center gap-3">
-                        <Target className="w-5 h-5 text-[var(--primary)] shrink-0" />
-                        <div>
-                          <h4 className="text-xs font-black text-text uppercase tracking-wider">Real-Time AIR</h4>
-                          <p className="text-[10px] text-text2">All India Rank Publication</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Simulated High-Yield Course List */}
-                    <div className="space-y-2.5">
-                      <div className="text-[10px] font-black uppercase tracking-wider text-text2 flex items-center gap-1.5">
-                        <Zap className="w-3.5 h-3.5 text-[var(--primary)]" /> Popular Active Courses &amp; Live Tests
-                      </div>
-                      {[
-                        { title: "AIIMS NORCET 2026 Comprehensive Syllabus Drills", info: "NORCET • 5+ Mock Papers • Instant Clinical Rationale", tag: "AIIMS", query: "NORCET" },
-                        { title: "ESIC Staff Nurse Level-7 Vacancy Preparation", info: "ESIC Special • 4 Subject Mocks • Negative Evaluation", tag: "ESIC", query: "ESIC" },
-                        { title: "RRB Railway Staff Nurse CBT Exam Preparation", info: "Railway Exams • General Sciences & Aptitude • Full Marks", tag: "RRB", query: "RRB" },
-                        { title: "CHO State Health Officer Recruitment Series", info: "Community Health • 100+ High-Yield Questions • PYQs", tag: "CHO", query: "CHO" },
-                      ].map((mockCourse, cIdx) => (
-                        <div
-                          key={cIdx}
-                          onClick={() => {
-                            const mapping: Record<string, string> = {
-                              "AIIMS": "aiims-norcet",
-                              "ESIC": "esic-officer",
-                              "RRB": "rrb-officer",
-                              "CHO": "cho-recruitment"
-                            };
-                            const examId = mapping[mockCourse.tag];
-                            if (examId) {
-                              selectExam(examId);
-                            } else {
-                              showPage("mock_tests");
-                              setHubSearchText(mockCourse.query);
-                            }
-                          }}
-                          className="p-3.5 bg-surface hover:bg-card2 border border-border hover:border-accent rounded-2xl transition-all duration-200 cursor-pointer flex items-center justify-between group"
-                        >
-                          <div className="flex items-center gap-3">
-                            <span className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20 text-xs font-bold flex items-center justify-center shrink-0">
-                              {mockCourse.tag}
-                            </span>
-                            <div>
-                              <h5 className="text-xs font-bold text-text group-hover:text-accent transition-colors leading-snug">
-                                {mockCourse.title}
-                              </h5>
-                              <p className="text-[10px] text-text2 mt-0.5">{mockCourse.info}</p>
-                            </div>
-                          </div>
-                          <span className="text-text3 group-hover:text-accent text-xs transition-colors shrink-0 pl-2">
-                            Enroll Free →
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* View All Button */}
-                    <div className="text-center pt-2">
-                      <button
-                        onClick={() => showPage("exam_landing")}
-                        className="w-full py-3 rounded-2xl border-2 border-dashed border-border hover:border-accent bg-transparent text-xs font-bold text-text2 hover:text-accent transition-all cursor-pointer flex items-center justify-center gap-2"
-                      >
-                        <Flame className="w-4 h-4 text-[var(--accent)]" /> View All Popular Tests &amp; Prep Material →
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
+              {/* CADRE GRID SECTION */}
+              <div className="mt-12 relative z-10 w-full">
+                <CadreGrid />
               </div>
 
               {/* THREE COLUMN BIG HIGHLIGHTS ROW */}
@@ -5235,352 +5132,119 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   {/* Left Column: Exam Title, Badges & Copywriting */}
                   <div className="space-y-4 text-left max-w-4xl">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--accent-soft)] border border-[var(--accent)]/30 text-[var(--accent)] rounded-xl text-[11px] font-black uppercase tracking-wider">
-                      <span>🏥 COURSE DETAILS</span>
+                      <span>🏥 TEST SERIES DETAILS</span>
                     </div>
 
                     <h1 className="text-3xl md:text-5xl font-black text-[var(--text-primary)] leading-tight">
-                      {exam.fullName} <br />
-                      <span className="text-[var(--primary)]">Complete Preparation Package</span>
+                      {exam.fullName}
                     </h1>
 
                     <p className="text-xs md:text-sm text-[var(--text-secondary)] leading-relaxed font-sans">
-                      {exam.desc} This package is specially designed for candidates preparing for {exam.name} recruitment exams. It includes highly curated real-time computer-based tests (CBT), full syllabus mocks, specialty clinical drills, and verified previous year papers with rich clinical rationales to help aspirants crack the exam with absolute confidence.
+                      {exam.desc} Designed specifically for candidates preparing for {exam.name} recruitment exams. Practice authentic computer-based test (CBT) questions, verified previous year papers (PYQs), and rich clinical rationales to prepare with absolute confidence.
                     </p>
 
                     {/* Tags */}
                     <div className="flex items-center gap-2.5 flex-wrap pt-1">
                       <span className="px-3 py-1.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-xs font-bold text-[var(--text-secondary)] flex items-center gap-1.5">
-                        📝 {finalMocksToShow.length}+ Mock Tests
+                        📄 {examPyqs.length} Solved PYQ Sets
                       </span>
                       <span className="px-3 py-1.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-xs font-bold text-[var(--text-secondary)] flex items-center gap-1.5">
-                        🏆 All India Rank
+                        🏆 All India Rank Simulation
                       </span>
                       <span className="px-3 py-1.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-xs font-bold text-[var(--text-secondary)] flex items-center gap-1.5">
-                        💻 CBT Web App
+                        💻 Real CBT Interface
                       </span>
-                      <span className="px-3 py-1.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-xs font-bold text-[var(--text-secondary)] flex items-center gap-1.5">
-                        ⭐ Premium Package
+                      <span className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                        ✨ 100% Free Practice
                       </span>
                     </div>
                   </div>
 
-                  {/* SINGLE UNIFIED MERGED CARD (Package + Pricing + Practice Arena Tabs & Search) */}
+                  {/* SINGLE UNIFIED MERGED CARD */}
                   <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 md:p-8 shadow-xl relative overflow-hidden space-y-6">
-                    {/* Top Row: Exam Info, SaaS Pricing & CTA Button */}
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-[var(--border)]/60">
-                      {/* Exam Icon, Title & Series Tag */}
-                      <div className="flex items-start sm:items-center gap-4">
-                        <span className="text-3xl w-14 h-14 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center shrink-0 shadow-sm">
-                          {exam.icon}
-                        </span>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[10px] bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/30 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider">
-                              {exam.category} Series
-                            </span>
-                            <span className="text-[10px] text-[var(--text-secondary)] font-bold">
-                              Full Mock &amp; PYQ Access
-                            </span>
-                          </div>
-                          <h2 className="text-lg md:text-2xl font-black text-[var(--text-primary)] leading-snug">
-                            {exam.fullName} Complete Package
-                          </h2>
-                          <p className="text-xs text-[var(--text-secondary)] font-medium">
-                            Instant activation • CBT exam interface simulation • Verified explanations
-                          </p>
+                    <div className="flex items-start sm:items-center gap-4">
+                      <span className="text-3xl w-14 h-14 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center shrink-0 shadow-sm">
+                        {exam.icon}
+                      </span>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/30 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider">
+                            {exam.category} Series
+                          </span>
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                            Solved Previous Year Papers
+                          </span>
                         </div>
-                      </div>
-
-                      {/* SaaS Pricing Block + CTA Button */}
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 shrink-0">
-                        {/* SaaS Pricing Display */}
-                        <div className="flex items-center gap-3 bg-[var(--surface-2)] px-4 py-3 rounded-2xl border border-[var(--border)] shadow-sm">
-                          <div className="flex flex-col text-left space-y-0.5">
-                            <div className="flex items-center gap-2 leading-none">
-                              <span className="text-xs text-[var(--text-secondary)] line-through font-bold opacity-80">
-                                ₹999
-                              </span>
-                              <span className="text-[10px] px-2 py-0.5 rounded-full font-black bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/30 uppercase tracking-wider">
-                                70% OFF
-                              </span>
-                            </div>
-                            <div className="flex items-baseline gap-1 leading-none">
-                              <span className="text-2xl md:text-3xl font-black text-emerald-600 dark:text-emerald-400">
-                                ₹299
-                              </span>
-                              <span className="text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider">
-                                / Lifetime
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Unlock CTA Button */}
-                        <button
-                          onClick={() => {
-                            const el = document.getElementById("practice-tab-content");
-                            if (el) el.scrollIntoView({ behavior: "smooth" });
-                          }}
-                          className="px-6 py-3.5 rounded-2xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-xs md:text-sm font-black shadow-lg shadow-[var(--primary)]/20 transition-all cursor-pointer text-center flex items-center justify-center gap-2 whitespace-nowrap"
-                        >
-                          <span>🔓 Unlock Full Access — ₹299</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Bottom Row: Integrated Practice Arena Tabs & Search Bar */}
-                    <div className="space-y-4" id="included-mocks-list">
-                      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-                        {/* Practice Tabs */}
-                        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
-                          {[
-                            { id: "full_mock", label: "📝 CBT Mock Papers", count: filteredMocks.length },
-                            { id: "pyq", label: "📄 Solved PYQs", count: examPyqs.length },
-                            { id: "subject", label: "🧠 Specialty Drills", count: examSubjectTests.length },
-                            { id: "short", label: "⏱️ Speed Sprints", count: examSprints.length },
-                          ].map((t) => (
-                            <button
-                              key={t.id}
-                              onClick={() => setHubTab(t.id as any)}
-                              className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                                hubTab === t.id
-                                  ? "bg-[var(--primary)] text-white shadow-md shadow-[var(--primary)]/20"
-                                  : "bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                              }`}
-                            >
-                              <span>{t.label}</span>
-                              <span
-                                className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                                  hubTab === t.id
-                                    ? "bg-white/20 text-white"
-                                    : "bg-[var(--surface)] border border-[var(--border)] text-[var(--text-secondary)]"
-                                }`}
-                              >
-                                {t.count}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-
-                        {/* Search Bar */}
-                        <div className="relative flex-1 max-w-md">
-                          <input
-                            type="text"
-                            placeholder="Search practice resources..."
-                            value={hubSearchText}
-                            onChange={(e) => setHubSearchText(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] text-xs text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-[var(--primary)] transition-all"
-                          />
-                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] text-xs">🔍</span>
-                          {hubSearchText && (
-                            <button
-                              onClick={() => setHubSearchText("")}
-                              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs font-bold"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
+                        <h2 className="text-lg md:text-2xl font-black text-[var(--text-primary)] leading-snug">
+                          {exam.fullName} Solved PYQs
+                        </h2>
+                        <p className="text-xs text-[var(--text-secondary)] font-medium">
+                          CBT exam interface simulation • Verified explanations • Instant scorecards
+                        </p>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* 2. CBT PRACTICE ARENA CONTENT AREA */}
+              {/* 2. CBT PRACTICE ARENA CONTENT AREA - PYQ ONLY */}
               <div className="w-full bg-[var(--surface)] py-12 px-4 md:px-8 border-b border-[var(--border)]/40" id="practice-tab-content">
                 <div id="page-hub" className="max-w-6xl mx-auto space-y-6">
                   <div id="hub-main-layout" className="space-y-6">
+                    <div className="flex items-center justify-between pb-4 border-b border-[var(--border)]">
+                      <div className="flex items-center gap-2">
+                        <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-base">📄</span>
+                        <div>
+                          <h3 className="text-base font-black text-[var(--text-primary)]">Solved Previous Year Papers (PYQ)</h3>
+                          <p className="text-xs text-[var(--text-secondary)]">Authentic exam questions with full clinical rationales and answer keys.</p>
+                        </div>
+                      </div>
+                      <span className="px-3 py-1 rounded-full bg-[var(--surface-2)] border border-[var(--border)] text-xs font-bold text-[var(--text-secondary)]">
+                        {examPyqs.length} Sets Available
+                      </span>
+                    </div>
 
-                    {/* Active Tab Content Area */}
+                    {/* SOLVED PYQS LIST */}
                     <div className="space-y-4 pt-2">
-                      {/* CBT MOCK PAPERS TAB */}
-                      {hubTab === "full_mock" && (
-                        <div className="space-y-4">
-                          {filteredMocks.length === 0 ? (
-                            <div className="p-12 text-center bg-[var(--surface-2)] rounded-3xl border border-dashed border-[var(--border)]">
-                              <span className="text-3xl">📝</span>
-                              <h4 className="text-xs font-bold text-[var(--text-primary)] mt-2">No CBT mock papers match your criteria</h4>
-                              <p className="text-[10px] text-[var(--text-secondary)] mt-1">Try clearing your search query or view other subjects.</p>
-                            </div>
-                          ) : (
-                            filteredMocks.map((testItem, idx) => (
-                              <div
-                                key={testItem.id}
-                                className="p-5 bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--primary)] rounded-3xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all duration-300 relative overflow-hidden group shadow-sm"
-                              >
-                                <div className="space-y-1 text-left">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-black uppercase tracking-wider bg-[var(--accent-soft)] border border-[var(--accent)]/20 px-2 py-0.5 rounded text-[var(--accent)]">
-                                      Mock Paper #{idx + 1}
-                                    </span>
-                                    <span className="text-[10px] text-[var(--text-secondary)] font-mono">
-                                      ⏱️ {testItem.mins} Mins • 📋 {testItem.questions?.length || 30} MCQs
-                                    </span>
-                                  </div>
-                                  <h3 className="text-sm font-extrabold text-[var(--text-primary)] group-hover:text-[var(--primary)] transition-colors">
-                                    {testItem.title}
-                                  </h3>
-                                  <p className="text-[11px] text-[var(--text-secondary)] line-clamp-2 max-w-2xl font-sans">
-                                    {testItem.desc}
-                                  </p>
-                                </div>
-
-                                <button
-                                  onClick={() => {
-                                    triggerTestInit("mock_tests", testItem.id);
-                                  }}
-                                  className="px-4 py-2.5 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all self-stretch md:self-auto justify-center cursor-pointer shrink-0"
-                                >
-                                  ⚡ Start CBT Mock
-                                </button>
-                              </div>
-                            ))
-                          )}
+                      {examPyqs.length === 0 ? (
+                        <div className="p-12 text-center bg-[var(--surface-2)] rounded-3xl border border-dashed border-[var(--border)]">
+                          <span className="text-3xl">📄</span>
+                          <h4 className="text-xs font-bold text-[var(--text-primary)] mt-2">No solved past papers found for this exam</h4>
+                          <p className="text-[10px] text-[var(--text-secondary)] mt-1">Practice papers are currently being uploaded by our subject team.</p>
                         </div>
-                      )}
-
-                      {/* SOLVED PYQS TAB */}
-                      {hubTab === "pyq" && (
-                        <div className="space-y-4">
-                          {examPyqs.length === 0 ? (
-                            <div className="p-12 text-center bg-[var(--surface-2)] rounded-3xl border border-dashed border-[var(--border)]">
-                              <span className="text-3xl">📄</span>
-                              <h4 className="text-xs font-bold text-[var(--text-primary)] mt-2">No solved past papers match your criteria</h4>
-                              <p className="text-[10px] text-[var(--text-secondary)] mt-1">Try clearing your search query or look for another exam.</p>
-                            </div>
-                          ) : (
-                            examPyqs.map((p, pIdx) => (
-                              <div
-                                key={pIdx}
-                                className="p-5 bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--primary)] rounded-3xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all duration-300 relative overflow-hidden group shadow-sm"
-                              >
-                                <div className="space-y-1 text-left">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded text-emerald-600 dark:text-emerald-400">
-                                      {p.year} Solved PYQ
-                                    </span>
-                                    <span className="text-[10px] text-[var(--text-secondary)] font-mono">
-                                      ⏱️ {Math.ceil(p.count * 1.5)} Mins • 📋 {p.count} MCQs • High Yield
-                                    </span>
-                                  </div>
-                                  <h3 className="text-sm font-extrabold text-[var(--text-primary)] group-hover:text-[var(--primary)] transition-colors">
-                                    {p.exam} Past Solved CBT Paper
-                                  </h3>
-                                  <p className="text-[11px] text-[var(--text-secondary)] line-clamp-2 max-w-2xl font-sans">
-                                    Complete authentic computer-based examination questions with fully researched clinical keys and step-by-step rationales.
-                                  </p>
-                                </div>
-
-                                <button
-                                  onClick={() => {
-                                    triggerTestInit("pyq", "pyq-" + p.tag + "-" + p.year);
-                                  }}
-                                  className="px-4 py-2.5 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all self-stretch md:self-auto justify-center cursor-pointer shrink-0"
-                                >
-                                  ⚡ Practice PYQ
-                                </button>
+                      ) : (
+                        examPyqs.map((p, pIdx) => (
+                          <div
+                            key={pIdx}
+                            className="p-5 bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--primary)] rounded-3xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all duration-300 relative overflow-hidden group shadow-sm"
+                          >
+                            <div className="space-y-1 text-left">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded text-emerald-600 dark:text-emerald-400">
+                                  {p.year} Solved PYQ
+                                </span>
+                                <span className="text-[10px] text-[var(--text-secondary)] font-mono">
+                                  ⏱️ {Math.ceil(p.count * 1.5)} Mins • 📋 {p.count} MCQs • High Yield
+                                </span>
                               </div>
-                            ))
-                          )}
-                        </div>
-                      )}
-
-                      {/* SPECIALTY DRILLS TAB */}
-                      {hubTab === "subject" && (
-                        <div className="space-y-4">
-                          {examSubjectTests.length === 0 ? (
-                            <div className="p-12 text-center bg-[var(--surface-2)] rounded-3xl border border-dashed border-[var(--border)]">
-                              <span className="text-3xl">🧠</span>
-                              <h4 className="text-xs font-bold text-[var(--text-primary)] mt-2">No specialty drills match your criteria</h4>
-                              <p className="text-[10px] text-[var(--text-secondary)] mt-1">Try searching for other medical topics or key terms.</p>
+                              <h3 className="text-sm font-extrabold text-[var(--text-primary)] group-hover:text-[var(--primary)] transition-colors">
+                                {p.exam} Past Solved CBT Paper
+                              </h3>
+                              <p className="text-[11px] text-[var(--text-secondary)] line-clamp-2 max-w-2xl font-sans">
+                                Complete authentic computer-based examination questions with fully researched clinical keys and step-by-step rationales.
+                              </p>
                             </div>
-                          ) : (
-                            examSubjectTests.map(({ subjectName, test: t }, idx) => (
-                              <div
-                                key={t.id}
-                                className="p-5 bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--primary)] rounded-3xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all duration-300 relative overflow-hidden group shadow-sm"
-                              >
-                                <div className="space-y-1 text-left">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-black uppercase tracking-wider bg-[var(--accent-soft)] border border-[var(--accent)]/20 px-2 py-0.5 rounded text-[var(--accent)]">
-                                      {subjectName} Specialty Drill
-                                    </span>
-                                    <span className="text-[10px] text-[var(--text-secondary)] font-mono">
-                                      📋 {t.questions} MCQs • {t.ready ? "Active Practice" : "Coming Soon"}
-                                    </span>
-                                  </div>
-                                  <h3 className="text-sm font-extrabold text-[var(--text-primary)] group-hover:text-[var(--primary)] transition-colors">
-                                    {t.title}
-                                  </h3>
-                                  <p className="text-[11px] text-[var(--text-secondary)] line-clamp-2 max-w-2xl font-sans">
-                                    {t.desc}
-                                  </p>
-                                </div>
 
-                                <button
-                                  disabled={!t.ready}
-                                  onClick={() => {
-                                    triggerTestInit("subject_mocks", t.id);
-                                  }}
-                                  className={`px-4 py-2.5 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all self-stretch md:self-auto justify-center cursor-pointer shrink-0 ${
-                                    t.ready
-                                      ? "bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white"
-                                      : "bg-[var(--surface-2)] text-[var(--text-secondary)] cursor-not-allowed border border-[var(--border)]"
-                                  }`}
-                                >
-                                  {t.ready ? "⚡ Start Specialty Drill" : "🔒 Under Prep"}
-                                </button>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      )}
-
-                      {/* SPEED SPRINTS TAB */}
-                      {hubTab === "short" && (
-                        <div className="space-y-4">
-                          {examSprints.length === 0 ? (
-                            <div className="p-12 text-center bg-[var(--surface-2)] rounded-3xl border border-dashed border-[var(--border)]">
-                              <span className="text-3xl">⏱️</span>
-                              <h4 className="text-xs font-bold text-[var(--text-primary)] mt-2">No speed sprints match your criteria</h4>
-                              <p className="text-[10px] text-[var(--text-secondary)] mt-1">Try clearing your search query.</p>
-                            </div>
-                          ) : (
-                            examSprints.map((t, idx) => (
-                              <div
-                                key={t.id}
-                                className="p-5 bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--primary)] rounded-3xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all duration-300 relative overflow-hidden group shadow-sm"
-                              >
-                                <div className="space-y-1 text-left">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-black uppercase tracking-wider bg-[var(--accent-soft)] border border-[var(--accent)]/20 px-2 py-0.5 rounded text-[var(--accent)]">
-                                      High Intensity Sprint
-                                    </span>
-                                    <span className="text-[10px] text-[var(--text-secondary)] font-mono">
-                                      ⏱️ {t.mins} Mins • 📋 {t.questions} MCQs • Scenario Based
-                                    </span>
-                                  </div>
-                                  <h3 className="text-sm font-extrabold text-[var(--text-primary)] group-hover:text-[var(--primary)] transition-colors">
-                                    {t.title}
-                                  </h3>
-                                  <p className="text-[11px] text-[var(--text-secondary)] line-clamp-2 max-w-2xl font-sans">
-                                    {t.desc}
-                                  </p>
-                                </div>
-
-                                <button
-                                  onClick={() => {
-                                    triggerTestInit("short", t.id);
-                                  }}
-                                  className="px-4 py-2.5 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all self-stretch md:self-auto justify-center cursor-pointer shrink-0"
-                                >
-                                  ⚡ Run Speed Sprint
-                                </button>
-                              </div>
-                            ))
-                          )}
-                        </div>
+                            <button
+                              onClick={() => {
+                                triggerTestInit("pyq", "pyq-" + p.tag + "-" + p.year);
+                              }}
+                              className="px-5 py-2.5 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all self-stretch md:self-auto justify-center cursor-pointer shrink-0"
+                            >
+                              ⚡ Practice PYQ
+                            </button>
+                          </div>
+                        ))
                       )}
                     </div>
                   </div>
@@ -5705,7 +5369,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                         </div>
                         <p className="text-[11px] text-[var(--text-secondary)] line-clamp-2 font-sans">{otherE.desc}</p>
                         <div className="pt-3 border-t border-[var(--border)]/40 flex items-center justify-between text-[11px] text-[var(--primary)] font-bold group-hover:underline">
-                          <span>View Package →</span>
+                          <span>Explore Exam Series →</span>
                           <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold font-sans">100% FREE</span>
                         </div>
                       </div>
@@ -5714,29 +5378,8 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 </div>
               </div>
 
-              {/* FLOATING STICKY BOTTOM BAR FOR LANDING PAGE */}
-              <div className="fixed bottom-0 left-0 right-0 z-[100] bg-[var(--surface)]/95 backdrop-blur-md border-t border-[var(--border)] py-3.5 px-4 md:px-8 shadow-2xl flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl hidden sm:inline">{exam.icon}</span>
-                  <div>
-                    <h4 className="text-xs font-black text-[var(--text-primary)] leading-none mb-1">{exam.fullName} Series</h4>
-                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">100% Free Practice Suite • Complete CBT &amp; PYQs</span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => {
-                    const el = document.getElementById("included-mocks-list");
-                    if (el) el.scrollIntoView({ behavior: "smooth" });
-                  }}
-                  className="px-6 py-3 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-xs font-black rounded-xl shadow-lg transition-all flex items-center gap-1.5 cursor-pointer"
-                >
-                  🔒 Join Now &amp; Practice
-                </button>
-              </div>
-
               {/* Footer */}
-              <footer className="py-8 text-center text-[var(--text-secondary)] text-xs border-t border-[var(--border)]/40 bg-[var(--surface)] pb-20">
+              <footer className="py-8 text-center text-[var(--text-secondary)] text-xs border-t border-[var(--border)]/40 bg-[var(--surface)]">
                 NCBT · India's Premier Nursing Officer CBT Exam Platform
               </footer>
             </div>
@@ -5818,8 +5461,8 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
             <div className="auth-wrap">
               <div className="auth-card font-sans bg-[var(--surface)] border border-[var(--border)] shadow-2xl rounded-2xl p-6">
                 <div className="auth-logo flex items-baseline justify-center select-none font-sans">
-                  <span className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]"><span className="text-[var(--accent)]">N</span>CBT</span>
-                  <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">.in</span>
+                  <span className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]"><span className="text-[var(--primary)]">N</span>CBT</span>
+                  <span className="text-2xl font-black text-sky-600 dark:text-sky-400">.in</span>
                 </div>
                 <div className="auth-tagline font-sans font-medium text-xs text-[var(--text-secondary)] mt-1 text-center">NCBT – National CBT | Government Exam Preparation Portal</div>
                 
