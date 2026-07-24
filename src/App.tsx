@@ -4347,9 +4347,9 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
             {/* Test Content Container */}
             {!isTestFinished && (
-              <div className="max-w-3xl mx-auto min-h-screen flex flex-col justify-between">
+              <div className="max-w-6xl mx-auto min-h-screen flex flex-col justify-between">
                 <div>
-                  {/* HEADER / NAVIGATOR SECTION (EXACT 2 ROWS, NO DUPLICATION) */}
+                  {/* HEADER / NAVIGATOR SECTION */}
                   <div className="sticky top-0 z-40 bg-[var(--surface)] border-b border-[var(--border)] shadow-sm">
                     {/* ROW 1 — single header */}
                     <div className="flex items-center gap-2 px-3 py-2">
@@ -4360,6 +4360,16 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       <span className="flex-1 min-w-0 truncate text-[13px] font-semibold text-[var(--text-primary)]">
                         {activeTest.title}
                       </span>
+
+                      {/* Desktop Palette Toggle Button */}
+                      <button
+                        onClick={() => setShowPalette(!showPalette)}
+                        className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--surface-2)] border border-[var(--border)] text-[12px] font-bold text-[var(--text-primary)] hover:border-[var(--primary)] transition-colors cursor-pointer"
+                        title="Toggle Question Palette"
+                      >
+                        <Grid size={13} />
+                        <span>{showPalette ? "Hide Palette" : "Show Palette"}</span>
+                      </button>
 
                       {/* Timer Capsule with Pause button safely on the LEFT */}
                       <div className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--surface-2)] border border-[var(--border)] text-[12px] font-mono font-bold text-[var(--text-primary)] shadow-sm">
@@ -4379,8 +4389,8 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       </button>
                     </div>
 
-                    {/* ROW 2 — Auto-scrolling chip strip (no squished question number label) */}
-                    <div className="px-3 pb-2 pt-0.5">
+                    {/* ROW 2 — Auto-scrolling chip strip for mobile / top quick bar */}
+                    <div className="px-3 pb-2 pt-0.5 lg:hidden">
                       <div ref={chipStripRef} className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth py-1">
                         {activeTest.data.map((q, i) => {
                           const isAnswered = selectedOptions[i] !== null;
@@ -4410,159 +4420,236 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     </div>
                   </div>
 
-                  {/* QUESTION CARD — CLEAN, FRESH, UNSTUCK LAYOUT */}
-                  <div className="px-3 sm:px-4 py-3">
-                    <div 
-                      className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm"
-                      onTouchStart={handleTouchStart}
-                      onTouchEnd={handleTouchEnd}
-                    >
-                      {/* Q Badge + Exam Name & Year + Live Per-Question Stopwatch */}
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="shrink-0 bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 px-2.5 py-0.5 rounded-lg text-[12px] font-extrabold tracking-wide">
-                            Q {currentQuestionIndex + 1} / {activeTest.data.length}
-                          </span>
-                          <span className="text-[12px] sm:text-[13px] font-medium italic text-[var(--text-secondary)] truncate">
-                            {activeTest.data[currentQuestionIndex].source || activeTest.title}
-                          </span>
-                        </div>
+                  {/* GRID CONTAINER FOR MAIN CARD & DESKTOP SIDEBAR */}
+                  <div className={`grid gap-5 px-3 sm:px-4 py-4 items-start ${showPalette ? "lg:grid-cols-[1fr_310px]" : "grid-cols-1 max-w-3xl mx-auto w-full"}`}>
+                    {/* LEFT COLUMN: Question Card */}
+                    <div className="space-y-4 min-w-0">
+                      <div 
+                        className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm"
+                        onTouchStart={handleTouchStart}
+                        onTouchEnd={handleTouchEnd}
+                      >
+                        {/* Q Badge + Exam Name & Year + Live Per-Question Stopwatch */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="shrink-0 bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 px-2.5 py-0.5 rounded-lg text-[12px] font-extrabold tracking-wide">
+                              Q {currentQuestionIndex + 1} / {activeTest.data.length}
+                            </span>
+                            <span className="text-[12px] sm:text-[13px] font-medium italic text-[var(--text-secondary)] truncate">
+                              {activeTest.data[currentQuestionIndex].source || activeTest.title}
+                            </span>
+                          </div>
 
-                        {/* Per-question Time Taken */}
-                        <div className="shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--surface-2)] text-[11px] font-mono font-bold text-[var(--text-primary)] border border-[var(--border)]" title="Time spent on this question">
-                          <span className="text-blue-500 text-[10px]">⏱️</span>
-                          <span>{formatQuestionTime(questionTimesSpent[currentQuestionIndex] || 0)}</span>
-                        </div>
-                      </div>
-
-                      {/* Question Text */}
-                      <p className="text-[15px] sm:text-[16px] font-bold text-[var(--text-primary)] leading-relaxed select-none my-2">
-                        {activeTest.data[currentQuestionIndex].q}
-                      </p>
-
-                      {/* Options List (A, B, C, D) */}
-                      <div className="flex flex-col gap-2.5">
-                        {activeTest.data[currentQuestionIndex].opts.map((opt, idx) => {
-                          const isSelected = selectedOptions[currentQuestionIndex] === idx;
-                          const optionLetter = String.fromCharCode(65 + idx);
-                          return (
-                            <button
-                              key={idx}
-                              onClick={() => handleOptionSelect(idx)}
-                              className={`flex items-center gap-3 px-3.5 py-3 rounded-xl border text-[13px] sm:text-[14px] text-left transition-all cursor-pointer active:scale-[0.99] ${
-                                isSelected
-                                  ? "border-blue-500 bg-blue-500/10 text-[var(--text-primary)] font-bold shadow-sm ring-1 ring-blue-500/40"
-                                  : "border-[var(--border)] bg-[var(--surface-2)]/40 text-[var(--text-primary)] hover:bg-[var(--surface-2)] font-medium"
-                              }`}
-                            >
-                              <span className={`shrink-0 w-6 h-6 flex items-center justify-center rounded-lg text-[11px] font-bold border transition-colors ${
-                                isSelected
-                                  ? "bg-blue-600 text-white border-blue-600"
-                                  : "bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border)]"
-                              }`}>
-                                {optionLetter}
-                              </span>
-                              <span className="flex-1 leading-snug">{opt}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {/* Practice Mode Rationale */}
-                      {!examMode && questionAnswers[currentQuestionIndex] !== null && (() => {
-                        const q = activeTest.data[currentQuestionIndex];
-                        const aiState = aiRationales[q.q];
-                        return (
-                          <div className="mt-3 animate-fade-in space-y-3 pt-3 border-t border-[var(--border)]/40">
-                            <div className={`p-3 rounded-xl border text-xs sm:text-sm font-semibold leading-relaxed ${
-                              questionAnswers[currentQuestionIndex] === 1 
-                                ? "bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400" 
-                                : "bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400"
-                            }`}>
-                              <div className="font-black text-sm mb-1">
-                                {questionAnswers[currentQuestionIndex] === 1 ? "✔ Correct Answer!" : "✘ Incorrect Attempt"}
-                              </div>
-                              <span style={{ whiteSpace: "pre-line" }}>{getDetailedExplain(q)}</span>
-                            </div>
-
-                          {/* AI Rationale Panel */}
-                          <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl p-3.5 text-left">
-                            <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-                              <span className="text-xs font-bold text-[var(--accent)] flex items-center gap-1.5">
-                                ✨ AI Clinical Expert (Gemini Flash)
-                              </span>
-                              {!aiState?.text && !aiState?.loading && (
-                                <button
-                                  onClick={() => generateAiRationale(q.q, q.opts, q.ans)}
-                                  className="bg-[var(--accent-soft)] hover:opacity-90 active:scale-95 text-[var(--accent)] font-extrabold text-[10px] px-3 py-1 rounded-lg transition-all cursor-pointer shadow-sm border border-[var(--accent)]/30"
-                                >
-                                  Generate Clinical Rationale
-                                </button>
-                              )}
-                            </div>
-
-                            {aiState?.loading && (
-                              <div className="py-3 flex flex-col items-center justify-center gap-2">
-                                <div className="w-4 h-4 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin"></div>
-                                <span className="text-[10px] text-[var(--text-secondary)] animate-pulse font-medium">Analyzing parameters & nursing protocols...</span>
-                              </div>
-                            )}
-
-                            {aiState?.error && (
-                              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">⚠️ {aiState.error}. Offline high-yield fallback enabled.</p>
-                            )}
-
-                            {aiState?.text && (
-                              <div className="text-xs text-[var(--text-secondary)] leading-relaxed space-y-2 mt-2 bg-[var(--surface)] p-3 rounded-xl border border-[var(--border)] select-text">
-                                <div className="prose-slate max-w-none text-[var(--text-primary)]" style={{ whiteSpace: "pre-wrap" }}>
-                                  {aiState.text}
-                                </div>
-                              </div>
-                            )}
+                          {/* Per-question Time Taken */}
+                          <div className="shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--surface-2)] text-[11px] font-mono font-bold text-[var(--text-primary)] border border-[var(--border)]" title="Time spent on this question">
+                            <span className="text-blue-500 text-[10px]">⏱️</span>
+                            <span>{formatQuestionTime(questionTimesSpent[currentQuestionIndex] || 0)}</span>
                           </div>
                         </div>
-                      );
-                    })()}
+
+                        {/* Question Text */}
+                        <p className="text-[15px] sm:text-[16px] font-bold text-[var(--text-primary)] leading-relaxed select-none my-2">
+                          {activeTest.data[currentQuestionIndex].q}
+                        </p>
+
+                        {/* Options List (A, B, C, D) */}
+                        <div className="flex flex-col gap-2.5">
+                          {activeTest.data[currentQuestionIndex].opts.map((opt, idx) => {
+                            const isSelected = selectedOptions[currentQuestionIndex] === idx;
+                            const optionLetter = String.fromCharCode(65 + idx);
+                            return (
+                              <button
+                                key={idx}
+                                onClick={() => handleOptionSelect(idx)}
+                                className={`flex items-center gap-3 px-3.5 py-3 rounded-xl border text-[13px] sm:text-[14px] text-left transition-all cursor-pointer active:scale-[0.99] ${
+                                  isSelected
+                                    ? "border-blue-500 bg-blue-500/10 text-[var(--text-primary)] font-bold shadow-sm ring-1 ring-blue-500/40"
+                                    : "border-[var(--border)] bg-[var(--surface-2)]/40 text-[var(--text-primary)] hover:bg-[var(--surface-2)] font-medium"
+                                }`}
+                              >
+                                <span className={`shrink-0 w-6 h-6 flex items-center justify-center rounded-lg text-[11px] font-bold border transition-colors ${
+                                  isSelected
+                                    ? "bg-blue-600 text-white border-blue-600"
+                                    : "bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border)]"
+                                }`}>
+                                  {optionLetter}
+                                </span>
+                                <span className="flex-1 leading-snug">{opt}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Practice Mode Rationale */}
+                        {!examMode && questionAnswers[currentQuestionIndex] !== null && (() => {
+                          const q = activeTest.data[currentQuestionIndex];
+                          const aiState = aiRationales[q.q];
+                          return (
+                            <div className="mt-3 animate-fade-in space-y-3 pt-3 border-t border-[var(--border)]/40">
+                              <div className={`p-3 rounded-xl border text-xs sm:text-sm font-semibold leading-relaxed ${
+                                questionAnswers[currentQuestionIndex] === 1 
+                                  ? "bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400" 
+                                  : "bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400"
+                              }`}>
+                                <div className="font-black text-sm mb-1">
+                                  {questionAnswers[currentQuestionIndex] === 1 ? "✔ Correct Answer!" : "✘ Incorrect Attempt"}
+                                </div>
+                                <span style={{ whiteSpace: "pre-line" }}>{getDetailedExplain(q)}</span>
+                              </div>
+
+                            {/* AI Rationale Panel */}
+                            <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl p-3.5 text-left">
+                              <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                                <span className="text-xs font-bold text-[var(--accent)] flex items-center gap-1.5">
+                                  ✨ AI Clinical Expert (Gemini Flash)
+                                </span>
+                                {!aiState?.text && !aiState?.loading && (
+                                  <button
+                                    onClick={() => generateAiRationale(q.q, q.opts, q.ans)}
+                                    className="bg-[var(--accent-soft)] hover:opacity-90 active:scale-95 text-[var(--accent)] font-extrabold text-[10px] px-3 py-1 rounded-lg transition-all cursor-pointer shadow-sm border border-[var(--accent)]/30"
+                                  >
+                                    Generate Clinical Rationale
+                                  </button>
+                                )}
+                              </div>
+
+                              {aiState?.loading && (
+                                <div className="py-3 flex flex-col items-center justify-center gap-2">
+                                  <div className="w-4 h-4 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin"></div>
+                                  <span className="text-[10px] text-[var(--text-secondary)] animate-pulse font-medium">Analyzing parameters & nursing protocols...</span>
+                                </div>
+                              )}
+
+                              {aiState?.error && (
+                                <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">⚠️ {aiState.error}. Offline high-yield fallback enabled.</p>
+                              )}
+
+                              {aiState?.text && (
+                                <div className="text-xs text-[var(--text-secondary)] leading-relaxed space-y-2 mt-2 bg-[var(--surface)] p-3 rounded-xl border border-[var(--border)] select-text">
+                                  <div className="prose-slate max-w-none text-[var(--text-primary)]" style={{ whiteSpace: "pre-wrap" }}>
+                                    {aiState.text}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
                   </div>
+
+                  {/* RIGHT COLUMN: DESKTOP QUESTION PALETTE & ATTEMPT STATS */}
+                  {showPalette && (
+                    <div className="hidden lg:flex flex-col gap-4 sticky top-[65px] bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
+                      <div className="flex items-center justify-between pb-2 border-b border-[var(--border)]">
+                        <h4 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
+                          <Grid size={16} className="text-blue-500" />
+                          <span>Question Palette</span>
+                        </h4>
+                        <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-[var(--surface-2)] text-[var(--text-secondary)]">
+                          {activeTest.data.length} Qs
+                        </span>
+                      </div>
+
+                      {/* Summary Stat Cards */}
+                      <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                        <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400">
+                          <div className="font-black text-base">{selectedOptions.filter(o => o !== null).length}</div>
+                          <div className="text-[10px] font-semibold opacity-90">Attempted</div>
+                        </div>
+                        <div className="p-2 rounded-xl bg-pink-500/10 border border-pink-500/20 text-pink-500">
+                          <div className="font-black text-base">{reviewedQuestions.filter(r => r === true).length}</div>
+                          <div className="text-[10px] font-semibold opacity-90">Marked</div>
+                        </div>
+                        <div className="p-2 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)]">
+                          <div className="font-black text-base">{selectedOptions.filter((o, i) => o === null && !reviewedQuestions[i]).length}</div>
+                          <div className="text-[10px] font-semibold opacity-90">Unvisited</div>
+                        </div>
+                      </div>
+
+                      {/* Full Palette Grid */}
+                      <div>
+                        <div className="text-[11px] font-semibold text-[var(--text-secondary)] mb-2">
+                          Jump to Question:
+                        </div>
+                        <div className="grid grid-cols-5 gap-1.5 max-h-[360px] overflow-y-auto p-1.5 rounded-xl bg-[var(--surface-2)]/40 border border-[var(--border)]/50 no-scrollbar">
+                          {activeTest.data.map((q, i) => {
+                            const isAnswered = selectedOptions[i] !== null;
+                            const isMarked = reviewedQuestions[i];
+                            const isCurrent = i === currentQuestionIndex;
+
+                            let style = "bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--primary)]";
+
+                            if (isAnswered) {
+                              style = "bg-blue-600 text-white border-blue-600 shadow-sm";
+                            } else if (isMarked) {
+                              style = "bg-pink-500/20 text-pink-500 border-pink-500/50";
+                            }
+
+                            if (isCurrent) {
+                              style += " ring-2 ring-blue-500 font-black scale-105 z-10 shadow-md";
+                            }
+
+                            return (
+                              <button
+                                key={i}
+                                onClick={() => setCurrentQuestionIndex(i)}
+                                className={`h-9 rounded-xl text-[12px] font-bold border flex items-center justify-center transition-all cursor-pointer ${style}`}
+                              >
+                                {i + 1}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Palette Legend */}
+                      <div className="pt-2 border-t border-[var(--border)] text-[10px] text-[var(--text-secondary)] space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0" />
+                          <span>Answered & Saved</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-pink-500 shrink-0" />
+                          <span>Marked for Review</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-[var(--surface-2)] border border-[var(--border)] shrink-0" />
+                          <span>Unvisited / Skipped</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
-                {/* BOTTOM BAR — COMPACT CBT BUTTONS */}
-                <div className="sticky bottom-0 z-40 bg-[var(--surface)]/95 backdrop-blur-md border-t border-[var(--border)] px-3 py-2">
-                  <div className="flex items-center justify-center gap-1.5 max-w-md mx-auto">
-                    {/* Prev icon button */}
+                {/* BOTTOM BAR — WELL-SPACED, UN-CROWDED 3 BUTTONS */}
+                <div className="sticky bottom-0 z-40 bg-[var(--surface)]/95 backdrop-blur-md border-t border-[var(--border)] px-4 py-2.5">
+                  <div className="flex items-center justify-between gap-3 max-w-lg mx-auto w-full">
+                    {/* Prev */}
                     <button 
                       onClick={handlePrevQuestion}
                       disabled={currentQuestionIndex === 0}
-                      className="px-2.5 py-1.5 rounded-lg border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--surface-2)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer text-xs font-bold shrink-0"
+                      className="flex-1 py-2.5 px-3 rounded-xl border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--surface-2)] disabled:opacity-30 disabled:cursor-not-allowed font-bold text-xs sm:text-sm transition-colors cursor-pointer text-center"
                       title="Previous Question"
                     >
-                      ←
+                      ← Prev
                     </button>
 
                     {/* Mark & Next */}
                     <button 
                       onClick={handleMarkAndNext}
-                      className="px-3 py-1.5 max-w-[105px] w-full rounded-lg border border-[var(--text-primary)]/80 text-[var(--text-primary)] hover:bg-[var(--surface-2)] font-semibold text-[11px] sm:text-[12px] transition-colors cursor-pointer text-center truncate"
+                      className="flex-1 py-2.5 px-3 rounded-xl border border-pink-500/50 bg-pink-500/10 text-pink-600 dark:text-pink-400 hover:bg-pink-500/20 font-bold text-xs sm:text-sm transition-colors cursor-pointer text-center truncate shadow-sm"
                     >
-                      Mark & Next
-                    </button>
-
-                    {/* Clear */}
-                    <button 
-                      onClick={handleClearSelection}
-                      disabled={selectedOptions[currentQuestionIndex] === null}
-                      className="px-3 py-1.5 max-w-[75px] w-full rounded-lg border border-[var(--text-primary)]/80 text-[var(--text-primary)] hover:bg-[var(--surface-2)] disabled:opacity-40 disabled:cursor-not-allowed font-semibold text-[11px] sm:text-[12px] transition-colors cursor-pointer text-center truncate"
-                    >
-                      Clear
+                      🔖 Mark & Next
                     </button>
 
                     {/* Save & Next */}
                     <button 
                       onClick={handleNextQuestion}
-                      className="px-3 py-1.5 max-w-[105px] w-full rounded-lg bg-blue-500 hover:bg-blue-600 active:scale-95 text-white font-semibold text-[11px] sm:text-[12px] shadow-sm transition-all cursor-pointer text-center truncate"
+                      className="flex-1 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer text-center truncate"
                     >
-                      Save & Next
+                      Save & Next →
                     </button>
                   </div>
                 </div>
