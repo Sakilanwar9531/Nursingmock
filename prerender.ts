@@ -15,6 +15,42 @@ function prerender() {
   const routes = getAllAppRoutes();
   console.log(`🚀 NCBT Pre-Rendering Engine started for ${routes.length} dynamic routes using base template...`);
 
+  // FIX 3: Clean stale output subdirectories in dist/ before writing current routes
+  const validFolderPaths = new Set<string>();
+  validFolderPaths.add("assets");
+  for (const route of routes) {
+    if (route !== "/") {
+      const rel = route.startsWith("/") ? route.slice(1) : route;
+      validFolderPaths.add(rel);
+      const parts = rel.split("/");
+      for (let i = 1; i < parts.length; i++) {
+        validFolderPaths.add(parts.slice(0, i).join("/"));
+      }
+    }
+  }
+
+  function cleanStaleDirs(currentDir: string, relPath = "") {
+    if (!fs.existsSync(currentDir)) return;
+    const entries = fs.readdirSync(currentDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        const itemRelPath = relPath ? `${relPath}/${entry.name}` : entry.name;
+        if (itemRelPath === "assets" || itemRelPath.startsWith("assets/")) {
+          continue;
+        }
+        const itemFullPath = path.join(currentDir, entry.name);
+        if (!validFolderPaths.has(itemRelPath)) {
+          console.log(`🧹 Removing stale output folder: dist/${itemRelPath}`);
+          fs.rmSync(itemFullPath, { recursive: true, force: true });
+        } else {
+          cleanStaleDirs(itemFullPath, itemRelPath);
+        }
+      }
+    }
+  }
+
+  cleanStaleDirs(distPath);
+
   // Strip initial template meta tags so each route receives crisp, un-duplicated meta tags
   let cleanBaseTemplate = rawTemplate;
   cleanBaseTemplate = cleanBaseTemplate.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/gi, "");
@@ -94,8 +130,8 @@ function prerender() {
   const today = new Date().toISOString().split("T")[0];
   const urlNodes = routes.map((route) => {
     const priority = route === "/" ? "1.0" :
-                     route.startsWith("/exam/") || route.startsWith("/nursing") || route === "/updates" || route === "/pyq" || route === "/mock-tests" ? "0.9" : "0.8";
-    const freq = route === "/" || route.startsWith("/exam/") || route === "/updates" ? "daily" : "weekly";
+                     route.startsWith("/exams/") || route.startsWith("/nursing") || route === "/updates" ? "0.9" : "0.8";
+    const freq = route === "/" || route.startsWith("/exams/") || route === "/updates" ? "daily" : "weekly";
     return `  <url>
     <loc>https://ncbt.in${route === "/" ? "" : route}</loc>
     <lastmod>${today}</lastmod>

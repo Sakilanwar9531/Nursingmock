@@ -391,18 +391,6 @@ const generateMockTests = (): Test[] => {
     } else if (cleanPath === "/find-tests" || cleanPath === "/find-test") {
       initialPage = "find_test";
       initialCategory = "all";
-    } else if (cleanPath === "/mock-tests") {
-      initialPage = "find_test";
-      initialCategory = "all";
-    } else if (cleanPath === "/pyq") {
-      initialPage = "find_test";
-      initialCategory = "pyq";
-    } else if (cleanPath === "/subject-mocks") {
-      initialPage = "find_test";
-      initialCategory = "subject";
-    } else if (cleanPath === "/short-sprints") {
-      initialPage = "find_test";
-      initialCategory = "sprint";
     } else if (CATEGORY_ROUTES.some(c => c.path === cleanPath)) {
       initialPage = "find_test";
       const cat = CATEGORY_ROUTES.find(c => c.path === cleanPath);
@@ -2224,7 +2212,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       const eId = customExamId || selectedExamId || "aiims-norcet";
       const found = TARGET_EXAMS.find(e => e.id.toLowerCase() === eId.toLowerCase());
       const validSlug = found ? found.id : "aiims-norcet";
-      return `/exam/${validSlug}`;
+      return `/exams/${validSlug}`;
     }
     if (pageId === "find_test") return "/find-tests";
     if (pageId === "landing") return "/";

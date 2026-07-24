@@ -24,10 +24,6 @@ export const CATEGORY_ROUTES = [
 export function getAllAppRoutes(): string[] {
   const routes: string[] = [
     '/',
-    '/pyq',
-    '/mock-tests',
-    '/subject-mocks',
-    '/short-sprints',
     '/updates',
     '/about',
     '/contact',
@@ -38,9 +34,9 @@ export function getAllAppRoutes(): string[] {
   // 1. Add Category/Profession landing routes
   CATEGORY_ROUTES.forEach(c => routes.push(c.path));
 
-  // 2. Add Target Exam landing routes (/exam/exam-id)
+  // 2. Add Target Exam landing routes (/exams/exam-id)
   TARGET_EXAMS.forEach(exam => {
-    routes.push(`/exam/${exam.id}`);
+    routes.push(`/exams/${exam.id}`);
   });
 
   // 3. Add Blog/Update article routes (/updates/update-id)
@@ -105,56 +101,6 @@ export function getSeoMetadata(urlPath: string): SeoMeta {
   }
 
   // 1. Static Core Pages
-  if (cleanPath === "/pyq") {
-    return {
-      title: "Nursing & Paramedical Officer Solved Past Papers (PYQ) | NCBT.in",
-      description: "Practice authentic solved previous year question papers for AIIMS NORCET, ESIC, RRB, and WBHRB recruitment exams with detailed professor rationales.",
-      jsonLd: JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "Quiz",
-        "name": "Nursing Officer Past Year Question Papers (PYQ)",
-        "description": "Authentic previous year question papers from central government nursing officer exams.",
-        "educationalAlignment": {
-          "@type": "AlignmentObject",
-          "educationalFramework": "Nursing Recruitment Exams India",
-          "targetName": "AIIMS NORCET, ESIC, RRB Staff Nurse"
-        }
-      })
-    };
-  }
-
-  if (cleanPath === "/mock-tests") {
-    return {
-      title: "Full CBT Mock Test Series (NORCET & Govt Exam Pattern) | NCBT.in",
-      description: "Attempt free full mock tests styled after India's central government nursing, pharmacist, and paramedical exams with timer countdowns and negative marking.",
-      jsonLd: JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "Course",
-        "name": "NCBT Nursing Officer CBT Mock Exam Series",
-        "description": "High-yield online simulated board examinations for nursing officers in India.",
-        "provider": {
-          "@type": "Organization",
-          "name": "NCBT.in",
-          "url": "https://ncbt.in"
-        }
-      })
-    };
-  }
-
-  if (cleanPath === "/subject-mocks") {
-    return {
-      title: "Subject-Wise Nursing & Paramedical Mocks & Clinical Unit Drills | NCBT.in",
-      description: "Target key exam areas: Medical-Surgical Nursing, Pharmacology, Pediatrics, Anatomy, and Pathology. Real-time feedback and rationales.",
-    };
-  }
-
-  if (cleanPath === "/short-sprints") {
-    return {
-      title: "Rapid Practice Speed Sprints (10 MCQ Daily Checkpoints) | NCBT.in",
-      description: "Daily randomized rapid speed nursing & paramedical assessment sprints. Fast clinical rationales to accelerate your active recall.",
-    };
-  }
-
   if (cleanPath === "/updates") {
     return {
       title: "NCBT Syllabus, Recruitment Vacancy Updates & Blog Insights | NCBT.in",
