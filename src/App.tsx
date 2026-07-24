@@ -4364,7 +4364,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       {/* Desktop Palette Toggle Button */}
                       <button
                         onClick={() => setShowPalette(!showPalette)}
-                        className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--surface-2)] border border-[var(--border)] text-[12px] font-bold text-[var(--text-primary)] hover:border-[var(--primary)] transition-colors cursor-pointer"
+                        className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--surface-2)] border border-[var(--border)] text-[12px] font-bold text-[var(--text-primary)] hover:border-[var(--primary)] transition-colors cursor-pointer"
                         title="Toggle Question Palette"
                       >
                         <Grid size={13} />
@@ -4390,7 +4390,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     </div>
 
                     {/* ROW 2 — Auto-scrolling chip strip for mobile / top quick bar */}
-                    <div className="px-3 pb-2 pt-0.5 lg:hidden">
+                    <div className="px-3 pb-2 pt-0.5 md:hidden">
                       <div ref={chipStripRef} className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth py-1">
                         {activeTest.data.map((q, i) => {
                           const isAnswered = selectedOptions[i] !== null;
@@ -4421,7 +4421,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   </div>
 
                   {/* GRID CONTAINER FOR MAIN CARD & DESKTOP SIDEBAR */}
-                  <div className={`grid gap-5 px-3 sm:px-4 py-4 items-start ${showPalette ? "lg:grid-cols-[1fr_310px]" : "grid-cols-1 max-w-3xl mx-auto w-full"}`}>
+                  <div className={`grid gap-5 px-3 sm:px-4 py-4 items-start ${showPalette ? "md:grid-cols-[1fr_290px] lg:grid-cols-[1fr_320px]" : "grid-cols-1 max-w-3xl mx-auto w-full"}`}>
                     {/* LEFT COLUMN: Question Card */}
                     <div className="space-y-4 min-w-0">
                       <div 
@@ -4540,15 +4540,24 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
                   {/* RIGHT COLUMN: DESKTOP QUESTION PALETTE & ATTEMPT STATS */}
                   {showPalette && (
-                    <div className="hidden lg:flex flex-col gap-4 sticky top-[65px] bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
+                    <div className="hidden md:flex flex-col gap-4 sticky top-[65px] bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
                       <div className="flex items-center justify-between pb-2 border-b border-[var(--border)]">
                         <h4 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
                           <Grid size={16} className="text-blue-500" />
                           <span>Question Palette</span>
                         </h4>
-                        <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-[var(--surface-2)] text-[var(--text-secondary)]">
-                          {activeTest.data.length} Qs
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-[var(--surface-2)] text-[var(--text-secondary)]">
+                            {activeTest.data.length} Qs
+                          </span>
+                          <button
+                            onClick={() => setShowPalette(false)}
+                            className="w-6 h-6 flex items-center justify-center rounded-lg bg-[var(--surface-2)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--border)] transition-colors text-xs font-extrabold cursor-pointer"
+                            title="Collapse Palette"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </div>
 
                       {/* Summary Stat Cards */}
