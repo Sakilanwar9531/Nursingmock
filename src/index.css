@@ -2704,4 +2704,29 @@ footer a {
   animation-play-state: paused;
 }
 
+/* Add to index.css — scoped under .ncbt-one-theme, won't affect the rest of the site */
+.ncbt-one-theme {
+  --n1-bg: #F7F3F9;
+  --n1-surface: #FFFFFF;
+  --n1-surface-2: #EFE6F4;
+  --n1-primary: #3B1F52;
+  --n1-primary-2: #5A3373;
+  --n1-accent: #C6963B;
+  --n1-border: #E4D9EC;
+  --n1-text: #1C1424;
+  --n1-text-secondary: #6E5E7E;
+}
+html.dark .ncbt-one-theme,
+.dark .ncbt-one-theme {
+  --n1-bg: #14101B;
+  --n1-surface: #1E1826;
+  --n1-surface-2: #271F31;
+  --n1-primary: #B79BD1;
+  --n1-primary-2: #8A6BB0;
+  --n1-accent: #E0B563;
+  --n1-border: #322A3D;
+  --n1-text: #F1EAF7;
+  --n1-text-secondary: #B7A8C7;
+}
+
 

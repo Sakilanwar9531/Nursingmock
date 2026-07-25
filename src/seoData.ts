@@ -21,6 +21,17 @@ export const CATEGORY_ROUTES = [
  * SINGLE SOURCE OF TRUTH FOR ALL ROUTES IN THE NCBT APPLICATION
  * Automatically discovers static, category, exam, blog/updates, and test routes.
  */
+export const NCBT_ONE_PROFESSIONS = [
+  { slug: "nursing", label: "Nursing Officer" },
+  { slug: "pharma", label: "Pharmacist" },
+  { slug: "lab-technician", label: "Lab Technician" },
+  { slug: "radiographer", label: "Radiographer" },
+  { slug: "ot-technician", label: "OT Technician" },
+  { slug: "cho", label: "CHO" },
+  { slug: "physiotherapist", label: "Physiotherapist" },
+  { slug: "medical-officer", label: "Medical Officer" },
+];
+
 export function getAllAppRoutes(): string[] {
   const routes: string[] = [
     '/',
@@ -32,6 +43,11 @@ export function getAllAppRoutes(): string[] {
     '/all-in-one',
     '/current-affairs',
   ];
+
+  // NCBT One Profession Routes
+  NCBT_ONE_PROFESSIONS.forEach(p => {
+    routes.push(`/ncbt-one/${p.slug}`);
+  });
 
   // 1. Add Category/Profession landing routes
   CATEGORY_ROUTES.forEach(c => routes.push(c.path));
@@ -114,6 +130,14 @@ export function isValidAppRoute(urlPath: string): boolean {
     return false;
   }
 
+  if (cleanPath.startsWith("/ncbt-one/")) {
+    const slug = cleanPath.split("/")[2];
+    if (slug && NCBT_ONE_PROFESSIONS.some(p => p.slug.toLowerCase() === slug.toLowerCase())) {
+      return true;
+    }
+    return false;
+  }
+
   return false;
 }
 
@@ -126,6 +150,17 @@ export function getSeoMetadata(urlPath: string): SeoMeta {
       title: "404 - Page Not Found | NCBT.in",
       description: "The page or assessment route you requested does not exist or has been updated on NCBT.in.",
       noIndex: true
+    };
+  }
+
+  // NCBT One Profession Pages (/ncbt-one/:profession)
+  if (cleanPath.startsWith("/ncbt-one/")) {
+    const slug = cleanPath.split("/")[2];
+    const prof = NCBT_ONE_PROFESSIONS.find(p => p.slug.toLowerCase() === slug?.toLowerCase());
+    const profName = prof ? prof.label : (slug ? slug.replace(/-/g, " ").toUpperCase() : "Profession");
+    return {
+      title: `${profName} NCBT One — PYQs, Mocks & Quick Quizzes | NCBT.in`,
+      description: `Access dedicated ${profName} CBT preparation on NCBT One: previous year question papers, mock tests, quick quizzes, and speed drills for target government competitive exams.`,
     };
   }
 

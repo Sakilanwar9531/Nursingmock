@@ -69,9 +69,7 @@ import {
   Radio,
   Syringe,
   HeartPulse,
-  Activity,
-  Droplets,
-  Heart
+  Droplets
 } from "lucide-react";
 import { SUBJECTS, PYQ_DATA, TARGET_EXAMS } from "./data";
 import { InteractiveFAQ } from "./components/InteractiveFAQ";
@@ -427,7 +425,7 @@ const generateMockTests = (): Test[] => {
       initialPage = "about";
     } else if (cleanPath === "/contact") {
       initialPage = "contact";
-    } else if (cleanPath === "/ncbt-one" || cleanPath === "/all-in-one") {
+    } else if (cleanPath === "/ncbt-one" || cleanPath === "/all-in-one" || cleanPath.startsWith("/ncbt-one/")) {
       initialPage = "ncbt_one";
     } else if (cleanPath === "/current-affairs") {
       initialPage = "current_affairs";
@@ -2490,7 +2488,11 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       return `/exams/${validSlug}`;
     }
     if (pageId === "find_test") return "/find-tests";
-    if (pageId === "ncbt_one" || pageId === "all_in_one") return "/ncbt-one";
+    if (pageId === "ncbt_one" || pageId === "all_in_one") {
+      const pathname = typeof window !== "undefined" ? window.location.pathname : "";
+      if (pathname.startsWith("/ncbt-one/")) return pathname;
+      return "/ncbt-one";
+    }
     if (pageId === "current_affairs") return "/current-affairs";
     if (pageId === "landing") return "/";
     if (pageId === "updates") return "/updates";
@@ -6876,7 +6878,18 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
         {/* =============== NCBT ONE PAGE =============== */}
         {(activePage === "ncbt_one" || activePage === "all_in_one") && (
-          <NcbtOnePage showPage={showPage} />
+          <NcbtOnePage 
+            professionSlug={(() => {
+              const path = typeof window !== "undefined" ? window.location.pathname : "";
+              if (path.startsWith("/ncbt-one/")) {
+                const slug = path.split("/")[2];
+                return slug || null;
+              }
+              return null;
+            })()} 
+            showPage={showPage}
+            onStartTest={(subjId, testId) => triggerTestInit(subjId, testId)}
+          />
         )}
 
         {/* =============== CURRENT AFFAIRS PAGE =============== */}
