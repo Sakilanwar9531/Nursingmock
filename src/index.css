@@ -53,10 +53,10 @@
   --text3: #64748b;
   --primary: #0D5C46;
   --primary-hover: #094434;
-  --accent: #B45309;
-  --accent-soft: rgba(180, 83, 9, 0.18);
-  --accent-dim: rgba(180, 83, 9, 0.18);
-  --accent-glow: rgba(180, 83, 9, 0.35);
+  --accent: #94a3b8;
+  --accent-soft: rgba(148, 163, 184, 0.16);
+  --accent-dim: rgba(148, 163, 184, 0.16);
+  --accent-glow: rgba(148, 163, 184, 0.3);
   --success: #10b981;
   --success-dim: rgba(16, 185, 129, 0.15);
   --danger: #ef4444;
@@ -67,8 +67,8 @@
   --green-dim: rgba(16, 185, 129, 0.15);
   --red: #ef4444;
   --red-dim: rgba(239, 68, 68, 0.15);
-  --gold: #f59e0b;
-  --gold-dim: rgba(245, 158, 11, 0.15);
+  --gold: #94a3b8;
+  --gold-dim: rgba(148, 163, 184, 0.16);
   --purple: #38bdf8;
   --purple-dim: rgba(56, 189, 248, 0.15);
   --nav-bg: rgba(7, 12, 24, 0.94);
@@ -79,7 +79,16 @@
   --ticker-label: #34D399;
   --ticker-chip-border: #34D399;
   --ticker-chip-text: #34D399;
-  --ticker-dot: #FBBF24;
+  --ticker-dot: #94a3b8;
+  --n1-bg: var(--bg);
+  --n1-surface: var(--surface);
+  --n1-surface-2: var(--surface-2);
+  --n1-border: var(--border);
+  --n1-text: var(--text-primary);
+  --n1-text-secondary: var(--text-secondary);
+  --n1-primary: #0D5C46;
+  --n1-primary-2: #10b981;
+  --n1-accent: #38bdf8;
   --r: 14px;
   --r2: 9999px;
   --trans: all .2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -100,10 +109,10 @@ html.light, body.light {
   --text3: #64748B;
   --primary: #0D5C46;
   --primary-hover: #094434;
-  --accent: #B45309;
-  --accent-soft: rgba(180, 83, 9, 0.12);
-  --accent-dim: rgba(180, 83, 9, 0.12);
-  --accent-glow: rgba(180, 83, 9, 0.25);
+  --accent: #475569;
+  --accent-soft: rgba(71, 85, 105, 0.12);
+  --accent-dim: rgba(71, 85, 105, 0.12);
+  --accent-glow: rgba(71, 85, 105, 0.22);
   --success: #0D5C46;
   --success-dim: rgba(13, 92, 70, 0.12);
   --danger: #991b1b;
@@ -114,8 +123,8 @@ html.light, body.light {
   --green-dim: rgba(13, 92, 70, 0.12);
   --red: #991b1b;
   --red-dim: rgba(153, 27, 27, 0.12);
-  --gold: #B45309;
-  --gold-dim: rgba(180, 83, 9, 0.15);
+  --gold: #475569;
+  --gold-dim: rgba(71, 85, 105, 0.12);
   --purple: #0284C7;
   --purple-dim: rgba(2, 132, 199, 0.12);
   --nav-bg: rgba(251, 251, 249, 0.95);
@@ -126,7 +135,7 @@ html.light, body.light {
   --ticker-label: #0D5C46;
   --ticker-chip-border: #0D5C46;
   --ticker-chip-text: #0D5C46;
-  --ticker-dot: #B45309;
+  --ticker-dot: #475569;
 }
 
 body {
@@ -2704,29 +2713,85 @@ footer a {
   animation-play-state: paused;
 }
 
-/* Add to index.css — scoped under .ncbt-one-theme, won't affect the rest of the site */
-.ncbt-one-theme {
-  --n1-bg: #F7F3F9;
-  --n1-surface: #FFFFFF;
-  --n1-surface-2: #EFE6F4;
-  --n1-primary: #3B1F52;
-  --n1-primary-2: #5A3373;
-  --n1-accent: #C6963B;
-  --n1-border: #E4D9EC;
-  --n1-text: #1C1424;
-  --n1-text-secondary: #6E5E7E;
+/* Global compact-card system, mobile-first */
+.n-card-compact {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
 }
-html.dark .ncbt-one-theme,
-.dark .ncbt-one-theme {
-  --n1-bg: #14101B;
-  --n1-surface: #1E1826;
-  --n1-surface-2: #271F31;
-  --n1-primary: #B79BD1;
-  --n1-primary-2: #8A6BB0;
-  --n1-accent: #E0B563;
-  --n1-border: #322A3D;
-  --n1-text: #F1EAF7;
-  --n1-text-secondary: #B7A8C7;
+
+.n-card-compact .n-card-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
 }
+
+.n-card-compact .n-card-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+
+.n-card-compact .n-card-desc {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.n-card-compact .n-card-footer {
+  font-size: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.n-card-compact .n-card-badge {
+  font-size: 9.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+/* Stat boxes (1.5 Lakh+, 4.9★, 100% Free, AIR) */
+.n-stat-compact {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.n-stat-compact .n-stat-value {
+  font-size: 19px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+}
+.n-stat-compact .n-stat-label {
+  font-size: 10.5px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* Mobile grid: 2-up instead of stacked full-width cards */
+.n-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+@media (min-width: 768px) {
+  .n-card-grid { grid-template-columns: repeat(3, 1fr); gap: 14px; }
+}
+@media (min-width: 1024px) {
+  .n-card-grid { grid-template-columns: repeat(4, 1fr); gap: 16px; }
+}
+
+.n-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+@media (min-width: 640px) {
+  .n-stat-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
 
 

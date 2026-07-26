@@ -76,7 +76,6 @@ export const AllInOneHub: React.FC<AllInOneHubProps> = ({
       { id: "wbhrb", name: "WBHRB Staff Nurse Grade II", tag: "West Bengal", badge: "URGENT", icon: "🏥" },
       { id: "esic", name: "ESIC Nursing Officer Recruitment", tag: "ESIC Central", badge: "POPULAR", icon: "⚡" },
       { id: "rrb", name: "RRB Staff Nurse CBT Mock", tag: "Railways", badge: "NEW", icon: "🚑" },
-      { id: "cho", name: "NHM / CHO Community Health Officer", tag: "State NHM", badge: "ACTIVE", icon: "🩺" },
       { id: "dsssb", name: "DSSSB Nursing Officer Delhi", tag: "Delhi Govt", badge: "TOP", icon: "🏛️" },
       { id: "jipmer", name: "JIPMER Staff Nurse CBT", tag: "Central Govt", badge: "FREE", icon: "🎓" },
       { id: "sgpgi", name: "SGPGI Nursing Officer Exam", tag: "UP State", badge: "PYQ", icon: "📋" }
@@ -232,7 +231,7 @@ export const AllInOneHub: React.FC<AllInOneHubProps> = ({
                     <option value="Paramedical">🔬 Paramedical & OT Technician</option>
                     <option value="Lab Technician">🧪 Lab Technician (DMLT / BMLT)</option>
                     <option value="Radiographer">📸 Radiographer & X-Ray</option>
-                    <option value="Medical Officer">👨‍⚕️ Medical Officer & CHO</option>
+                    <option value="Medical Officer">👨‍⚕️ Medical Officer</option>
                   </select>
                 </div>
 

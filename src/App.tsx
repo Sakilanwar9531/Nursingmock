@@ -77,6 +77,9 @@ import CadreGrid from "./components/CadreGrid";
 import { AllInOneHub } from "./components/AllInOneHub";
 import { FindTestPage } from "./components/FindTestPage";
 import { NcbtOnePage } from "./components/NcbtOnePage";
+import { ProfessionNCBTOnePage } from "./components/ProfessionNCBTOnePage";
+import { NCBT_ONE_PROFESSIONS } from "./data/ncbtOneProfessions";
+import HeroAurora from "./components/HeroAurora";
 import { CurrentAffairsPage } from "./components/CurrentAffairsPage";
 import { BlogPostTemplate } from "./components/BlogPostTemplate";
 import { BlogFeedPage } from "./components/BlogFeedPage";
@@ -425,7 +428,14 @@ const generateMockTests = (): Test[] => {
       initialPage = "about";
     } else if (cleanPath === "/contact") {
       initialPage = "contact";
-    } else if (cleanPath === "/ncbt-one" || cleanPath === "/all-in-one" || cleanPath.startsWith("/ncbt-one/")) {
+    } else if (cleanPath.startsWith("/ncbt-one/")) {
+      const profSlug = cleanPath.replace("/ncbt-one/", "");
+      if (NCBT_ONE_PROFESSIONS[profSlug]) {
+        initialPage = "ncbt_one_" + profSlug;
+      } else {
+        initialPage = "ncbt_one";
+      }
+    } else if (cleanPath === "/ncbt-one" || cleanPath === "/all-in-one") {
       initialPage = "ncbt_one";
     } else if (cleanPath === "/current-affairs") {
       initialPage = "current_affairs";
@@ -2488,11 +2498,11 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       return `/exams/${validSlug}`;
     }
     if (pageId === "find_test") return "/find-tests";
-    if (pageId === "ncbt_one" || pageId === "all_in_one") {
-      const pathname = typeof window !== "undefined" ? window.location.pathname : "";
-      if (pathname.startsWith("/ncbt-one/")) return pathname;
-      return "/ncbt-one";
+    if (pageId.startsWith("ncbt_one_")) {
+      const pSlug = pageId.replace("ncbt_one_", "");
+      return `/ncbt-one/${pSlug}`;
     }
+    if (pageId === "ncbt_one" || pageId === "all_in_one") return "/ncbt-one";
     if (pageId === "current_affairs") return "/current-affairs";
     if (pageId === "landing") return "/";
     if (pageId === "updates") return "/updates";
@@ -2594,6 +2604,12 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         }
       } else if (activePage === "find_test") {
         document.title = "Find Government Exam Mock Test Series — NCBT";
+      } else if (activePage.startsWith("ncbt_one_")) {
+        const pSlug = activePage.replace("ncbt_one_", "");
+        const prof = NCBT_ONE_PROFESSIONS[pSlug];
+        if (prof) {
+          document.title = `NCBT One — ${prof.label} Specialization Portal | NCBT`;
+        }
       } else if (activePage === "ncbt_one" || activePage === "all_in_one") {
         document.title = "NCBT One — All-in-One Distraction-Free Healthcare CBT Portal | NCBT";
       } else if (activePage === "current_affairs") {
@@ -3257,13 +3273,12 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   
                   <div className="space-y-1">
                     {[
-                      { id: "nursing", name: "Nursing Officer", icon: Stethoscope, desc: "NORCET, WBHRB, ESIC, RRB, CHO" },
+                      { id: "nursing", name: "Nursing Officer", icon: Stethoscope, desc: "NORCET, WBHRB, ESIC, RRB" },
                       { id: "pharmacist", name: "Pharmacist", icon: Pill, desc: "RRB, ESIC, WBHRB, Drug Inspector" },
                       { id: "lab-technician", name: "Lab Technician", icon: FlaskConical, desc: "DMLT, AIIMS, RRB Pathology" },
                       { id: "radiographer", name: "Radiographer", icon: Radio, desc: "X-Ray, CT/MRI, Radiation Physics" },
                       { id: "ot-technician", name: "OT Technician", icon: Syringe, desc: "Surgical OT, Anesthesia Tech" },
-                      { id: "cho", name: "CHO (Community Health)", icon: HeartPulse, desc: "State Health, NHM Recruitment" },
-                      { id: "physiotherapist", name: "Physiotherapist", icon: Activity, desc: "BPT, Central Govt Exams" },
+                      { id: "physiotherapist", name: "Physiotherapist", icon: HeartPulse, desc: "BPT, Central Govt Exams" },
                       { id: "dialysis-tech", name: "Dialysis Technician", icon: Droplets, desc: "Renal Care, Clinical Tech" },
                       { id: "ecg-technician", name: "ECG Technician", icon: Heart, desc: "Cardiology, Diagnostic Tech" },
                     ].map((cat) => {
@@ -3538,9 +3553,9 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                         <span>RRB Railway Staff Nurse — Syllabus &amp; PYQ Question Vaults</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => selectExam("cho-recruitment")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                      <span onClick={() => selectExam("dsssb-officer")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
                         <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">RESULT:</span>
-                        <span>CHO NHM State Recruitment — Model Tests &amp; Clinical Drills</span>
+                        <span>WBHRB Staff Nurse Grade II — Final Merit Mock Practice</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
                       <span onClick={() => selectExam("dsssb-officer")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
@@ -3581,37 +3596,8 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
             {/* Glowing Backdrop Accents & Hero Graphic Network */}
             <div className="relative overflow-hidden pt-12 pb-20 px-4 md:px-8 max-w-7xl mx-auto">
-              {/* HERO BACKGROUND GRAPHIC — "EXAM NETWORK" */}
-              <div className="hero-graphic" aria-hidden="true">
-                <svg viewBox="0 0 800 400" preserveAspectRatio="xMidYMid slice">
-                  {/* faint connecting lines */}
-                  <g stroke="var(--primary)" strokeWidth="1" opacity="0.10">
-                    <line x1="60" y1="80" x2="220" y2="140"/>
-                    <line x1="220" y1="140" x2="380" y2="60"/>
-                    <line x1="380" y1="60" x2="540" y2="160"/>
-                    <line x1="540" y1="160" x2="700" y2="90"/>
-                    <line x1="220" y1="140" x2="260" y2="300"/>
-                    <line x1="540" y1="160" x2="500" y2="320"/>
-                    <line x1="380" y1="60" x2="380" y2="220"/>
-                  </g>
-                  {/* static nodes */}
-                  <g fill="var(--primary)" opacity="0.18">
-                    <circle cx="60" cy="80" r="4"/>
-                    <circle cx="220" cy="140" r="5"/>
-                    <circle cx="380" cy="60" r="4"/>
-                    <circle cx="540" cy="160" r="5"/>
-                    <circle cx="700" cy="90" r="4"/>
-                    <circle cx="260" cy="300" r="4"/>
-                    <circle cx="500" cy="320" r="4"/>
-                    <circle cx="380" cy="220" r="4"/>
-                  </g>
-                  {/* one live pulsing node, gold, travels the path slowly */}
-                  <circle r="6" fill="var(--accent)">
-                    <animateMotion dur="9s" repeatCount="indefinite" path="M60,80 L220,140 L380,60 L540,160 L700,90"/>
-                    <animate attributeName="opacity" values="0.9;0.3;0.9" dur="2s" repeatCount="indefinite"/>
-                  </circle>
-                </svg>
-              </div>
+              {/* HERO BACKGROUND GRAPHIC — "HERO AURORA" */}
+              <HeroAurora />
 
               <div className="absolute top-12 left-10 w-80 h-80 bg-accent/10 rounded-full filter blur-[110px] pointer-events-none"></div>
               <div className="absolute top-40 right-20 w-96 h-96 bg-primary/5 rounded-full filter blur-[130px] pointer-events-none"></div>
@@ -3723,8 +3709,8 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 <CadreGrid />
               </div>
 
-              {/* THREE COLUMN BIG HIGHLIGHTS ROW */}
-              <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              {/* COMPACT STATS GRID SECTION */}
+              <div className="mt-12 n-stat-grid text-center relative z-10">
                 {[
                   { value: "1.5 Lakh+", label: "Mock Tests Attempted" },
                   { value: "4.9★", label: "Student Rating" },
@@ -3737,10 +3723,10 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     whileInView={{ opacity: 1, scale: 1 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: idx * 0.1 }}
-                    className="p-4 bg-card border border-border rounded-2xl shadow-sm premium-glow-box"
+                    className="n-stat-compact shadow-sm hover:shadow transition-all"
                   >
-                    <div className="text-2xl md:text-3xl font-black text-text tracking-tight">{statItem.value}</div>
-                    <div className="text-[10px] md:text-xs text-text2 mt-1 font-medium">{statItem.label}</div>
+                    <div className="n-stat-value text-[var(--text-primary)]">{statItem.value}</div>
+                    <div className="n-stat-label">{statItem.label}</div>
                   </motion.div>
                 ))}
               </div>
@@ -3769,7 +3755,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="n-card-grid">
                   {TARGET_EXAMS.map((exam) => (
                     <motion.div
                       key={exam.id}
@@ -3780,39 +3766,36 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       onClick={() => {
                         selectExam(exam.id);
                       }}
-                      className="premium-glow-box rounded-3xl p-6 flex flex-col justify-between group relative overflow-hidden cursor-pointer"
+                      className="n-card-compact flex flex-col justify-between group relative overflow-hidden cursor-pointer hover:border-[var(--primary)] transition-all shadow-sm hover:shadow-md"
                     >
-                      {/* Decorative corner glow */}
-                      <div className="absolute -right-8 -bottom-8 w-24 h-24 bg-accent/5 rounded-full filter blur-xl group-hover:bg-accent/10 transition-colors"></div>
-                      
-                      <div className="space-y-4 relative z-10">
+                      <div className="space-y-2 relative z-10">
                         <div className="flex items-center justify-between">
-                          <span className="text-2xl w-12 h-12 rounded-2xl bg-[var(--bg)] border border-[var(--border)] flex items-center justify-center">
+                          <span className="n-card-icon text-lg bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center">
                             {exam.icon}
                           </span>
-                          <span className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 bg-amber-500/10 text-amber-500 rounded-full border border-amber-500/20">
+                          <span className="n-card-badge font-black uppercase tracking-widest bg-amber-500/10 text-amber-500 border border-amber-500/20">
                             {exam.badge}
                           </span>
                         </div>
                         <div>
-                          <span className="text-[9px] text-accent font-black uppercase tracking-widest">
+                          <span className="text-[9px] text-[var(--accent)] font-black uppercase tracking-widest block">
                             {exam.category}
                           </span>
-                          <h3 className="text-base font-extrabold text-text mt-1 group-hover:text-accent transition-colors leading-tight">
+                          <h3 className="n-card-title text-[var(--text-primary)] group-hover:text-[var(--primary)] transition-colors mt-0.5">
                             {exam.fullName}
                           </h3>
-                          <p className="text-xs text-text2 leading-relaxed mt-2 font-sans line-clamp-3">
+                          <p className="n-card-desc font-sans line-clamp-2">
                             {exam.desc}
                           </p>
                         </div>
                       </div>
 
-                      <div className="pt-5 border-t border-border/30 mt-6 flex items-center justify-between relative z-10">
-                        <span className="text-[11px] font-black text-text3 group-hover:text-accent transition-colors">
+                      <div className="n-card-footer flex items-center justify-between relative z-10">
+                        <span className="font-bold text-[var(--primary)] group-hover:underline transition-colors text-[11px]">
                           Start Practice →
                         </span>
-                        <span className="text-[10px] text-green-400 font-bold flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-green-400" /> 100% Free
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-0.5">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Free
                         </span>
                       </div>
                     </motion.div>
@@ -4071,7 +4054,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       <span className="w-8 h-8 rounded-full bg-accent/20 text-accent font-black text-sm flex items-center justify-center">1</span>
                       <h4 className="text-xs font-black text-text uppercase tracking-wider">Select Your Target Exam</h4>
                       <p className="text-[11px] text-text2 leading-relaxed font-sans">
-                        Choose your specific target exam (e.g., AIIMS NORCET, WBHRB, ESIC, RRB, or CHO) to immediately align your dashboard with the correct syllabus, pattern, and mock criteria.
+                        Choose your specific target exam (e.g., AIIMS NORCET, WBHRB, ESIC, or RRB) to immediately align your dashboard with the correct syllabus, pattern, and mock criteria.
                       </p>
                     </div>
                     <div className="bg-card border border-border/50 rounded-2xl p-5 space-y-2.5 hover:border-accent/40 transition-colors">
@@ -4224,7 +4207,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                         { label: "DSSSB Board Exam Paper Pack", query: "DSSSB" },
                         { label: "RPSC Staff Nurse Model Solved", query: "RPSC" },
                         { label: "State PSC Recruitment Drills", query: "State" },
-                        { label: "CHO Entrance Selected PYQs", query: "CHO" },
+                        { label: "WBHRB Grade II Solved PYQs", query: "WBHRB" },
                         { label: "JIPMER Staff Nurse Solved Mock", query: "JIPMER" },
                         { label: "BHU Nursing Officer Papers", query: "BHU" },
                       ].map((pyqL, pIdx) => (
@@ -4325,7 +4308,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     <li><button onClick={() => { showPage("mock_tests"); setHubSearchText("NORCET"); }} className="hover:text-accent text-left transition-colors cursor-pointer">🏥 AIIMS NORCET Mock</button></li>
                     <li><button onClick={() => { showPage("mock_tests"); setHubSearchText("ESIC"); }} className="hover:text-accent text-left transition-colors cursor-pointer">⚡ ESIC Staff Nurse Special</button></li>
                     <li><button onClick={() => { showPage("mock_tests"); setHubSearchText("RRB"); }} className="hover:text-accent text-left transition-colors cursor-pointer">🚆 RRB Staff Nurse CBT</button></li>
-                    <li><button onClick={() => { showPage("mock_tests"); setHubSearchText("CHO"); }} className="hover:text-accent text-left transition-colors cursor-pointer">🎖️ CHO Recruitment Mock</button></li>
+                    <li><button onClick={() => { showPage("mock_tests"); setHubSearchText("WBHRB"); }} className="hover:text-accent text-left transition-colors cursor-pointer">🏥 WBHRB Staff Nurse Mock</button></li>
                     <li><button onClick={() => { showPage("pyq"); setHubSearchText("State"); }} className="hover:text-accent text-left transition-colors cursor-pointer">📄 State PSC Previous Year</button></li>
                     <li><button onClick={() => { showPage("subject_mocks"); setHubSearchText("Anatomy"); }} className="hover:text-accent text-left transition-colors cursor-pointer">🫀 Anatomy & Physiology Drill</button></li>
                   </ul>
@@ -6876,21 +6859,23 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           </div>
         )}
 
-        {/* =============== NCBT ONE PAGE =============== */}
+        {/* =============== NCBT ONE PAGE & PROFESSION SPECIALIZATION PORTALS =============== */}
         {(activePage === "ncbt_one" || activePage === "all_in_one") && (
-          <NcbtOnePage 
-            professionSlug={(() => {
-              const path = typeof window !== "undefined" ? window.location.pathname : "";
-              if (path.startsWith("/ncbt-one/")) {
-                const slug = path.split("/")[2];
-                return slug || null;
-              }
-              return null;
-            })()} 
-            showPage={showPage}
-            onStartTest={(subjId, testId) => triggerTestInit(subjId, testId)}
-          />
+          <NcbtOnePage showPage={showPage} />
         )}
+
+        {activePage.startsWith("ncbt_one_") && (() => {
+          const profSlug = activePage.replace("ncbt_one_", "");
+          const config = NCBT_ONE_PROFESSIONS[profSlug];
+          if (!config) return <NcbtOnePage showPage={showPage} />;
+          return (
+            <ProfessionNCBTOnePage
+              config={config}
+              onStartTest={(testId) => triggerTestInit("virtual", testId)}
+              onGoHome={() => showPage("ncbt_one")}
+            />
+          );
+        })()}
 
         {/* =============== CURRENT AFFAIRS PAGE =============== */}
         {activePage === "current_affairs" && (
@@ -6943,7 +6928,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     { name: "WBHRB Staff Nurse", id: "wbhrb-grade2" },
                     { name: "ESIC Nursing Officer", id: "esic-officer" },
                     { name: "RRB Staff Nurse", id: "rrb-officer" },
-                    { name: "CHO NHM Officer", id: "cho-recruitment" },
+                    { name: "SGPGI Nursing Officer", id: "sgpgi-jipmer" },
                     { name: "DSSSB Nursing", id: "dsssb-officer" },
                   ].map((exam) => (
                     <button

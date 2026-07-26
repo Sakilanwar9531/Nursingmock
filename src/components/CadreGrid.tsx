@@ -13,14 +13,19 @@ const CADRES: CadreCard[] = [
   { label: "Lab Technician",       slug: "lab-technician",  tint: "info"    },
   { label: "Radiographer",         slug: "radiographer",    tint: "success" },
   { label: "OT Technician",        slug: "ot-technician",   tint: "primary" },
-  { label: "CHO",                  slug: "cho",             tint: "accent"  },
   { label: "Physiotherapist",      slug: "physiotherapist", tint: "info"    },
   { label: "Dialysis Technician",  slug: "dialysis-tech",   tint: "primary" },
   { label: "ECG Technician",       slug: "ecg-technician",  tint: "accent"  },
 ];
 
 function navigateToCategory(slug: string) {
-  window.history.pushState(null, "", `/find-tests?category=${slug}`);
+  let targetSlug = slug;
+  if (slug === "pharmacist") targetSlug = "pharma";
+  if (["nursing", "pharma", "lab-technician", "radiographer", "ot-technician", "physiotherapist"].includes(targetSlug)) {
+    window.history.pushState(null, "", `/ncbt-one/${targetSlug}`);
+  } else {
+    window.history.pushState(null, "", `/find-tests?category=${slug}`);
+  }
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
 

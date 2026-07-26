@@ -1,366 +1,410 @@
 import React, { useState } from "react";
 import { 
-  Menu, 
   Sparkles, 
   Layers, 
+  BarChart3, 
   FileText, 
-  Target, 
-  Zap, 
-  ChevronRight, 
-  Clock, 
+  UserCheck, 
+  ChevronDown, 
+  ChevronUp, 
   CheckCircle2, 
-  ArrowLeft,
-  GraduationCap,
-  Pill,
-  TestTube2,
-  Radiation,
-  Scissors,
-  HeartPulse,
-  Activity,
-  Stethoscope,
-  BookOpen,
-  Award,
-  AlertCircle
+  ShieldCheck, 
+  Zap, 
+  ArrowRight,
+  BookOpen
 } from "lucide-react";
-import { NCBTOneTopNav } from "./NCBTOneTopNav";
-import { NCBTOneSidebar, PROFESSIONS } from "./NCBTOneSidebar";
-import NCBTOneHub from "./NCBTOneHub";
-import { TARGET_EXAMS, PYQ_DATA, SUBJECTS } from "../data";
 
 interface NcbtOnePageProps {
-  professionSlug?: string | null;
-  showPage?: (pageId: string, pushHistory?: boolean, customState?: any) => void;
-  onStartTest?: (subjectId: string, testId: string) => void;
+  showPage: (pageId: string, pushHistory?: boolean, customState?: any) => void;
 }
 
-export const NcbtOnePage: React.FC<NcbtOnePageProps> = ({ 
-  professionSlug, 
-  showPage,
-  onStartTest 
-}) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("pyq");
-  const [activeFilter, setActiveFilter] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
+export const NcbtOnePage: React.FC<NcbtOnePageProps> = ({ showPage }) => {
+  // Table of Contents closed by default as requested
+  const [isTocOpen, setIsTocOpen] = useState(false);
 
-  const currentProfession = PROFESSIONS.find(p => p.slug === professionSlug);
+  const tocItems = [
+    { id: "nursing-officer", slug: "nursing", label: "Nursing Officer", icon: "🩺" },
+    { id: "pharmacist", slug: "pharma", label: "Pharmacist", icon: "💊" },
+    { id: "paramedical-ot", slug: "ot-technician", label: "Paramedical / OT Technician", icon: "🏥" },
+    { id: "physiotherapist", slug: "physiotherapist", label: "Physiotherapist", icon: "🧘" },
+    { id: "radiographer", slug: "radiographer", label: "Radiographer / X-Ray Technician", icon: "📸" },
+    { id: "lab-technician", slug: "lab-technician", label: "Lab Technician (DMLT)", icon: "🧪" },
+    { id: "medical-officer", slug: "", label: "Medical Officer", icon: "⚕️" }
+  ];
 
-  // Helper to trigger test navigation
-  const handleStartTestClick = (subjId: string, testId: string) => {
-    if (onStartTest) {
-      onStartTest(subjId, testId);
-    } else if (showPage) {
-      showPage("test", true, { subjectId: subjId, testId: testId });
+  const handleProfessionClick = (prof: { id: string; slug: string }) => {
+    if (prof.slug) {
+      showPage("ncbt_one_" + prof.slug);
     } else {
-      window.history.pushState({ page: "test", subjectId: subjId, testId: testId }, "", `/test/${subjId}/${testId}`);
-      window.dispatchEvent(new PopStateEvent("popstate"));
+      scrollToSection(prof.id);
     }
   };
 
-  // Helper to open exam page
-  const handleExamClick = (examId: string) => {
-    if (showPage) {
-      showPage("exam_landing", true, { examId: examId });
-    } else {
-      window.history.pushState({ page: "exam_landing", examId: examId }, "", `/exams/${examId}`);
-      window.dispatchEvent(new PopStateEvent("popstate"));
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
 
-  // Filter exams by profession slug match
-  const getMatchingExams = () => {
-    if (!currentProfession) return [];
-    const catMatch = currentProfession.categoryMatch.toLowerCase();
-    
-    return TARGET_EXAMS.filter(exam => {
-      const examCat = exam.category.toLowerCase();
-      if (currentProfession.slug === "nursing") return examCat === "nursing";
-      if (currentProfession.slug === "pharma") return examCat === "pharmacist";
-      if (currentProfession.slug === "lab-technician") return examCat === "lab tech" || examCat === "lab technician";
-      if (currentProfession.slug === "radiographer") return examCat === "radiographer";
-      if (currentProfession.slug === "ot-technician") return examCat === "paramedical" || examCat === "ot technician";
-      if (currentProfession.slug === "medical-officer") return examCat === "medical officer";
-      return examCat === catMatch;
-    });
-  };
-
-  const matchingExams = getMatchingExams();
-
-  // Pull matching PYQs for matching exams
-  const getMatchingPYQs = () => {
-    if (matchingExams.length === 0) return [];
-    const examIds = matchingExams.map(e => e.id.toLowerCase());
-    return PYQ_DATA.filter(p => {
-      const tag = p.tag.toLowerCase();
-      return examIds.some(eId => eId.includes(tag) || tag.includes(eId) || (currentProfession?.slug === "nursing" && tag.includes("norcet")));
-    });
-  };
-
-  const matchingPYQs = getMatchingPYQs();
-
-  // Render Hub Landing Page if no specific profession slug is selected
-  if (!professionSlug) {
-    return <NCBTOneHub onStartTest={onStartTest} showPage={showPage} />;
-  }
-
-  // Render DEDICATED PROFESSION PAGE (/ncbt-one/:profession)
   return (
-    <div className="ncbt-one-theme min-h-screen text-[var(--n1-text)] font-sans pb-24" style={{ background: "var(--n1-bg)" }}>
-      <NCBTOneSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] pb-24 font-sans">
+      
+      {/* ==================== A) HERO SECTION ==================== */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-[var(--surface-2)] via-[var(--surface)] to-[var(--bg)] pt-12 pb-14 px-4 md:px-8 border-b border-[var(--border)] text-center">
+        
+        {/* Glow backdrop accents */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-96 bg-slate-500/10 rounded-full filter blur-[140px] pointer-events-none"></div>
+        <div className="absolute top-10 right-10 w-72 h-72 bg-[var(--primary)]/10 rounded-full filter blur-[100px] pointer-events-none"></div>
 
-      {/* TOP PROFESSION HEADER */}
-      <header className="px-4 py-3 border-b border-[var(--n1-border)] flex items-center justify-between sticky top-0 z-40 backdrop-blur-md" style={{ background: "var(--n1-surface)" }}>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-xl hover:bg-[var(--n1-surface-2)] transition-colors cursor-pointer border border-[var(--n1-border)]"
-            title="Open Professions Sidebar"
-          >
-            <Menu size={18} style={{ color: "var(--n1-primary)" }} />
-          </button>
+        <div className="max-w-4xl mx-auto relative z-10 space-y-5">
           
-          <button
-            onClick={() => {
-              window.history.pushState(null, "", "/ncbt-one");
-              window.dispatchEvent(new PopStateEvent("popstate"));
-            }}
-            className="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-xl border border-[var(--n1-border)] cursor-pointer hover:bg-[var(--n1-surface-2)] transition-colors"
-            style={{ color: "var(--n1-text)" }}
-          >
-            <ArrowLeft size={14} />
-            <span className="hidden sm:inline">Hub</span>
-          </button>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm sm:text-base font-extrabold tracking-tight truncate max-w-[180px] sm:max-w-xs" style={{ color: "var(--n1-text)" }}>
-              {currentProfession ? currentProfession.label : "Profession"} NCBT One
+          {/* H1 Heading */}
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-[var(--text-primary)] tracking-tight leading-[1.15]">
+            One Dashboard. Every Exam. <br className="hidden sm:block" />
+            <span className="bg-gradient-to-r from-slate-200 via-slate-400 to-slate-300 bg-clip-text text-transparent font-serif italic font-normal">
+              Zero Distractions.
             </span>
+          </h1>
+
+          {/* Subtext */}
+          <p className="text-sm md:text-base text-[var(--text2)] max-w-2xl mx-auto leading-relaxed font-sans">
+            NCBT One brings every mock test, PYQ, and short test for your profession into a single personalized space — no ads, no page-hopping, no clicking through five menus to practice. Just you, your exams, and your progress.
+          </p>
+
+        </div>
+      </section>
+
+      {/* MAIN CONTAINER */}
+      <div className="max-w-5xl mx-auto px-4 md:px-8 mt-8 space-y-8">
+
+        {/* ==================== B) PROFESSION BUTTONS (ABOVE TOC) ==================== */}
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-5 md:p-6 shadow-xl space-y-3">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
+            <Sparkles className="w-4 h-4 text-slate-400" />
+            <span>Select Profession to Jump:</span>
+          </div>
+          
+          <div className="n-card-grid pt-1">
+            {tocItems.map((prof) => (
+              <button
+                key={prof.id}
+                onClick={() => handleProfessionClick(prof)}
+                className="n-card-compact flex items-center gap-2.5 hover:border-[var(--primary)] transition-all cursor-pointer group text-left"
+              >
+                <span className="text-xl group-hover:scale-110 transition-transform shrink-0">{prof.icon}</span>
+                <span className="text-xs font-bold text-[var(--text-primary)] group-hover:text-[var(--primary)] transition-colors">{prof.label}</span>
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider" style={{ background: "var(--n1-surface-2)", color: "var(--n1-primary)" }}>
-            {matchingExams.length > 0 ? `${matchingExams.length} Series` : "Coming Soon"}
-          </span>
+        {/* ==================== C) TABLE OF CONTENTS (COLLAPSIBLE BY DEFAULT) ==================== */}
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-5 md:p-6 shadow-xl space-y-4">
+          
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setIsTocOpen(!isTocOpen)}
+              className="flex items-center gap-2.5 text-sm md:text-base font-black text-[var(--text-primary)] hover:text-slate-300 transition-colors cursor-pointer"
+            >
+              <div className="p-1.5 rounded-lg bg-slate-800 text-slate-300">
+                <Layers className="w-4 h-4" />
+              </div>
+              <span>☰ Table of Contents — Select Your Profession</span>
+              {isTocOpen ? (
+                <ChevronUp className="w-4 h-4 text-[var(--text2)]" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-[var(--text2)]" />
+              )}
+            </button>
+            <span className="text-[11px] font-mono font-bold text-slate-400 hidden sm:inline">
+              7 Professions Covered
+            </span>
+          </div>
+
+          {isTocOpen && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 pt-2 border-t border-[var(--border)]/60 animate-fade-in">
+              {tocItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => scrollToSection(item.id)}
+                  className="p-3 rounded-2xl bg-[var(--surface)] hover:bg-[var(--surface-2)] border border-[var(--border)] hover:border-slate-400 text-left transition-all cursor-pointer flex items-center gap-2.5 group"
+                >
+                  <span className="text-lg group-hover:scale-110 transition-transform">{item.icon}</span>
+                  <span className="text-xs font-bold text-[var(--text-primary)] group-hover:text-white leading-tight">
+                    {item.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-      </header>
 
-      {/* ZEPTAL-STYLE STICKY TOP NAV */}
-      <NCBTOneTopNav 
-        onSearch={(q) => setSearchQuery(q)}
-        onTabChange={(t) => setActiveTab(t)}
-        onFilterChange={(f) => setActiveFilter(f)}
-        activeTab={activeTab}
-        activeFilter={activeFilter}
-      />
+        {/* ==================== D) PROFESSION SECTIONS ==================== */}
+        <div className="space-y-10">
 
-      {/* PROFESSION CONTENT AREA */}
-      <div className="max-w-6xl mx-auto px-4 pt-6 space-y-6">
-
-        {/* CASE A: NO DATA FOR PROFESSION -> STRICT "COMING SOON" EMPTY STATE */}
-        {matchingExams.length === 0 ? (
-          <div className="p-8 sm:p-12 rounded-3xl border border-[var(--n1-border)] text-center space-y-4 max-w-2xl mx-auto my-12" style={{ background: "var(--n1-surface)" }}>
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto border border-[var(--n1-border)]" style={{ background: "var(--n1-surface-2)" }}>
-              <AlertCircle size={32} style={{ color: "var(--n1-accent)" }} />
+          {/* 1. NURSING OFFICER NCBT ONE */}
+          <section id="nursing-officer" className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 md:p-8 shadow-lg space-y-4 scroll-mt-24">
+            <div className="flex items-center gap-3 border-b border-[var(--border)] pb-3">
+              <span className="text-2xl p-2 bg-[var(--surface)] rounded-2xl border border-[var(--border)]">🩺</span>
+              <div>
+                <h2 className="text-xl md:text-2xl font-black text-[var(--text-primary)]">
+                  Nursing Officer NCBT One
+                </h2>
+                <span className="text-[10px] font-mono uppercase text-slate-400 font-bold">
+                  Targeting AIIMS NORCET, ESIC, WBHRB &amp; Staff Nurse
+                </span>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <span className="inline-block px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider" style={{ background: "var(--n1-surface-2)", color: "var(--n1-primary)" }}>
-                Upcoming Cadre
-              </span>
-              <h2 className="text-xl sm:text-2xl font-black" style={{ color: "var(--n1-text)" }}>
-                {currentProfession ? currentProfession.label : "This Cadre"} Test Series Coming Soon
-              </h2>
-              <p className="text-xs sm:text-sm max-w-md mx-auto leading-relaxed" style={{ color: "var(--n1-text-secondary)" }}>
-                We are actively curating board-level previous year papers and high-yield CBT mock tests specifically for {currentProfession ? currentProfession.label : "this profession"}. Check back soon for full access!
+            <div className="prose max-w-none text-[var(--text2)] space-y-3 text-xs sm:text-sm leading-relaxed font-sans">
+              <p>
+                <strong>Nursing Officer NCBT One</strong> is the ultimate distraction-free computer-based testing hub designed specifically for nursing graduates and diploma holders across India. Preparing for premier nursing recruitment exams like <strong>AIIMS NORCET</strong>, <strong>ESIC Nursing Officer</strong>, <strong>WBHRB Basic B.Sc &amp; GNM Staff Nurse</strong>, and <strong>RRB Railway Staff Nurse</strong> often requires bouncing between multiple websites, dealing with broken links, and fighting intrusive advertisements.
+              </p>
+              <p>
+                With <strong>Nursing Officer NCBT One</strong>, candidates gain single-click access to thousands of authentic CBT mock papers, past year solved question sets (PYQs), clinical speed drills, and image-based nursing procedure questions. Every question includes in-depth professor-verified clinical rationales, physiological explanations, and drug dosage breakdowns.
+              </p>
+            </div>
+          </section>
+
+          {/* 2. PHARMACIST NCBT ONE */}
+          <section id="pharmacist" className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 md:p-8 shadow-lg space-y-4 scroll-mt-24">
+            <div className="flex items-center gap-3 border-b border-[var(--border)] pb-3">
+              <span className="text-2xl p-2 bg-[var(--surface)] rounded-2xl border border-[var(--border)]">💊</span>
+              <div>
+                <h2 className="text-xl md:text-2xl font-black text-[var(--text-primary)]">
+                  Pharmacist NCBT One
+                </h2>
+                <span className="text-[10px] font-mono uppercase text-slate-400 font-bold">
+                  Targeting RRB Pharmacist, ESIC, WBHRB &amp; Drug Inspector
+                </span>
+              </div>
+            </div>
+
+            <div className="prose max-w-none text-[var(--text2)] space-y-3 text-xs sm:text-sm leading-relaxed font-sans">
+              <p>
+                <strong>Pharmacist NCBT One</strong> provides a dedicated, streamlined practice environment for Diploma in Pharmacy (D.Pharm) and Bachelor of Pharmacy (B.Pharm) candidates preparing for central and state government pharmaceutical posts. Top recruitment exams such as <strong>RRB Pharmacist CBT</strong>, <strong>ESIC Pharmacist</strong>, <strong>WBHRB Pharmacist Grade-III</strong>, <strong>CGHS Hospital Pharmacist</strong>, and <strong>State Drug Inspector</strong> demand deep conceptual clarity across Pharmaceutics, Pharmacology, Pharmacognosy, and Pharmaceutical Jurisprudence.
+              </p>
+              <p>
+                Inside <strong>Pharmacist NCBT One</strong>, aspirants can practice full-length online mock exams, subject-specific pharmaceutical quizzes, and official past year papers without external redirects.
+              </p>
+            </div>
+          </section>
+
+          {/* 3. PARAMEDICAL & OT TECHNICIAN NCBT ONE */}
+          <section id="paramedical-ot" className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 md:p-8 shadow-lg space-y-4 scroll-mt-24">
+            <div className="flex items-center gap-3 border-b border-[var(--border)] pb-3">
+              <span className="text-2xl p-2 bg-[var(--surface)] rounded-2xl border border-[var(--border)]">🏥</span>
+              <div>
+                <h2 className="text-xl md:text-2xl font-black text-[var(--text-primary)]">
+                  Paramedical &amp; OT Technician NCBT One
+                </h2>
+                <span className="text-[10px] font-mono uppercase text-slate-400 font-bold">
+                  Targeting Operation Theatre, Anesthesia &amp; Dialysis Techs
+                </span>
+              </div>
+            </div>
+
+            <div className="prose max-w-none text-[var(--text2)] space-y-3 text-xs sm:text-sm leading-relaxed font-sans">
+              <p>
+                <strong>Paramedical &amp; OT Technician NCBT One</strong> offers an all-in-one testing portal customized for Operation Theatre Technicians, Anesthesia Assistants, Dialysis Technicians, and CSSD Supervisors. Candidates targeting competitive exams across <strong>AIIMS Surgical OT Recruitment</strong>, <strong>RRB Paramedical Cadres</strong>, and State Health Directorates frequently struggle to find high-quality, exam-oriented study content.
+              </p>
+              <p>
+                Through <strong>Paramedical &amp; OT Technician NCBT One</strong>, candidates access structured test suites covering surgical instrument identification, sterilization protocols, anesthesia workstation workflows, and emergency airway management.
+              </p>
+            </div>
+          </section>
+
+          {/* 4. PHYSIOTHERAPIST NCBT ONE */}
+          <section id="physiotherapist" className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 md:p-8 shadow-lg space-y-4 scroll-mt-24">
+            <div className="flex items-center gap-3 border-b border-[var(--border)] pb-3">
+              <span className="text-2xl p-2 bg-[var(--surface)] rounded-2xl border border-[var(--border)]">🧘</span>
+              <div>
+                <h2 className="text-xl md:text-2xl font-black text-[var(--text-primary)]">
+                  Physiotherapist NCBT One
+                </h2>
+                <span className="text-[10px] font-mono uppercase text-slate-400 font-bold">
+                  Targeting BPT / MPT AIIMS, RRB &amp; State Hospital Recruitment
+                </span>
+              </div>
+            </div>
+
+            <div className="prose max-w-none text-[var(--text2)] space-y-3 text-xs sm:text-sm leading-relaxed font-sans">
+              <p>
+                <strong>Physiotherapist NCBT One</strong> delivers a comprehensive computer-based examination workspace for Bachelor of Physiotherapy (BPT) and Master of Physiotherapy (MPT) professionals. Securing government physiotherapy positions in premier institutions such as <strong>AIIMS Hospital Physiotherapist</strong>, <strong>RRB Rehabilitation Cadres</strong>, and State Public Service Commissions requires mastering complex subjects like Kinesiology, Electrotherapy, and Neuro-rehabilitation.
+              </p>
+              <p>
+                By consolidating all past papers, clinical case scenario MCQs, and domain-wise speed drills into <strong>Physiotherapist NCBT One</strong>, candidates no longer need to spend hours searching for authentic test series.
+              </p>
+            </div>
+          </section>
+
+          {/* 5. RADIOGRAPHER & X-RAY TECHNICIAN NCBT ONE */}
+          <section id="radiographer" className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 md:p-8 shadow-lg space-y-4 scroll-mt-24">
+            <div className="flex items-center gap-3 border-b border-[var(--border)] pb-3">
+              <span className="text-2xl p-2 bg-[var(--surface)] rounded-2xl border border-[var(--border)]">📸</span>
+              <div>
+                <h2 className="text-xl md:text-2xl font-black text-[var(--text-primary)]">
+                  Radiographer &amp; X-Ray Technician NCBT One
+                </h2>
+                <span className="text-[10px] font-mono uppercase text-slate-400 font-bold">
+                  Targeting DRT, BRT, CT/MRI &amp; Radiation Physics Exams
+                </span>
+              </div>
+            </div>
+
+            <div className="prose max-w-none text-[var(--text2)] space-y-3 text-xs sm:text-sm leading-relaxed font-sans">
+              <p>
+                <strong>Radiographer &amp; X-Ray Technician NCBT One</strong> is designed for Diploma in Radiography Technology (DRT) and Bachelor in Radiography Technology (BRT) specialists. Candidates targeting central recruitment for <strong>AIIMS Radiographer</strong>, <strong>RRB X-Ray Technician</strong>, and state health directorate imaging posts must excel in Radiation Physics, Diagnostic Radiographic Positioning, Computed Tomography (CT), and Magnetic Resonance Imaging (MRI).
+              </p>
+              <p>
+                Inside <strong>Radiographer &amp; X-Ray Technician NCBT One</strong>, students practice full-length CBT mocks, radiation safety quizzes, and image-based diagnostic questions without annoying popups or ad traps.
+              </p>
+            </div>
+          </section>
+
+          {/* 6. LAB TECHNICIAN NCBT ONE */}
+          <section id="lab-technician" className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 md:p-8 shadow-lg space-y-4 scroll-mt-24">
+            <div className="flex items-center gap-3 border-b border-[var(--border)] pb-3">
+              <span className="text-2xl p-2 bg-[var(--surface)] rounded-2xl border border-[var(--border)]">🧪</span>
+              <div>
+                <h2 className="text-xl md:text-2xl font-black text-[var(--text-primary)]">
+                  Lab Technician NCBT One
+                </h2>
+                <span className="text-[10px] font-mono uppercase text-slate-400 font-bold">
+                  Targeting DMLT, BMLT, AIIMS Pathology &amp; RRB Lab Assistant
+                </span>
+              </div>
+            </div>
+
+            <div className="prose max-w-none text-[var(--text2)] space-y-3 text-xs sm:text-sm leading-relaxed font-sans">
+              <p>
+                <strong>Lab Technician NCBT One</strong> serves DMLT and BMLT medical laboratory professionals seeking government appointments across AIIMS, Railway Recruitment Boards, and state pathology departments. Competitive exams for <strong>AIIMS Medical Laboratory Technologist</strong>, <strong>RRB Lab Assistant</strong>, and <strong>State DMLT Recruitment</strong> evaluate thorough knowledge in Clinical Biochemistry, Hematology, Blood Banking, Medical Microbiology, and Histopathology.
+              </p>
+              <p>
+                With <strong>Lab Technician NCBT One</strong>, candidates get direct, ad-free access to solved PYQs, topic-wise diagnostic practice sets, and full-length CBT exams on a single clean interface.
+              </p>
+            </div>
+          </section>
+
+          {/* 7. MEDICAL OFFICER NCBT ONE */}
+          <section id="medical-officer" className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 md:p-8 shadow-lg space-y-4 scroll-mt-24">
+            <div className="flex items-center gap-3 border-b border-[var(--border)] pb-3">
+              <span className="text-2xl p-2 bg-[var(--surface)] rounded-2xl border border-[var(--border)]">⚕️</span>
+              <div>
+                <h2 className="text-xl md:text-2xl font-black text-[var(--text-primary)]">
+                  Medical Officer NCBT One
+                </h2>
+                <span className="text-[10px] font-mono uppercase text-slate-400 font-bold">
+                  Targeting State MO, UPSC Combined Medical Services (CMS) &amp; NHM
+                </span>
+              </div>
+            </div>
+
+            <div className="prose max-w-none text-[var(--text2)] space-y-3 text-xs sm:text-sm leading-relaxed font-sans">
+              <p>
+                <strong>Medical Officer NCBT One</strong> is tailored for MBBS doctors and medical professionals preparing for government healthcare leadership posts. Examinations such as <strong>UPSC Combined Medical Services (CMS)</strong>, <strong>State Public Service Commission Medical Officer (MO) Recruitment</strong>, and <strong>NHM Medical Officer Screening Tests</strong> require rapid recall in General Medicine, Pediatrics, Surgery, Obstetrics &amp; Gynecology, and Preventive &amp; Social Medicine (PSM).
+              </p>
+              <p>
+                Through <strong>Medical Officer NCBT One</strong>, candidates access high-yield clinical case questions, official previous year question banks, and timed full-scale CBT simulations.
+              </p>
+            </div>
+          </section>
+
+        </div>
+
+        {/* ==================== E) FEATURES SECTION ==================== */}
+        <div className="border-t border-[var(--border)] pt-12 space-y-8">
+          <div className="text-center space-y-2">
+            <span className="text-xs font-black uppercase tracking-widest text-slate-400 bg-[var(--surface-2)] px-3 py-1 rounded-full border border-[var(--border)]">
+              THE NCBT ONE ARCHITECTURE
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black text-[var(--text-primary)] tracking-tight">
+              Designed for Pure Performance &amp; Focus
+            </h2>
+            <p className="text-xs sm:text-sm text-[var(--text2)] max-w-xl mx-auto">
+              Every tool and view inside NCBT One is built around speed, clarity, and deep diagnostic retention.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            {/* Feature 1 */}
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-5 space-y-3 hover:border-slate-400/50 transition-all shadow-sm">
+              <div className="w-10 h-10 rounded-2xl bg-[var(--primary)]/15 text-slate-300 flex items-center justify-center font-bold">
+                <Layers className="w-5 h-5 text-slate-300" />
+              </div>
+              <h3 className="text-sm font-black text-[var(--text-primary)]">All Your Tests, One Place</h3>
+              <p className="text-xs text-[var(--text2)] leading-relaxed">
+                Full mock tests, solved past year question sets, and speed sprints for your exact profession and target exam — with zero page-hopping.
               </p>
             </div>
 
-            <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
-              <button
-                onClick={() => {
-                  window.history.pushState(null, "", "/ncbt-one");
-                  window.dispatchEvent(new PopStateEvent("popstate"));
-                }}
-                className="px-5 py-2.5 rounded-xl text-xs font-bold text-white transition-all shadow-md cursor-pointer"
-                style={{ background: "var(--n1-primary)" }}
-              >
-                Return to NCBT One Hub
-              </button>
+            {/* Feature 2 */}
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-5 space-y-3 hover:border-slate-400/50 transition-all shadow-sm">
+              <div className="w-10 h-10 rounded-2xl bg-[var(--primary)]/15 text-slate-300 flex items-center justify-center font-bold">
+                <UserCheck className="w-5 h-5 text-slate-300" />
+              </div>
+              <h3 className="text-sm font-black text-[var(--text-primary)]">Personalized Dashboard</h3>
+              <p className="text-xs text-[var(--text2)] leading-relaxed">
+                A dedicated, ad-free learning space per student showing overall syllabus coverage, test history, and daily target goals.
+              </p>
             </div>
-          </div>
-        ) : (
-          /* CASE B: REAL EXAM DATA EXISTS FOR THIS PROFESSION */
-          <div className="space-y-8">
 
-            {/* TAB 1: PYQ ZONE */}
-            {(activeTab === "pyq" || activeFilter === "pyq" || activeFilter === "all") && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b border-[var(--n1-border)] pb-2">
-                  <h3 className="text-base font-black flex items-center gap-2" style={{ color: "var(--n1-text)" }}>
-                    <FileText size={18} style={{ color: "var(--n1-accent)" }} />
-                    <span>{currentProfession?.label} PYQ Zone</span>
-                  </h3>
-                  <span className="text-xs font-bold text-emerald-500">100% Verified Papers</span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {matchingPYQs.length > 0 ? (
-                    matchingPYQs.map((pyq, idx) => {
-                      const pyqVirtualId = `pyq-${pyq.tag}-${pyq.year}`.toLowerCase();
-                      if (searchQuery && !pyq.exam.toLowerCase().includes(searchQuery.toLowerCase())) return null;
-
-                      return (
-                        <div
-                          key={idx}
-                          className="rounded-2xl p-4 border border-[var(--n1-border)] flex flex-col justify-between space-y-3 hover:shadow-md transition-all"
-                          style={{ background: "var(--n1-surface)" }}
-                        >
-                          <div className="space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: "var(--n1-surface-2)", color: "var(--n1-primary)" }}>
-                                {pyq.year} Official PYQ
-                              </span>
-                              <span className="text-[11px] font-bold" style={{ color: "var(--n1-text-secondary)" }}>
-                                {pyq.tag.toUpperCase()}
-                              </span>
-                            </div>
-                            <h4 className="text-sm font-bold line-clamp-2" style={{ color: "var(--n1-text)" }}>
-                              {pyq.exam}
-                            </h4>
-                            <p className="text-xs line-clamp-2" style={{ color: "var(--n1-text-secondary)" }}>
-                              Board Previous Year Question Paper
-                            </p>
-                          </div>
-
-                          <div className="pt-3 border-t border-[var(--n1-border)] flex items-center justify-between">
-                            <span className="text-xs font-medium" style={{ color: "var(--n1-text-secondary)" }}>
-                              {pyq.count} Questions
-                            </span>
-                            <button
-                              onClick={() => handleStartTestClick("virtual", pyqVirtualId)}
-                              className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white transition-all cursor-pointer shadow-xs"
-                              style={{ background: "var(--n1-primary)" }}
-                            >
-                              Attempt PYQ
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="col-span-full p-6 rounded-2xl border border-[var(--n1-border)] text-center text-xs" style={{ background: "var(--n1-surface)", color: "var(--n1-text-secondary)" }}>
-                      Board-level official PYQ papers for {currentProfession?.label} are being verified and mapped. Check mock test series below!
-                    </div>
-                  )}
-                </div>
+            {/* Feature 3 */}
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-5 space-y-3 hover:border-slate-400/50 transition-all shadow-sm">
+              <div className="w-10 h-10 rounded-2xl bg-[var(--primary)]/15 text-slate-300 flex items-center justify-center font-bold">
+                <BarChart3 className="w-5 h-5 text-slate-300" />
               </div>
-            )}
+              <h3 className="text-sm font-black text-[var(--text-primary)]">Performance Analytics</h3>
+              <p className="text-xs text-[var(--text2)] leading-relaxed">
+                Comprehensive accuracy trends, weak-topic diagnostics, and comparison charts tracking improvement across mock attempts.
+              </p>
+            </div>
 
-            {/* TAB 2: MOCK ARENA */}
-            {(activeTab === "mocks" || activeFilter === "mocks" || activeFilter === "all") && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b border-[var(--n1-border)] pb-2">
-                  <h3 className="text-base font-black flex items-center gap-2" style={{ color: "var(--n1-text)" }}>
-                    <Target size={18} style={{ color: "var(--n1-primary)" }} />
-                    <span>{currentProfession?.label} Mock Test Series</span>
-                  </h3>
-                  <span className="text-xs font-bold" style={{ color: "var(--n1-text-secondary)" }}>
-                    {matchingExams.length} Series Active
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {matchingExams.map((exam) => {
-                    if (searchQuery && !exam.name.toLowerCase().includes(searchQuery.toLowerCase())) return null;
-
-                    return (
-                      <div
-                        key={exam.id}
-                        onClick={() => handleExamClick(exam.id)}
-                        className="rounded-2xl p-5 border border-[var(--n1-border)] flex flex-col justify-between space-y-4 hover:shadow-md transition-all cursor-pointer group"
-                        style={{ background: "var(--n1-surface)" }}
-                      >
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-2xl">{exam.icon || "📋"}</span>
-                            {exam.badge && (
-                              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full text-white" style={{ background: "var(--n1-accent)" }}>
-                                🔥 {exam.badge}
-                              </span>
-                            )}
-                          </div>
-                          <h4 className="text-base font-extrabold group-hover:underline transition-colors" style={{ color: "var(--n1-text)" }}>
-                            {exam.fullName || exam.name}
-                          </h4>
-                          <p className="text-xs line-clamp-2" style={{ color: "var(--n1-text-secondary)" }}>
-                            {exam.desc}
-                          </p>
-                        </div>
-
-                        <div className="pt-3 border-t border-[var(--n1-border)] flex items-center justify-between text-xs font-bold" style={{ color: "var(--n1-primary)" }}>
-                          <span>Explore Mock Series →</span>
-                          <ChevronRight size={16} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+            {/* Feature 4 */}
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-5 space-y-3 hover:border-slate-400/50 transition-all shadow-sm">
+              <div className="w-10 h-10 rounded-2xl bg-[var(--primary)]/15 text-slate-300 flex items-center justify-center font-bold">
+                <FileText className="w-5 h-5 text-slate-300" />
               </div>
-            )}
-
-            {/* TAB 3: QUICK QUIZ & SPEED DRILLS */}
-            {(activeTab === "quiz" || activeTab === "drills") && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b border-[var(--n1-border)] pb-2">
-                  <h3 className="text-base font-black flex items-center gap-2" style={{ color: "var(--n1-text)" }}>
-                    <Zap size={18} style={{ color: "var(--n1-accent)" }} />
-                    <span>Speed Drills &amp; High-Yield Topic Quizzes</span>
-                  </h3>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {[
-                    { id: "sprint-curated-1", title: "General Awareness & Current Affairs", mins: 15, qs: 15 },
-                    { id: "sprint-curated-2", title: "Reasoning & Quantitative Aptitude", mins: 15, qs: 15 },
-                    { id: "sprint-curated-3", title: "Clinical Pharmacology & Safety", mins: 20, qs: 20 },
-                  ].map((sprint) => (
-                    <div
-                      key={sprint.id}
-                      className="rounded-2xl p-4 border border-[var(--n1-border)] space-y-3 flex flex-col justify-between"
-                      style={{ background: "var(--n1-surface)" }}
-                    >
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: "var(--n1-surface-2)", color: "var(--n1-primary)" }}>
-                          Speed Drill
-                        </span>
-                        <h4 className="text-sm font-bold" style={{ color: "var(--n1-text)" }}>
-                          {sprint.title}
-                        </h4>
-                      </div>
-
-                      <div className="pt-2 border-t border-[var(--n1-border)] flex items-center justify-between">
-                        <span className="text-xs" style={{ color: "var(--n1-text-secondary)" }}>
-                          ⏱ {sprint.mins} Mins • {sprint.qs} Qs
-                        </span>
-                        <button
-                          onClick={() => handleStartTestClick("virtual", sprint.id)}
-                          className="px-3 py-1.5 rounded-xl text-xs font-bold text-white transition-all cursor-pointer"
-                          style={{ background: "var(--n1-primary)" }}
-                        >
-                          Start Drill
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+              <h3 className="text-sm font-black text-[var(--text-primary)]">Study Resources</h3>
+              <p className="text-xs text-[var(--text2)] leading-relaxed">
+                High-yield clinical notes, pharmaceutical charts, and downloadable PDFs (expanding continuously over time).
+              </p>
+            </div>
 
           </div>
-        )}
+        </div>
+
+        {/* ==================== F) CLOSING ==================== */}
+        <div className="bg-gradient-to-r from-[var(--surface-2)] via-[var(--card)] to-[var(--surface-2)] border border-[var(--border)] rounded-3xl p-8 md:p-10 text-center space-y-5 shadow-xl">
+          <div className="w-12 h-12 rounded-2xl bg-[var(--surface)] text-slate-300 flex items-center justify-center mx-auto border border-[var(--border)]">
+            <Sparkles className="w-6 h-6 text-slate-300" />
+          </div>
+
+          <div className="space-y-2 max-w-xl mx-auto">
+            <h3 className="text-2xl md:text-3xl font-black text-[var(--text-primary)] tracking-tight">
+              NCBT One — Medical &amp; Paramedical Prep
+            </h3>
+            <p className="text-xs sm:text-sm text-[var(--text2)] leading-relaxed">
+              Experience focused, distraction-free computer-based practice tailored for your exact profession.
+            </p>
+          </div>
+
+          {/* Return Home Button */}
+          <div className="pt-2">
+            <button
+              onClick={() => showPage("landing")}
+              className="px-6 py-3 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-2 shadow-md hover:scale-105"
+            >
+              <span>← Return to NCBT Home</span>
+            </button>
+          </div>
+
+        </div>
 
       </div>
+
     </div>
   );
 };
