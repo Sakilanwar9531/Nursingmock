@@ -2758,9 +2758,56 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       }
     }
 
-    // 3. PYQs handler
+    // 3. Notes Handler
+    if (testId.startsWith("note-")) {
+      triggerToast("📄 Opening Clinical Revision Handbook in reader mode...", "ok");
+      return;
+    }
+
+    // 4. Grand Mock Tests Handler (norcet-mock-*, wbhrb-mock-*, esic-mock-*, rrb-mock-*)
+    if (!targetTest && (testId.includes("mock") || testId.startsWith("norcet-") || testId.startsWith("wbhrb-") || testId.startsWith("esic-") || testId.startsWith("rrb-"))) {
+      let mockName = "All India Grand CBT Mock Test";
+      let mockExam = "NORCET";
+      let reqCount = 50;
+
+      if (testId.includes("norcet")) {
+        mockName = "AIIMS NORCET Grand CBT Mock 2026";
+        mockExam = "AIIMS";
+        reqCount = 80;
+      } else if (testId.includes("wbhrb")) {
+        mockName = "WBHRB Staff Nurse Grade II CBT Mock";
+        mockExam = "WBHRB";
+        reqCount = 50;
+      } else if (testId.includes("esic")) {
+        mockName = "ESIC Nursing Officer Grand Mock";
+        mockExam = "ESIC";
+        reqCount = 50;
+      } else if (testId.includes("rrb")) {
+        mockName = "RRB Railway Staff Nurse Grand Mock";
+        mockExam = "RRB";
+        reqCount = 50;
+      }
+
+      const mockQs = getQuestionsForPyq(mockExam, "", reqCount);
+      targetTest = {
+        id: testId,
+        icon: "🏆",
+        title: mockName,
+        desc: "Comprehensive full-length exam simulation covering high-yield NCBT clinical syllabus, negative marking & detailed rationales.",
+        questions: mockQs.length || reqCount,
+        mins: mockQs.length || reqCount,
+        ready: true,
+        data: mockQs
+      };
+
+      setPendingTest({ subjectId: "virtual", testId: targetTest.id, test: targetTest });
+      setSelectedModeForPending("exam");
+      return;
+    }
+
+    // 5. PYQs handler
     if (!targetTest && (subjectId === "pyq" || testId.startsWith("pyq-"))) {
-      const foundPyq = PYQ_DATA.find(p => `pyq-${p.tag}-${p.year}`.toLowerCase() === testId.toLowerCase() || p.tag.toLowerCase() === testId.toLowerCase());
+      const foundPyq = PYQ_DATA.find(p => `pyq-${p.tag}-${p.year}`.toLowerCase() === testId.toLowerCase() || p.tag.toLowerCase() === testId.toLowerCase() || testId.toLowerCase().includes(p.tag.toLowerCase()));
       if (foundPyq) {
         const qCount = foundPyq.count || 20;
         const pyqQs = getQuestionsForPyq(foundPyq.exam, foundPyq.year, qCount);
@@ -2769,8 +2816,8 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           icon: "📋",
           title: `${foundPyq.year} ${foundPyq.exam} Paper`,
           desc: `Authentic simulated past year question paper covering high-yield syllabus domains with professor-rationales.`,
-          questions: qCount,
-          mins: qCount,
+          questions: pyqQs.length || qCount,
+          mins: pyqQs.length || qCount,
           ready: true,
           data: pyqQs
         };
@@ -2780,7 +2827,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       }
     }
 
-    // 4. Speed Sprints handler
+    // 6. Speed Sprints handler
     if (!targetTest && (subjectId === "short" || testId.startsWith("sprint-"))) {
       const sprint = CURATED_SPRINTS.find(s => s.id === testId);
       if (sprint) {
@@ -2800,7 +2847,27 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       }
     }
 
-    // 5. Final launch
+    // 7. Dynamic Subject Drill Fallback for topicWise tests without static match
+    if (!targetTest) {
+      const fallbackQs = getQuestionsForPyq("", "", 25);
+      if (fallbackQs && fallbackQs.length > 0) {
+        targetTest = {
+          id: testId,
+          icon: "🎯",
+          title: testId.replace(/-/g, " ").toUpperCase() + " Practice Drill",
+          desc: "Targeted clinical practice test covering core INC syllabus competencies, instant feedback and rationales.",
+          questions: fallbackQs.length,
+          mins: fallbackQs.length,
+          ready: true,
+          data: fallbackQs
+        };
+        setPendingTest({ subjectId: "virtual", testId: targetTest.id, test: targetTest });
+        setSelectedModeForPending("exam");
+        return;
+      }
+    }
+
+    // 8. Final launch
     if (targetTest && targetTest.ready) {
       setPendingTest({
         subjectId: targetSubject ? targetSubject.id : subjectId,
