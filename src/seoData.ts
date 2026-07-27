@@ -36,6 +36,10 @@ export function getAllAppRoutes(): string[] {
   // 1. Add Category/Profession landing routes
   CATEGORY_ROUTES.forEach(c => routes.push(c.path));
 
+  // Add NCBT One profession hub routes
+  const NCBT_ONE_SLUGS = ['nursing', 'pharma', 'physio', 'labtech', 'radiography', 'ot-icu'];
+  NCBT_ONE_SLUGS.forEach(slug => routes.push(`/ncbt-one/${slug}`));
+
   // 2. Add Target Exam landing routes (/exams/exam-id)
   TARGET_EXAMS.forEach(exam => {
     routes.push(`/exams/${exam.id}`);
@@ -83,6 +87,7 @@ export function isValidAppRoute(urlPath: string): boolean {
 
   // Check alias routes & dynamic patterns
   if (cleanPath === "/find-test" || cleanPath === "/find-tests") return true;
+  if (cleanPath.startsWith("/ncbt-one/")) return true;
   if (cleanPath.startsWith("/exams/") || cleanPath.startsWith("/exam/")) {
     const slug = cleanPath.split("/")[2];
     if (slug && TARGET_EXAMS.some(e => e.id.toLowerCase() === slug.toLowerCase())) {
@@ -158,7 +163,25 @@ export function getSeoMetadata(urlPath: string): SeoMeta {
     };
   }
 
-  if (cleanPath === "/ncbt-one" || cleanPath === "/all-in-one") {
+  if (cleanPath === "/ncbt-one" || cleanPath === "/all-in-one" || cleanPath.startsWith("/ncbt-one/")) {
+    const profSlug = cleanPath.startsWith("/ncbt-one/") ? cleanPath.replace("/ncbt-one/", "") : "";
+    const nameMap: Record<string, string> = {
+      nursing: "Nursing Officer",
+      pharma: "Pharmacist",
+      physio: "Physiotherapist",
+      labtech: "Medical Lab Technician",
+      radiography: "Radiographer",
+      "ot-icu": "OT & Critical Care Technician"
+    };
+    const profName = nameMap[profSlug];
+
+    if (profName) {
+      return {
+        title: `${profName} NCBT One — All-in-One CBT Practice Hub | NCBT.in`,
+        description: `Dedicated NCBT One dashboard for ${profName} exams. Practice solved PYQs, topic-wise practice drills, and full-length CBT mock test series.`,
+      };
+    }
+
     return {
       title: "NCBT One — All-in-One Distraction-Free Healthcare CBT Platform | NCBT.in",
       description: "Access NCBT One: the ad-free, distraction-free CBT preparation hub for Nursing, Pharmacist, Physiotherapy, Lab Technician, Radiographer, OT & Critical Care exams.",

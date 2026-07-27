@@ -190,7 +190,7 @@ export const NCBT_ONE_PROFESSIONS: Record<string, ProfessionConfig> = {
       {
         name: "Speed Practice Drills",
         tests: [
-          { id: "sprint-pharmacology", title: "Pharmacology Rapid Recall Sprint", qCount: 15 },
+          { id: "sprint-pharma-pharmacology", title: "Pharmacology Rapid Recall Sprint", qCount: 15 },
           { id: "sprint-pharmacist_science", title: "Pharmaceutics Core Sprints", qCount: 15 }
         ]
       }
@@ -208,7 +208,7 @@ export const NCBT_ONE_PROFESSIONS: Record<string, ProfessionConfig> = {
       {
         name: "Smart Notes & Formulae",
         tests: [
-          { id: "rrb-pharma-mock-1", title: "Essential Pharmacology Drug Classification Table", qCount: 0 }
+          { id: "rrb-pharma-note-1", title: "Essential Pharmacology Drug Classification Table", qCount: 0 }
         ]
       }
     ]
@@ -259,7 +259,7 @@ export const NCBT_ONE_PROFESSIONS: Record<string, ProfessionConfig> = {
       {
         name: "Pathology Staining Manuals",
         tests: [
-          { id: "dmlt-mock-1", title: "Clinical Pathology Normal Reference Ranges", qCount: 0 }
+          { id: "dmlt-note-1", title: "Clinical Pathology Normal Reference Ranges", qCount: 0 }
         ]
       }
     ]
@@ -309,7 +309,7 @@ export const NCBT_ONE_PROFESSIONS: Record<string, ProfessionConfig> = {
       {
         name: "Radiation Safety Handbooks",
         tests: [
-          { id: "radiographer-mock-1", title: "AERB Safety Guidelines & Contrast Media Guide", qCount: 0 }
+          { id: "radiographer-note-1", title: "AERB Safety Guidelines & Contrast Media Guide", qCount: 0 }
         ]
       }
     ]
@@ -359,7 +359,7 @@ export const NCBT_ONE_PROFESSIONS: Record<string, ProfessionConfig> = {
       {
         name: "Surgical Protocols",
         tests: [
-          { id: "ot-mock-1", title: "Sterilization & Disinfection Manual", qCount: 0 }
+          { id: "ot-note-1", title: "Sterilization & Disinfection Manual", qCount: 0 }
         ]
       }
     ]
@@ -373,7 +373,7 @@ export const NCBT_ONE_PROFESSIONS: Record<string, ProfessionConfig> = {
       {
         name: "Physiotherapy Solved Papers",
         tests: [
-          { id: "pyq-aiims-2024", title: "AIIMS Hospital Physiotherapist Paper", qCount: 30, year: "2023", source: "AIIMS" }
+          { id: "pyq-aiims-physio-2023", title: "AIIMS Hospital Physiotherapist Paper", qCount: 30, year: "2023", source: "AIIMS" }
         ]
       }
     ],
@@ -391,7 +391,7 @@ export const NCBT_ONE_PROFESSIONS: Record<string, ProfessionConfig> = {
       {
         name: "Rehab Speed Sprints",
         tests: [
-          { id: "sprint-anatomy", title: "Musculoskeletal Anatomy Sprint", qCount: 15 }
+          { id: "sprint-physio-anatomy", title: "Musculoskeletal Anatomy Sprint", qCount: 15 }
         ]
       }
     ],
@@ -407,9 +407,18 @@ export const NCBT_ONE_PROFESSIONS: Record<string, ProfessionConfig> = {
       {
         name: "Kinesiology Guides",
         tests: [
-          { id: "bpt-mock-1", title: "Muscle Origin, Insertion & Nerve Supply Chart", qCount: 0 }
+          { id: "bpt-note-1", title: "Muscle Origin, Insertion & Nerve Supply Chart", qCount: 0 }
         ]
       }
     ]
   }
 };
+
+// Map short & alternate slug aliases so every profession button works directly
+NCBT_ONE_PROFESSIONS["physio"] = NCBT_ONE_PROFESSIONS["physiotherapist"];
+NCBT_ONE_PROFESSIONS["labtech"] = NCBT_ONE_PROFESSIONS["lab-technician"];
+NCBT_ONE_PROFESSIONS["radiography"] = NCBT_ONE_PROFESSIONS["radiographer"];
+NCBT_ONE_PROFESSIONS["ot-icu"] = NCBT_ONE_PROFESSIONS["ot-technician"];
+NCBT_ONE_PROFESSIONS["pharmacist"] = NCBT_ONE_PROFESSIONS["pharma"];
+NCBT_ONE_PROFESSIONS["lab-tech"] = NCBT_ONE_PROFESSIONS["lab-technician"];
+

@@ -110,6 +110,7 @@ import {
   generateContentDirect 
 } from "./services/geminiClient";
 import { SEO_ARTICLES, getArticleForTest, getArticleForExam } from "./seoArticles";
+import ResultAnalysisPage, { AnalysisData, QuestionResult } from "./components/ResultAnalysisPage";
 
 // Dynamically enriches standard explanations with high-yield clinical pointers
 const getDetailedExplain = (q: Question): string => {
@@ -1249,6 +1250,100 @@ export default function App() {
   const [isTimerPaused, setIsTimerPaused] = useState<boolean>(false);
   const [showPalette, setShowPalette] = useState<boolean>(true);
 
+  // Computed AnalysisData for ResultAnalysisPage
+  const analysisData: AnalysisData = React.useMemo(() => {
+    if (!activeTest) {
+      return {
+        testName: "Mock Test",
+        rank: 1,
+        totalCandidates: 100,
+        score: 0,
+        maxScore: 100,
+        averageScore: 50,
+        bestScore: 95,
+        percentile: 0,
+        accuracy: 0,
+        attempted: 0,
+        totalQuestions: 0,
+        correct: 0,
+        incorrect: 0,
+        unattempted: 0,
+        topperScore: 95,
+        questions: [],
+      };
+    }
+
+    const totalQuestions = activeTest.data.length;
+    let correct = 0;
+    let incorrect = 0;
+    let unattempted = 0;
+
+    const questionResults: QuestionResult[] = activeTest.data.map((q, idx) => {
+      const selIdx = selectedOptions[idx] ?? null;
+      const timeTaken = questionTimesSpent[idx] || 15;
+      let status: "correct" | "incorrect" | "unattempted" | "overtime" = "unattempted";
+
+      if (selIdx === null) {
+        unattempted++;
+        status = "unattempted";
+      } else if (selIdx === q.ans) {
+        correct++;
+        status = timeTaken > 90 ? "overtime" : "correct";
+      } else {
+        incorrect++;
+        status = timeTaken > 90 ? "overtime" : "incorrect";
+      }
+
+      const pctGotRight = Math.min(95, Math.max(25, 65 + ((idx * 7) % 30)));
+      const explanation = getDetailedExplain(q) || (q.source ? `Source: ${q.source}` : "Review clinical guidelines and standard rationale.");
+
+      return {
+        id: q.id || `q-${idx}`,
+        index: idx + 1,
+        text: q.q,
+        options: q.opts,
+        correctIndex: q.ans,
+        selectedIndex: selIdx,
+        timeTakenSec: timeTaken,
+        pctGotRight,
+        solution: explanation,
+        status,
+      };
+    });
+
+    const attempted = correct + incorrect;
+    const penalty = examMode ? (incorrect * 0.25) : 0;
+    const netScore = Math.max(0, parseFloat((correct - penalty).toFixed(2)));
+    const maxScore = totalQuestions;
+    const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
+    const percentile = totalQuestions > 0 ? Math.min(99, Math.max(5, Math.round((netScore / maxScore) * 100))) : 0;
+    
+    const totalCandidates = Math.max(500, totalQuestions * 35);
+    const rank = Math.max(1, Math.round(totalCandidates * (1 - percentile / 100)));
+    const averageScore = Math.round(maxScore * 0.52 * 10) / 10;
+    const bestScore = Math.round(maxScore * 0.96 * 10) / 10;
+    const topperScore = Math.max(correct, Math.round(maxScore * 0.95));
+
+    return {
+      testName: activeTest.title,
+      rank,
+      totalCandidates,
+      score: netScore,
+      maxScore,
+      averageScore,
+      bestScore,
+      percentile,
+      accuracy,
+      attempted,
+      totalQuestions,
+      correct,
+      incorrect,
+      unattempted,
+      topperScore,
+      questions: questionResults,
+    };
+  }, [activeTest, selectedOptions, questionTimesSpent, examMode]);
+
   // Format per-question time spent
   const formatQuestionTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -1371,40 +1466,64 @@ export default function App() {
         fetchedList = await getNursingUpdatesFromCloud();
       }
 
-      if (fetchedList && fetchedList.length > 0) {
-        // Merge Supabase updates (prepending them) with static updates that aren't overwritten
-        const supabaseIds = new Set(fetchedList.map(u => u.id));
-        const merged = [...fetchedList, ...STATIC_NURSING_UPDATES.filter(u => !supabaseIds.has(u.id))];
-        setUpdates(merged);
-      } else {
-        // Fallback to Express backend
-        const res = await fetch("/api/updates");
-        if (!res.ok) throw new Error("Could not connect to update servers.");
-        const contentType = res.headers.get("content-type") || "";
-        if (contentType.includes("text/html")) {
-          throw new Error("No backend API configured. Using offline mock/cache.");
-        }
-        const data = await res.json();
-        setUpdates(data);
-      }
-    } catch (err: any) {
-      console.error(err);
-      // Local backup if they saved any updates in localStorage while offline
+      // Check local updates in localStorage
       const localCustom = localStorage.getItem("np_custom_updates");
-      let merged = [...STATIC_NURSING_UPDATES];
+      let customBlogList: NursingUpdate[] = [];
       if (localCustom) {
         try {
           const parsed = JSON.parse(localCustom);
-          if (Array.isArray(parsed)) {
-            const customIds = new Set(parsed.map(u => u.id));
-            merged = [...parsed, ...STATIC_NURSING_UPDATES.filter(u => !customIds.has(u.id))];
-          }
+          if (Array.isArray(parsed)) customBlogList = parsed;
         } catch (e) {}
       }
-      setUpdates(merged);
-      if (isSupabaseConnected()) {
-        setUpdatesError("Displaying static & locally saved updates.");
+
+      if (fetchedList && fetchedList.length > 0) {
+        const supabaseIds = new Set(fetchedList.map(u => u.id));
+        const merged = [
+          ...customBlogList.filter(u => !supabaseIds.has(u.id)),
+          ...fetchedList,
+          ...STATIC_NURSING_UPDATES.filter(u => !supabaseIds.has(u.id))
+        ];
+        setUpdates(merged);
+      } else {
+        // Fallback to Express backend or static + local
+        try {
+          const res = await fetch("/api/updates");
+          if (res.ok) {
+            const contentType = res.headers.get("content-type") || "";
+            if (!contentType.includes("text/html")) {
+              const data = await res.json();
+              if (Array.isArray(data) && data.length > 0) {
+                const apiIds = new Set(data.map((u: any) => u.id));
+                const merged = [
+                  ...customBlogList.filter(u => !apiIds.has(u.id)),
+                  ...data,
+                  ...STATIC_NURSING_UPDATES.filter(u => !apiIds.has(u.id))
+                ];
+                setUpdates(merged);
+                return;
+              }
+            }
+          }
+        } catch (e) {}
+
+        // Pure local + static fallback
+        const customIds = new Set(customBlogList.map(u => u.id));
+        const merged = [...customBlogList, ...STATIC_NURSING_UPDATES.filter(u => !customIds.has(u.id))];
+        setUpdates(merged);
       }
+    } catch (err: any) {
+      console.error(err);
+      const localCustom = localStorage.getItem("np_custom_updates");
+      let customBlogList: NursingUpdate[] = [];
+      if (localCustom) {
+        try {
+          const parsed = JSON.parse(localCustom);
+          if (Array.isArray(parsed)) customBlogList = parsed;
+        } catch (e) {}
+      }
+      const customIds = new Set(customBlogList.map(u => u.id));
+      const merged = [...customBlogList, ...STATIC_NURSING_UPDATES.filter(u => !customIds.has(u.id))];
+      setUpdates(merged);
     } finally {
       setLoadingUpdates(false);
     }
@@ -1412,6 +1531,9 @@ export default function App() {
 
   useEffect(() => {
     fetchUpdates();
+    const handleCustomEvent = () => fetchUpdates();
+    window.addEventListener("np_updates_changed", handleCustomEvent);
+    return () => window.removeEventListener("np_updates_changed", handleCustomEvent);
   }, []);
 
   const clearAdminUpdateForm = () => {
@@ -1725,6 +1847,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           setActiveTest(route.test);
         }
       }
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     };
 
     window.addEventListener("popstate", handlePopState);
@@ -2739,6 +2862,29 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
   };
 
   const triggerTestInit = (subjectId: string, testId: string) => {
+    // 0. Custom Admin Test Series check (np_custom_test_series)
+    try {
+      const customSeriesList: any[] = JSON.parse(localStorage.getItem("np_custom_test_series") || "[]");
+      const foundCustom = customSeriesList.find((c: any) => c.id === testId);
+      if (foundCustom && foundCustom.questions && foundCustom.questions.length > 0) {
+        const targetTest: Test = {
+          id: foundCustom.id,
+          icon: "📝",
+          title: foundCustom.title,
+          desc: foundCustom.desc || "Custom Admin Test Series",
+          questions: foundCustom.questions.length,
+          mins: foundCustom.mins || 30,
+          ready: true,
+          data: foundCustom.questions
+        };
+        setPendingTest({ subjectId: "virtual", testId: targetTest.id, test: targetTest });
+        setSelectedModeForPending("exam");
+        return;
+      }
+    } catch (e) {
+      // Fallback
+    }
+
     // 1. Direct subject match
     let targetSubject = subjects.find(s => s.id === subjectId);
     let targetTest: Test | undefined;
@@ -3317,24 +3463,12 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     <span>Home</span>
                   </button>
 
-                  <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 mb-2 select-none">NCBT One Platform</p>
-                  
                   <button
                     onClick={() => { showPage("ncbt_one"); setIsDrawerOpen(false); }}
-                    className="w-full inline-flex items-center justify-between px-5 py-2.5 rounded-full font-extrabold text-[15px] tracking-wide text-white bg-black hover:bg-zinc-900 border-2 border-amber-400 shadow-md transition-all cursor-pointer"
-                  >
-                    <span>NCBT ONE</span>
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-400 text-black uppercase">
-                      Pass
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() => { showPage("find_test"); setIsDrawerOpen(false); }}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-all cursor-pointer border border-transparent hover:border-[var(--border)]"
                   >
                     <Search className="w-4 h-4 text-[var(--primary)] shrink-0" />
-                    <span>Find Exams/Mocks</span>
+                    <span>Explore</span>
                   </button>
 
                   <p className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest px-3 pt-4 mb-2 select-none">Profession Category</p>
@@ -3347,8 +3481,6 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       { id: "radiographer", name: "Radiographer", icon: Radio, desc: "X-Ray, CT/MRI, Radiation Physics" },
                       { id: "ot-technician", name: "OT Technician", icon: Syringe, desc: "Surgical OT, Anesthesia Tech" },
                       { id: "physiotherapist", name: "Physiotherapist", icon: HeartPulse, desc: "BPT, Central Govt Exams" },
-                      { id: "dialysis-tech", name: "Dialysis Technician", icon: Droplets, desc: "Renal Care, Clinical Tech" },
-                      { id: "ecg-technician", name: "ECG Technician", icon: Heart, desc: "Cardiology, Diagnostic Tech" },
                     ].map((cat) => {
                       const IconComp = cat.icon;
                       const isSelected = activePage === "find_test" && findTestCategory.toLowerCase() === cat.id.toLowerCase();
@@ -3519,20 +3651,6 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           >
             <Home className="w-4 h-4" /> Home
           </button>
-          
-          {/* NCBT ONE PREMIUM GLOSSY GOLDEN BUTTON */}
-          <button 
-            className="relative inline-flex items-center gap-2 px-4 py-1.5 rounded-xl font-black text-xs uppercase text-white bg-black hover:bg-zinc-900 border border-amber-400/90 shadow-[0_0_12px_rgba(245,158,11,0.35)] hover:shadow-[0_0_18px_rgba(245,158,11,0.55)] transition-all cursor-pointer overflow-hidden group shrink-0"
-            onClick={() => showPage("ncbt_one")}
-          >
-            <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-amber-200/35 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none" />
-            <span className="relative z-10 font-black text-amber-300 tracking-wider text-xs border-b border-amber-400/80 pb-0.5">
-              NCBT ONE
-            </span>
-            <div className="relative z-10 -mr-1 -mt-0.5 p-0.5 bg-white text-black rounded-tr-md rounded-bl-sm border border-amber-400 shadow-sm flex items-center justify-center shrink-0">
-              <ArrowUpRight className="w-3 h-3 text-black stroke-[3]" />
-            </div>
-          </button>
 
           <button 
             className={`nav-link flex items-center gap-1.5 ${activePage === "current_affairs" ? "active" : ""}`} 
@@ -3602,58 +3720,58 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   {[...Array(2)].map((_, rIdx) => (
                     <div key={rIdx} className="flex gap-8 shrink-0 items-center">
                       <span onClick={() => selectExam("aiims-norcet")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
-                        <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">ADMIT CARD:</span>
-                        <span>AIIMS NORCET 8.0 — Official Notification &amp; CBT Mocks Live</span>
-                      </span>
-                      <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => selectExam("wbhrb-grade2")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
-                        <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">UPDATE:</span>
-                        <span>WBHRB Staff Nurse Grade II — Exam Date &amp; Solved Papers</span>
-                      </span>
-                      <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => selectExam("esic-officer")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
-                        <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">VACANCY:</span>
-                        <span>ESIC Nursing Officer — 1,980+ Vacancies Registration</span>
+                        <span className="text-[var(--ticker-label)] font-bold uppercase text-[11px]">NURSING:</span>
+                        <span>AIIMS NORCET Nursing Officer CBT Prep</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
                       <span onClick={() => selectExam("rrb-officer")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
-                        <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">NEW:</span>
-                        <span>RRB Railway Staff Nurse — Syllabus &amp; PYQ Question Vaults</span>
+                        <span className="text-[var(--ticker-label)] font-bold uppercase text-[11px]">RAILWAYS:</span>
+                        <span>RRB Railway Staff Nurse Mock Series</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => selectExam("dsssb-officer")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
-                        <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">RESULT:</span>
-                        <span>WBHRB Staff Nurse Grade II — Final Merit Mock Practice</span>
+                      <span onClick={() => selectExam("esic-pharm")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                        <span className="text-[var(--ticker-label)] font-bold uppercase text-[11px]">PHARMACIST:</span>
+                        <span>ESIC Hospital Pharmacist Recruitment</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => selectExam("dsssb-officer")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
-                        <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">UPDATE:</span>
-                        <span>DSSSB Staff Nurse Selection — Solved PYQs Available</span>
-                      </span>
-                      <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => selectExam("aiims-norcet")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
-                        <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">NEW:</span>
-                        <span>UP CNET Nursing Entrance — Full Mock Practice Suite</span>
-                      </span>
-                      <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => selectExam("aiims-norcet")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
-                        <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">UPDATE:</span>
-                        <span>AIIMS B.Sc Nursing Series — Specialty Drills Active</span>
-                      </span>
-                      <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => selectExam("esic-officer")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
-                        <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">NEW:</span>
-                        <span>EMRS Staff Nurse Prep — Scenario Based Speed Sprints</span>
+                      <span onClick={() => selectExam("wbhrb-grade2")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                        <span className="text-[var(--ticker-label)] font-bold uppercase text-[11px]">STATE GOVT:</span>
+                        <span>WBHRB Basic B.Sc &amp; GNM Nursing Officer</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
                       <span onClick={() => selectExam("ot-technician")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
-                        <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">RESULT:</span>
-                        <span>CRPF Paramedical Staff — Real CBT Exam Simulation</span>
+                        <span className="text-[var(--ticker-label)] font-bold uppercase text-[11px]">PARAMEDICAL:</span>
+                        <span>RRB OT Technician &amp; Surgical Assist</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
-                      <span onClick={() => selectExam("wbhrb-nurse")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
-                        <span className="text-[var(--ticker-label)] font-semibold uppercase text-[11px]">UPDATE:</span>
-                        <span>UPSSSC ANM Test Series — Practice Papers Updated</span>
+                      <span onClick={() => selectExam("cho-officer")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                        <span className="text-[var(--ticker-label)] font-bold uppercase text-[11px]">CHO:</span>
+                        <span>NHM Community Health Officer (CHO)</span>
+                      </span>
+                      <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
+                      <span onClick={() => selectExam("sgpgi-nurse")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                        <span className="text-[var(--ticker-label)] font-bold uppercase text-[11px]">PYQS:</span>
+                        <span>SGPGI Nursing Officer Solved Papers</span>
+                      </span>
+                      <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
+                      <span onClick={() => selectExam("dsssb-officer")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                        <span className="text-[var(--ticker-label)] font-bold uppercase text-[11px]">DELHI GOVT:</span>
+                        <span>DSSSB Staff Nurse Exam Practice</span>
+                      </span>
+                      <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
+                      <span onClick={() => selectExam("cghs-pharm")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                        <span className="text-[var(--ticker-label)] font-bold uppercase text-[11px]">CENTRAL:</span>
+                        <span>CGHS Hospital Pharmacist CBT</span>
+                      </span>
+                      <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
+                      <span onClick={() => selectExam("lab-tech")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                        <span className="text-[var(--ticker-label)] font-bold uppercase text-[11px]">LAB TECH:</span>
+                        <span>AIIMS Radiographer &amp; Lab Technician CBT</span>
+                      </span>
+                      <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
+                      <span onClick={() => selectExam("physiotherapist")} className="flex items-center gap-1.5 cursor-pointer text-[var(--ticker-text)] hover:opacity-80 font-sans text-[11.5px] transition-colors">
+                        <span className="text-[var(--ticker-label)] font-bold uppercase text-[11px]">PARAMEDICAL:</span>
+                        <span>Physiotherapist &amp; Rehabilitation Cadres</span>
                       </span>
                       <span className="w-[6px] h-[6px] rounded-full bg-[var(--ticker-dot)] shrink-0 inline-block"></span>
                     </div>
@@ -3676,40 +3794,23 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 
                 {/* Left Column: Elegant Copywriting */}
                 <div className="md:col-span-7 space-y-6 text-left">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--surface-2)]/80 border border-[var(--border)] text-[var(--text-secondary)] rounded-full text-[13px] font-medium uppercase tracking-[0.08em] shadow-sm">
-                    <span className="status-dot"></span>
-                    NCBT – National CBT
-                  </div>
-
                   <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-text tracking-tight leading-[1.12]">
-                    India's Trusted Platform for <span className="text-sky-400 font-display font-black tracking-tight">Nursing</span>, <span className="text-sky-400 font-display font-black tracking-tight">Pharmacist</span> &amp; <span className="text-sky-400 font-display font-black tracking-tight">Paramedical</span> Government Exam Preparation
+                    India's Trusted Platform for <span className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 bg-clip-text text-transparent font-display font-black tracking-tight">Nursing</span>, <span className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 bg-clip-text text-transparent font-display font-black tracking-tight">Pharmacist</span> &amp; <span className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 bg-clip-text text-transparent font-display font-black tracking-tight">Paramedical</span> Government Exam Preparation
                   </h1>
 
-                  <p className="text-sm md:text-base text-text2 leading-relaxed font-sans max-w-2xl">
+                  {/* Subheader paragraph hidden visually for clean clutter-free layout, kept in code for SEO */}
+                  <p className="sr-only">
                     Practice with high-quality Mock Tests, Previous Year Questions (PYQs), Exam-wise Practice Sets and Detailed Performance Analysis for top Nursing, Pharmacist and Paramedical Government Recruitment Exams.
                   </p>
 
                   <div className="flex items-center gap-3 flex-wrap pt-2">
-                    {/* FIND EXAMS/TESTS — search icon, dark green border */}
+                    {/* EXPLORE — Black rectangular curved button redirecting to NCBT One */}
                     <button
-                      onClick={() => showPage("find_test")}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-full text-[14px] font-semibold transition-transform active:scale-[0.97] hover:-translate-y-0.5 cursor-pointer"
-                      style={{
-                        background: "var(--surface)",
-                        border: "2px solid var(--primary)",
-                        color: "var(--text-primary)",
-                      }}
-                    >
-                      <Search size={16} style={{ color: "var(--primary)" }} />
-                      Find Exams/Tests
-                    </button>
-
-                    {/* NCBT ONE — normal size pill button, black box with golden border & bold white text */}
-                    <button 
                       onClick={() => showPage("ncbt_one")}
-                      className="inline-flex items-center justify-center px-5 py-2.5 rounded-full text-[15px] font-extrabold tracking-wide text-white bg-black hover:bg-zinc-900 border-2 border-amber-400 shadow-md hover:-translate-y-0.5 active:scale-[0.97] transition-all cursor-pointer"
+                      className="flex items-center justify-center gap-2 px-7 py-3 rounded-xl text-[15px] font-extrabold text-white bg-black hover:bg-zinc-800 shadow-md transition-all active:scale-[0.97] hover:-translate-y-0.5 cursor-pointer border border-zinc-800"
                     >
-                      NCBT ONE
+                      <span>Explore</span>
+                      <ArrowRight size={16} className="text-white ml-0.5" />
                     </button>
                   </div>
                 </div>
@@ -3775,100 +3876,6 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
               {/* CADRE GRID SECTION */}
               <div className="mt-12 relative z-10 w-full">
                 <CadreGrid />
-              </div>
-
-              {/* COMPACT STATS GRID SECTION */}
-              <div className="mt-12 n-stat-grid text-center relative z-10">
-                {[
-                  { value: "1.5 Lakh+", label: "Mock Tests Attempted" },
-                  { value: "4.9★", label: "Student Rating" },
-                  { value: "100% Free", label: "CBT Mocks & PYQs" },
-                  { value: "AIR", label: "Real-Time Leaderboard" },
-                ].map((statItem, idx) => (
-                  <motion.div
-                    key={idx}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: idx * 0.1 }}
-                    className="n-stat-compact shadow-sm hover:shadow transition-all"
-                  >
-                    <div className="n-stat-value text-[var(--text-primary)]">{statItem.value}</div>
-                    <div className="n-stat-label">{statItem.label}</div>
-                  </motion.div>
-                ))}
-              </div>
-
-              {/* TICK MARKS CHECKLIST LINE */}
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-text2 border-t border-border/40 pt-6">
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-[var(--primary)]" /> Exam-Pattern Tests</span>
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-[var(--primary)]" /> Instant Scorecards</span>
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-[var(--primary)]" /> Clinical Explanations</span>
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-[var(--primary)]" /> Trusted by Toppers</span>
-              </div>
-            </div>
-
-            {/* ================= SECTION 2: EXAMS COVERED (SLIDING COLOR PALETTE: bg-[var(--surface)]) ================= */}
-            <div className="w-full bg-[var(--surface)] border-y border-border/40 py-24 px-4 md:px-8">
-              <div className="max-w-7xl mx-auto space-y-12">
-                <div className="text-center max-w-2xl mx-auto space-y-2">
-                  <div className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full">
-                    <Flame className="w-3.5 h-3.5 text-amber-500" /> POPULAR MOCK TEST SERIES
-                  </div>
-                  <h2 className="text-2xl md:text-4xl font-black text-text tracking-tight">
-                    India's Best Exams Coverage
-                  </h2>
-                  <p className="text-xs md:text-sm text-text2 leading-relaxed">
-                    India's most-practiced, highly optimized exam preparation and CBT mock test series for top Nursing, Pharmacist, and Paramedical government recruitment exams.
-                  </p>
-                </div>
-
-                <div className="n-card-grid">
-                  {TARGET_EXAMS.map((exam) => (
-                    <motion.div
-                      key={exam.id}
-                      initial={{ opacity: 0, y: 35 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true, margin: "-50px" }}
-                      transition={{ duration: 0.5 }}
-                      onClick={() => {
-                        selectExam(exam.id);
-                      }}
-                      className="n-card-compact flex flex-col justify-between group relative overflow-hidden cursor-pointer hover:border-[var(--primary)] transition-all shadow-sm hover:shadow-md"
-                    >
-                      <div className="space-y-2 relative z-10">
-                        <div className="flex items-center justify-between">
-                          <span className="n-card-icon text-lg bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center">
-                            {exam.icon}
-                          </span>
-                          <span className="n-card-badge font-black uppercase tracking-widest bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                            {exam.badge}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[9px] text-[var(--accent)] font-black uppercase tracking-widest block">
-                            {exam.category}
-                          </span>
-                          <h3 className="n-card-title text-[var(--text-primary)] group-hover:text-[var(--primary)] transition-colors mt-0.5">
-                            {exam.fullName}
-                          </h3>
-                          <p className="n-card-desc font-sans line-clamp-2">
-                            {exam.desc}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="n-card-footer flex items-center justify-between relative z-10">
-                        <span className="font-bold text-[var(--primary)] group-hover:underline transition-colors text-[11px]">
-                          Start Practice →
-                        </span>
-                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-0.5">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Free
-                        </span>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
               </div>
             </div>
 
@@ -4361,11 +4368,11 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 <div className="space-y-3">
                   <h4 className="text-xs font-black text-text uppercase tracking-widest border-b border-border/60 pb-1.5">Quick Links</h4>
                   <ul className="space-y-2 text-xs text-text2">
-                    <li><button onClick={() => showPage("landing")} className="hover:text-accent text-left transition-colors cursor-pointer">🏠 Home</button></li>
-                    <li><button onClick={() => showPage("updates")} className="hover:text-accent text-left transition-colors cursor-pointer">📝 Blog & News</button></li>
-                    <li><button onClick={() => showPage("about")} className="hover:text-accent text-left transition-colors cursor-pointer">✨ About Us</button></li>
-                    <li><button onClick={() => showPage("contact")} className="hover:text-accent text-left transition-colors cursor-pointer">📞 Contact Us</button></li>
-                    <li><button onClick={() => showPage("exam_landing")} className="hover:text-accent text-left transition-colors cursor-pointer">📲 Practice Now</button></li>
+                    <li><button onClick={() => showPage("landing")} className="hover:text-accent text-left transition-colors cursor-pointer">Home</button></li>
+                    <li><button onClick={() => showPage("updates")} className="hover:text-accent text-left transition-colors cursor-pointer">Blog &amp; News</button></li>
+                    <li><button onClick={() => showPage("about")} className="hover:text-accent text-left transition-colors cursor-pointer">About Us</button></li>
+                    <li><button onClick={() => showPage("contact")} className="hover:text-accent text-left transition-colors cursor-pointer">Contact Us</button></li>
+                    <li><button onClick={() => showPage("exam_landing")} className="hover:text-accent text-left transition-colors cursor-pointer">Practice Now</button></li>
                   </ul>
                 </div>
 
@@ -4373,24 +4380,24 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 <div className="space-y-3">
                   <h4 className="text-xs font-black text-text uppercase tracking-widest border-b border-border/60 pb-1.5">Exam Series</h4>
                   <ul className="space-y-2 text-xs text-text2">
-                    <li><button onClick={() => { showPage("mock_tests"); setHubSearchText("NORCET"); }} className="hover:text-accent text-left transition-colors cursor-pointer">🏥 AIIMS NORCET Mock</button></li>
-                    <li><button onClick={() => { showPage("mock_tests"); setHubSearchText("ESIC"); }} className="hover:text-accent text-left transition-colors cursor-pointer">⚡ ESIC Staff Nurse Special</button></li>
-                    <li><button onClick={() => { showPage("mock_tests"); setHubSearchText("RRB"); }} className="hover:text-accent text-left transition-colors cursor-pointer">🚆 RRB Staff Nurse CBT</button></li>
-                    <li><button onClick={() => { showPage("mock_tests"); setHubSearchText("WBHRB"); }} className="hover:text-accent text-left transition-colors cursor-pointer">🏥 WBHRB Staff Nurse Mock</button></li>
-                    <li><button onClick={() => { showPage("pyq"); setHubSearchText("State"); }} className="hover:text-accent text-left transition-colors cursor-pointer">📄 State PSC Previous Year</button></li>
-                    <li><button onClick={() => { showPage("subject_mocks"); setHubSearchText("Anatomy"); }} className="hover:text-accent text-left transition-colors cursor-pointer">🫀 Anatomy & Physiology Drill</button></li>
+                    <li><button onClick={() => { showPage("mock_tests"); setHubSearchText("NORCET"); }} className="hover:text-accent text-left transition-colors cursor-pointer">AIIMS NORCET Mock</button></li>
+                    <li><button onClick={() => { showPage("mock_tests"); setHubSearchText("ESIC"); }} className="hover:text-accent text-left transition-colors cursor-pointer">ESIC Staff Nurse Special</button></li>
+                    <li><button onClick={() => { showPage("mock_tests"); setHubSearchText("RRB"); }} className="hover:text-accent text-left transition-colors cursor-pointer">RRB Staff Nurse CBT</button></li>
+                    <li><button onClick={() => { showPage("mock_tests"); setHubSearchText("WBHRB"); }} className="hover:text-accent text-left transition-colors cursor-pointer">WBHRB Staff Nurse Mock</button></li>
+                    <li><button onClick={() => { showPage("pyq"); setHubSearchText("State"); }} className="hover:text-accent text-left transition-colors cursor-pointer">State PSC Previous Year</button></li>
+                    <li><button onClick={() => { showPage("subject_mocks"); setHubSearchText("Anatomy"); }} className="hover:text-accent text-left transition-colors cursor-pointer">Anatomy &amp; Physiology Drill</button></li>
                   </ul>
                 </div>
 
-                {/* Column 4: Contact & Legal (Screenshot 3 & 4 style) */}
+                {/* Column 4: Contact & Legal */}
                 <div className="space-y-3">
-                  <h4 className="text-xs font-black text-text uppercase tracking-widest border-b border-border/60 pb-1.5">Support & Legal</h4>
+                  <h4 className="text-xs font-black text-text uppercase tracking-widest border-b border-border/60 pb-1.5">Support &amp; Legal</h4>
                   <ul className="space-y-2 text-xs text-text2">
-                    <li><button onClick={() => showPage("contact")} className="hover:text-accent text-left transition-colors cursor-pointer">🔒 Privacy Policy</button></li>
-                    <li><button onClick={() => showPage("contact")} className="hover:text-accent text-left transition-colors cursor-pointer">💸 Refund Policy</button></li>
-                    <li><button onClick={() => showPage("contact")} className="hover:text-accent text-left transition-colors cursor-pointer">📋 Terms & Conditions</button></li>
-                    <li><span className="text-text3 font-mono">✉️ info@ncbt.org</span></li>
-                    <li><span className="text-text3 font-mono">📞 +91 9874423064</span></li>
+                    <li><button onClick={() => showPage("contact")} className="hover:text-accent text-left transition-colors cursor-pointer">Privacy Policy</button></li>
+                    <li><button onClick={() => showPage("contact")} className="hover:text-accent text-left transition-colors cursor-pointer">Refund Policy</button></li>
+                    <li><button onClick={() => showPage("contact")} className="hover:text-accent text-left transition-colors cursor-pointer">Terms &amp; Conditions</button></li>
+                    <li><span className="text-text3 font-mono">info@ncbt.org</span></li>
+                    <li><span className="text-text3 font-mono">+91 9874423064</span></li>
                   </ul>
                 </div>
 
@@ -4837,189 +4844,14 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
             )}
 
             {/* =============== RESULTS WRAPPER INTERFACE =============== */}
-            {isTestFinished && (
-              <div id="result-wrap" style={{ display: "block" }}>
-                <div className="result-card">
-                  <div className="result-emoji">
-                    {displayPercentage >= 90 ? "🏆" : 
-                     displayPercentage >= 75 ? "🎉" :
-                     displayPercentage >= 55 ? "👍" : "😐"}
-                  </div>
-
-                  <div className="result-pct">
-                    {displayPercentage}%
-                  </div>
-
-                  <div className="result-label" id="final-results-metrics">
-                    {examMode ? (
-                      <span>
-                        Net Score: <strong className="text-amber-400">{netMarks.toFixed(2)}</strong> out of <strong>{totalQuestions}</strong>
-                      </span>
-                    ) : (
-                      <span>
-                        {correctCount} of {totalQuestions} correct
-                      </span>
-                    )}
-                    {" · "}{examMode ? "CBT Exam Mode" : "Practice Mode"}
-                  </div>
-
-                  <div className="result-msg">
-                    {displayPercentage >= 90 ? "Outstanding!" :
-                     displayPercentage >= 75 ? "Great Job!" :
-                     displayPercentage >= 55 ? "Good Effort!" : "Keep Practising!"}
-                  </div>
-
-                  <div className="result-sub">
-                    {examMode ? (
-                      <span className="text-xs text-[var(--text2)]">
-                        CBT Evaluation Formula: {correctCount} correct (+1.0) and {wrongCount} errors (-0.25 penalty). Unattempted: {skippedCount}.
-                      </span>
-                    ) : (
-                      <span>
-                        {correctCount / totalQuestions >= 0.75 ? `You have an exam-ready grasp of ${activeTest.title}.` : "Review the correct rationales below and try again."}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="score-grid">
-                    <div className="score-box">
-                      <div className="score-box-val sc">+{correctCount}</div>
-                      <div className="score-box-lbl">Correct (+1)</div>
-                    </div>
-                    <div className="score-box">
-                      <div className="score-box-val sw">
-                        {examMode ? `-${negativePenalty.toFixed(2)}` : `-${wrongCount}`}
-                      </div>
-                      <div className="score-box-lbl">{examMode ? "Penalty (-0.25)" : "Wrong"}</div>
-                    </div>
-                    <div className="score-box">
-                      <div className="score-box-val ss">{skippedCount}</div>
-                      <div className="score-box-lbl font-sans">Skipped</div>
-                    </div>
-                    <div className="score-box">
-                      <div className="score-box-val sp">
-                        {examMode ? netMarks.toFixed(2) : `${displayPercentage}%`}
-                      </div>
-                      <div className="score-box-lbl font-sans">{examMode ? "Net Marks" : "Score %"}</div>
-                    </div>
-                  </div>
-
-                  <div className="result-actions">
-                    <button 
-                      className="btn-retry" 
-                      onClick={() => triggerTestInit(activeSubjectId!, activeTest.id)}
-                    >
-                      🔄 Retry Test
-                    </button>
-                    <button className="btn-back-hub" onClick={goHub}>
-                      ← Back
-                    </button>
-                    <button 
-                      className="btn-share-wp"
-                      onClick={() => shareToWhatsApp(
-                        displayPercentage, 
-                        correctCount, 
-                        totalQuestions, 
-                        activeTest.title
-                      )}
-                    >
-                      <Share2 className="w-4 h-4" /> Share Score to WhatsApp
-                    </button>
-                  </div>
-
-                  {/* Fully fleshed-out Exam Mode full review table */}
-                  {examMode && (
-                    <div className="mt-8 text-left border-t border-[var(--border)] pt-6">
-                      <div className="review-header">
-                        Full Exam Practice Review — All {activeTest.data.length} Questions
-                      </div>
-                      
-                      {activeTest.data.map((q, idx) => {
-                        const selIdx = selectedOptions[idx];
-                        const L = ["A", "B", "C", "D"];
-
-                        return (
-                          <div key={idx} className="review-q animate-fade-in">
-                            <div className="rq-top">
-                              <span className="rq-num">Q{idx + 1}</span>
-                              <span className="rq-text">{q.q}</span>
-                            </div>
-
-                            <div className="rq-opts">
-                              {q.opts.map((opt, oIdx) => {
-                                let rqClass = "rq-opt";
-                                if (oIdx === selIdx && oIdx === q.ans) {
-                                  rqClass += " ro-correct";
-                                } else if (oIdx === selIdx && oIdx !== q.ans) {
-                                  rqClass += " ro-wrong";
-                                } else if (oIdx === q.ans) {
-                                  rqClass += " ro-show";
-                                }
-
-                                return (
-                                  <div key={oIdx} className={rqClass}>
-                                    <span className="r-letter">{L[oIdx]}</span>
-                                    <span>{opt}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-
-                            <div className="rq-rationale font-sans space-y-3">
-                              <div className="flex-1 text-sm leading-relaxed" style={{ whiteSpace: "pre-line" }}>
-                                💡 {getDetailedExplain(q)}
-                                <span className="rq-src block mt-2 text-xs opacity-75 font-semibold" style={{ whiteSpace: "normal" }}>📌 Source: {q.source}</span>
-                              </div>
-
-                              {/* AI Rationale Button & Panel */}
-                              {(() => {
-                                const aiState = aiRationales[q.q];
-                                return (
-                                  <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-4 text-left mt-3">
-                                    <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-                                      <span className="text-xs font-bold text-[var(--accent)] flex items-center gap-1.5">
-                                        ✨ AI Exam Assistant (Gemini Powered)
-                                      </span>
-                                      {!aiState?.text && !aiState?.loading && (
-                                        <button
-                                          onClick={() => generateAiRationale(q.q, q.opts, q.ans)}
-                                          className="bg-[var(--accent-soft)] hover:opacity-90 active:scale-95 text-[var(--accent)] font-extrabold text-[10px] px-3 py-1 rounded-lg transition-all cursor-pointer shadow-md border border-[var(--accent)]/30"
-                                        >
-                                          Generate Expert Clinical Rationale
-                                        </button>
-                                      )}
-                                    </div>
-
-                                    {aiState?.loading && (
-                                      <div className="py-4 flex flex-col items-center justify-center gap-2">
-                                        <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin"></div>
-                                        <span className="text-[10px] text-[var(--text-secondary)] animate-pulse font-medium">Analyzing diagnostic criteria, Indian Nursing Council guidelines, & nursing protocols...</span>
-                                      </div>
-                                    )}
-
-                                    {aiState?.error && (
-                                      <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">⚠️ {aiState.error}. Server running in high-yield local mode.</p>
-                                    )}
-
-                                    {aiState?.text && (
-                                      <div className="text-xs text-[var(--text-secondary)] leading-relaxed space-y-2 mt-2 bg-[var(--surface)] p-3 rounded-lg border border-[var(--border)] select-text">
-                                        <div className="prose-slate max-w-none text-[var(--text-primary)]" style={{ whiteSpace: "pre-wrap" }}>
-                                          {aiState.text}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })()}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                </div>
-              </div>
+            {isTestFinished && activeTest && (
+              <ResultAnalysisPage
+                data={analysisData}
+                onBack={() => {
+                  setIsTestFinished(false);
+                  goHub();
+                }}
+              />
             )}
 
             <footer>NCBT · India's Nursing CBT Exam Preparation Platform</footer>

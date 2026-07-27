@@ -95,7 +95,7 @@
 }
 
 html.light, body.light {
-  --bg: #FBFBF9;
+  --bg: #FFFFFF;
   --surface: #FFFFFF;
   --surface-2: #F4F6F2;
   --card: #FFFFFF;
@@ -136,6 +136,13 @@ html.light, body.light {
   --ticker-chip-border: #0D5C46;
   --ticker-chip-text: #0D5C46;
   --ticker-dot: #475569;
+}
+
+html.light .text-title-dark-black {
+  color: #000000 !important;
+}
+html:not(.light) .text-title-dark-black, body:not(.light) .text-title-dark-black {
+  color: #ffffff !important;
 }
 
 body {
@@ -2706,7 +2713,7 @@ footer a {
 .marquee-track {
   display: flex;
   width: max-content;
-  animation: marquee-horizontal 30s linear infinite;
+  animation: marquee-horizontal 65s linear infinite;
 }
 
 .marquee-track:hover {
