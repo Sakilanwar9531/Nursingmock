@@ -50,26 +50,7 @@ export function getAllAppRoutes(): string[] {
     routes.push(`/updates/${update.id}`);
   });
 
-  // 4. Add Subject Test routes (/test/subject-id/test-id)
-  SUBJECTS.forEach(subj => {
-    subj.tests.forEach(t => {
-      if (t.ready) {
-        routes.push(`/test/${subj.id}/${t.id}`);
-      }
-    });
-  });
-
-  // 5. Add PYQ virtual test routes
-  PYQ_DATA.forEach(pyq => {
-    const pyqId = `pyq-${pyq.tag}-${pyq.year}`.toLowerCase();
-    routes.push(`/test/virtual/${pyqId}`);
-  });
-
-  // 6. Add Curated Sprint virtual test routes
-  const SPRINT_IDS = ["sprint-anatomy", "sprint-medsurg", "sprint-pharma", "sprint-curated-1", "sprint-curated-2", "sprint-curated-3", "sprint-curated-4", "sprint-curated-5"];
-  SPRINT_IDS.forEach(sprintId => {
-    routes.push(`/test/virtual/${sprintId}`);
-  });
+  // Note: /test/... interactive test execution pages are excluded from sitemap.xml as requested
 
   // Return unique route list
   return Array.from(new Set(routes));

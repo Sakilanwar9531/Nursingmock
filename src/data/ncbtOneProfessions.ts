@@ -46,79 +46,79 @@ export const NCBT_ONE_PROFESSIONS: Record<string, ProfessionConfig> = {
       {
         name: "Anatomy & Physiology",
         tests: [
-          { id: "cell-tissues-1", title: "Cell Organelles & Membrane Transport (Set 1)", qCount: 30, source: "INC Syllabus" },
-          { id: "cell-tissues-2", title: "Tissues, Epithelium & Muscle Fiber (Set 2)", qCount: 30, source: "INC Syllabus" },
-          { id: "cell-tissues-3", title: "Biochemistry & Cell Division (Set 3)", qCount: 10, source: "INC Syllabus" },
-          { id: "nervous-system-1", title: "Central Nervous System & Glia (Set 1)", qCount: 30, source: "AIIMS / ESIC" },
-          { id: "nervous-system-2", title: "Brain Anatomy & ANS (Set 2)", qCount: 30, source: "AIIMS / DSSSB" },
-          { id: "nervous-system-3", title: "Cranial Nerves & Reflexes (Set 3)", qCount: 21, source: "High-Yield NORCET" },
-          { id: "blood-mock-1", title: "Blood Composition & Hematopoiesis (Mock 1)", qCount: 50, source: "AIIMS / RUHS" },
-          { id: "blood-mock-2", title: "RBC Disorders & Anemic Indices (Mock 2)", qCount: 50, source: "AIIMS Patna" },
-          { id: "blood-mock-3", title: "WBCs, Immunity & CD4 Counts (Mock 3)", qCount: 50, source: "AIIMS Jodhpur" },
-          { id: "blood-mock-4", title: "Platelets, Clotting & Heparin (Mock 4)", qCount: 50, source: "AIIMS Raipur" },
-          { id: "blood-mock-5", title: "Transfusion Reactions & Blood Typing (Mock 5)", qCount: 48, source: "AIIMS Bathinda" }
+          { id: "cell-tissues-1", title: "CELL & TISSUE - 1", qCount: 30, source: "INC Syllabus" },
+          { id: "cell-tissues-2", title: "CELL & TISSUE - 2", qCount: 30, source: "INC Syllabus" },
+          { id: "cell-tissues-3", title: "CELL & TISSUE - 3", qCount: 10, source: "INC Syllabus" },
+          { id: "nervous-system-1", title: "NERVOUS SYSTEM - 1", qCount: 30, source: "AIIMS / ESIC" },
+          { id: "nervous-system-2", title: "NERVOUS SYSTEM - 2", qCount: 30, source: "AIIMS / DSSSB" },
+          { id: "nervous-system-3", title: "NERVOUS SYSTEM - 3", qCount: 21, source: "High-Yield NORCET" },
+          { id: "blood-mock-1", title: "BLOOD & CIRCULATION - 1", qCount: 50, source: "AIIMS / RUHS" },
+          { id: "blood-mock-2", title: "BLOOD & CIRCULATION - 2", qCount: 50, source: "AIIMS Patna" },
+          { id: "blood-mock-3", title: "BLOOD & CIRCULATION - 3", qCount: 50, source: "AIIMS Jodhpur" },
+          { id: "blood-mock-4", title: "BLOOD & CIRCULATION - 4", qCount: 50, source: "AIIMS Raipur" },
+          { id: "blood-mock-5", title: "BLOOD & CIRCULATION - 5", qCount: 48, source: "AIIMS Bathinda" }
         ]
       },
       {
         name: "Medical-Surgical Nursing",
         tests: [
-          { id: "ms-cardiac", title: "Cardiovascular Disorders & ECG Interpretation", qCount: 30, source: "High-Yield NORCET" },
-          { id: "ms-neuro", title: "Neurological Assessment & Stroke Care", qCount: 25, source: "AIIMS Officer" },
-          { id: "ms-respiratory", title: "Respiratory Disorders & Mechanical Ventilation", qCount: 25, source: "ESIC Standard" },
-          { id: "ms-renal", title: "Renal Nursing, AKI & Dialysis Protocols", qCount: 20, source: "RRB Railway" },
-          { id: "ms-onco", title: "Oncology Nursing & Chemotherapy Staging", qCount: 20, source: "NORCET Target" },
-          { id: "ms-gi", title: "GI Disorders, Cirrhosis & Stoma Care", qCount: 20, source: "WBHRB Standard" }
+          { id: "ms-cardiac", title: "CARDIOVASCULAR SYSTEM - 1", qCount: 30, source: "High-Yield NORCET" },
+          { id: "ms-neuro", title: "NEUROLOGICAL NURSING - 1", qCount: 25, source: "AIIMS Officer" },
+          { id: "ms-respiratory", title: "RESPIRATORY NURSING - 1", qCount: 25, source: "ESIC Standard" },
+          { id: "ms-renal", title: "RENAL NURSING - 1", qCount: 20, source: "RRB Railway" },
+          { id: "ms-onco", title: "ONCOLOGY NURSING - 1", qCount: 20, source: "NORCET Target" },
+          { id: "ms-gi", title: "GASTROINTESTINAL NURSING - 1", qCount: 20, source: "WBHRB Standard" }
         ]
       },
       {
         name: "Pharmacology in Nursing",
         tests: [
-          { id: "pharmacology-autonomic-1", title: "ANS & Cardiovascular Pharmacology", qCount: 20, source: "INC Syllabus" },
-          { id: "pharma-basics", title: "Pharmacokinetics, ADME & Drug Routes", qCount: 15, source: "High-Yield" },
-          { id: "pharma-antibiotics", title: "Antibiotics & Antimicrobial Resistance", qCount: 20, source: "AIIMS Standard" },
-          { id: "pharma-calculations", title: "Drug Calculations & IV Infusion Rates", qCount: 15, source: "Clinical Practical" }
+          { id: "pharmacology-autonomic-1", title: "CLINICAL PHARMACOLOGY - 1", qCount: 20, source: "INC Syllabus" },
+          { id: "pharma-basics", title: "CLINICAL PHARMACOLOGY - 2", qCount: 15, source: "High-Yield" },
+          { id: "pharma-antibiotics", title: "CLINICAL PHARMACOLOGY - 3", qCount: 20, source: "AIIMS Standard" },
+          { id: "pharma-calculations", title: "CLINICAL PHARMACOLOGY - 4", qCount: 15, source: "Clinical Practical" }
         ]
       },
       {
         name: "Community Health Nursing",
         tests: [
-          { id: "chn-basics", title: "CHN Concepts, Levels of Prevention & Alma Ata", qCount: 25, source: "INC Syllabus" },
-          { id: "chn-epidemiology", title: "Epidemiology, Triad & Vital Statistics", qCount: 20, source: "NHM / CHO" },
-          { id: "chn-immunization", title: "Universal Immunization & Cold Chain Protocols", qCount: 25, source: "UIP India" },
-          { id: "chn-programs", title: "National Health Programmes & Ayushman Bharat", qCount: 20, source: "Health Ministry" }
+          { id: "chn-basics", title: "COMMUNITY HEALTH NURSING - 1", qCount: 25, source: "INC Syllabus" },
+          { id: "chn-epidemiology", title: "COMMUNITY HEALTH NURSING - 2", qCount: 20, source: "NHM / CHO" },
+          { id: "chn-immunization", title: "COMMUNITY HEALTH NURSING - 3", qCount: 25, source: "UIP India" },
+          { id: "chn-programs", title: "COMMUNITY HEALTH NURSING - 4", qCount: 20, source: "Health Ministry" }
         ]
       },
       {
         name: "Obstetrical & Midwifery Nursing",
         tests: [
-          { id: "maternal-antenatal-1", title: "Antenatal Care, ANC Schedule & Minor Ailments", qCount: 25, source: "INC Syllabus" },
-          { id: "obs-labour", title: "Stages of Labour, Mechanisms & Partograph", qCount: 25, source: "NORCET High-Yield" },
-          { id: "obs-postnatal", title: "Postnatal Care, Puerperium & Breastfeeding", qCount: 20, source: "AIIMS Nursing" },
-          { id: "obs-hrc", title: "High-Risk Obstetrics, PIH & Eclampsia", qCount: 20, source: "AIIMS Clinical" }
+          { id: "maternal-antenatal-1", title: "OBSTETRICS & MIDWIFERY - 1", qCount: 25, source: "INC Syllabus" },
+          { id: "obs-labour", title: "OBSTETRICS & MIDWIFERY - 2", qCount: 25, source: "NORCET High-Yield" },
+          { id: "obs-postnatal", title: "OBSTETRICS & MIDWIFERY - 3", qCount: 20, source: "AIIMS Nursing" },
+          { id: "obs-hrc", title: "OBSTETRICS & MIDWIFERY - 4", qCount: 20, source: "AIIMS Clinical" }
         ]
       },
       {
         name: "Pediatric Nursing",
         tests: [
-          { id: "pediatrics-growth-1", title: "Growth & Developmental Milestones", qCount: 20, source: "INC Syllabus" },
-          { id: "ped-newborn", title: "Neonatal Care, APGAR & NICU Nursing", qCount: 20, source: "NICU Standard" },
-          { id: "ped-disorders", title: "Pediatric Illnesses, Dehydration & IMNCI", qCount: 20, source: "AIIMS / UNICEF" }
+          { id: "pediatrics-growth-1", title: "PEDIATRIC NURSING - 1", qCount: 20, source: "INC Syllabus" },
+          { id: "ped-newborn", title: "PEDIATRIC NURSING - 2", qCount: 20, source: "NICU Standard" },
+          { id: "ped-disorders", title: "PEDIATRIC NURSING - 3", qCount: 20, source: "AIIMS / UNICEF" }
         ]
       },
       {
         name: "Mental Health Nursing",
         tests: [
-          { id: "mhn-concepts", title: "MHN Concepts, Maslow & Therapeutic Comm", qCount: 20, source: "INC Syllabus" },
-          { id: "mhn-disorders", title: "Psychiatric Disorders, Schizophrenia & Mood", qCount: 20, source: "NORCET Target" },
-          { id: "mhn-drugs", title: "Psychopharmacology, Antipsychotics & ECT", qCount: 20, source: "Clinical Psych" }
+          { id: "mhn-concepts", title: "MENTAL HEALTH NURSING - 1", qCount: 20, source: "INC Syllabus" },
+          { id: "mhn-disorders", title: "MENTAL HEALTH NURSING - 2", qCount: 20, source: "NORCET Target" },
+          { id: "mhn-drugs", title: "MENTAL HEALTH NURSING - 3", qCount: 20, source: "Clinical Psych" }
         ]
       },
       {
         name: "Fundamentals of Nursing",
         tests: [
-          { id: "fun-vitals", title: "Vital Signs, Temperature & Pulse Assessment", qCount: 25, source: "INC Syllabus" },
-          { id: "fun-infection", title: "Infection Control, Asepsis & PPE Protocols", qCount: 25, source: "CDC / NABH" },
-          { id: "fun-procedures", title: "Nursing Procedures, IV Therapy & Catheterization", qCount: 25, source: "Practical Skills" }
+          { id: "fun-vitals", title: "FUNDAMENTALS OF NURSING - 1", qCount: 25, source: "INC Syllabus" },
+          { id: "fun-infection", title: "FUNDAMENTALS OF NURSING - 2", qCount: 25, source: "CDC / NABH" },
+          { id: "fun-procedures", title: "FUNDAMENTALS OF NURSING - 3", qCount: 25, source: "Practical Skills" }
         ]
       }
     ],

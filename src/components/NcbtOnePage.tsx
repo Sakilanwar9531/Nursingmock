@@ -74,7 +74,7 @@ const PROFESSIONS: ProfessionSection[] = [
     quarterBgInner: "#428c68",
     quarterBgOuter: "#63a380",
     iconColor: "#063b2a",
-    badge: "MOST POPULAR"
+    badge: "60+ Tests | 1,800+ Qs"
   },
   {
     slug: "pharma",
@@ -98,7 +98,7 @@ const PROFESSIONS: ProfessionSection[] = [
     quarterBgInner: "#a85220",
     quarterBgOuter: "#c46d37",
     iconColor: "#522105",
-    badge: "HIGH YIELD"
+    badge: "13 Tests | 360+ Qs"
   },
   {
     slug: "physio",
@@ -122,7 +122,7 @@ const PROFESSIONS: ProfessionSection[] = [
     quarterBgInner: "#256e9c",
     quarterBgOuter: "#428dbf",
     iconColor: "#072d47",
-    badge: "CLINICAL"
+    badge: "12 Tests | 320+ Qs"
   },
   {
     slug: "labtech",
@@ -146,7 +146,7 @@ const PROFESSIONS: ProfessionSection[] = [
     quarterBgInner: "#256e9c",
     quarterBgOuter: "#428dbf",
     iconColor: "#072d47",
-    badge: "ACTIVE"
+    badge: "15 Tests | 420+ Qs"
   },
   {
     slug: "radiography",
@@ -170,7 +170,7 @@ const PROFESSIONS: ProfessionSection[] = [
     quarterBgInner: "#428c68",
     quarterBgOuter: "#63a380",
     iconColor: "#063b2a",
-    badge: "IMAGING TECH"
+    badge: "14 Tests | 380+ Qs"
   },
   {
     slug: "ot-icu",
@@ -194,7 +194,7 @@ const PROFESSIONS: ProfessionSection[] = [
     quarterBgInner: "#a85220",
     quarterBgOuter: "#c46d37",
     iconColor: "#522105",
-    badge: "SURGERY & ICU"
+    badge: "12 Tests | 350+ Qs"
   }
 ];
 
@@ -271,44 +271,44 @@ export const NcbtOnePage: React.FC<NcbtOnePageProps> = ({ showPage }) => {
             </div>
 
             {/* Micro Stats & Value Highlights Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-slate-800/80">
-              <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 font-extrabold text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-4 border-t border-slate-800/80">
+              <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-3.5 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 font-extrabold text-base">
                   ⚡
                 </div>
                 <div className="min-w-0">
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Interface</span>
-                  <p className="text-xs font-black text-white truncate">Official CBT Simulator</p>
+                  <p className="text-xs font-black text-white leading-snug break-words">Official CBT Simulator</p>
                 </div>
               </div>
 
-              <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 font-extrabold text-sm">
+              <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-3.5 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 font-extrabold text-base">
                   🎯
                 </div>
                 <div className="min-w-0">
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Question Sets</span>
-                  <p className="text-xs font-black text-white truncate">Verified Syllabus PYQs</p>
+                  <p className="text-xs font-black text-white leading-snug break-words">Verified Syllabus PYQs</p>
                 </div>
               </div>
 
-              <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0 font-extrabold text-sm">
+              <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-3.5 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0 font-extrabold text-base">
                   📊
                 </div>
                 <div className="min-w-0">
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Analytics</span>
-                  <p className="text-xs font-black text-white truncate">Instant Rationales</p>
+                  <p className="text-xs font-black text-white leading-snug break-words">Instant Rationales</p>
                 </div>
               </div>
 
-              <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0 font-extrabold text-sm">
+              <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-3.5 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0 font-extrabold text-base">
                   🛡️
                 </div>
                 <div className="min-w-0">
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Environment</span>
-                  <p className="text-xs font-black text-white truncate">100% Ad-Free Hub</p>
+                  <p className="text-xs font-black text-white leading-snug break-words">100% Ad-Free Hub</p>
                 </div>
               </div>
             </div>
@@ -347,7 +347,7 @@ export const NcbtOnePage: React.FC<NcbtOnePageProps> = ({ showPage }) => {
                 >
                   {/* Top Badge & Arrow Button */}
                   <div className="flex items-center justify-between w-full relative z-10 mb-3">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-white/80 text-slate-800 shadow-2xs border border-black/5">
+                    <span className="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-white/90 text-slate-900 shadow-2xs border border-black/10">
                       {p.badge}
                     </span>
 
@@ -366,7 +366,7 @@ export const NcbtOnePage: React.FC<NcbtOnePageProps> = ({ showPage }) => {
                       <IconComponent className="w-5 h-5 shrink-0" style={{ color: p.iconColor }} />
                       <span>{p.label}</span>
                     </h3>
-                    <p className="text-xs line-clamp-1 font-semibold" style={{ color: "#475569" }}>
+                    <p className="text-xs line-clamp-2 font-semibold leading-snug" style={{ color: "#334155" }}>
                       {p.exams}
                     </p>
                   </div>

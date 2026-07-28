@@ -1,8 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import {
-  ArrowLeft, Download, ChevronDown, ChevronUp, Clock, CheckCircle2,
-  XCircle, HelpCircle, Trophy, Target, Percent, ListChecks, BarChart3
+  ArrowLeft, Download, Clock, CheckCircle2,
+  XCircle, HelpCircle, Trophy, Target, Percent, ListChecks, BarChart3,
+  ChevronUp, ChevronDown, Sun, Moon
 } from "lucide-react";
+import AnalyticsSection from "./AnalyticsSection";
+import { TestSubmissionAnalytics, ErrorType } from "../data/mockAnalyticsSubmission";
 
 /* ---------------- TYPES ---------------- */
 export interface QuestionResult {
@@ -44,16 +47,21 @@ const TABS = [
 ] as const;
 type TabKey = typeof TABS[number]["key"];
 
-const METRICS = ["Score", "Accuracy", "Attempt", "Correct", "Incorrect", "Time"] as const;
-type MetricKey = typeof METRICS[number];
-
 /* =================================================================== */
 export default function ResultAnalysisPage({
   data,
+  submissionAnalytics,
   onBack,
+  onGenerateFixItQuiz,
+  theme,
+  onToggleTheme,
 }: {
   data: AnalysisData;
+  submissionAnalytics?: TestSubmissionAnalytics;
   onBack: () => void;
+  onGenerateFixItQuiz?: (subTopics: string[]) => void;
+  theme?: "light" | "dark";
+  onToggleTheme?: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<TabKey>("analysis");
   const printRef = useRef<HTMLDivElement>(null);
@@ -65,6 +73,23 @@ export default function ResultAnalysisPage({
     window.print();
     setTimeout(() => document.body.removeAttribute("data-print-section"), 500);
   };
+
+  const handleToggleTheme = () => {
+    if (onToggleTheme) {
+      onToggleTheme();
+    } else {
+      const isDark = document.documentElement.classList.contains("dark");
+      if (isDark) {
+        document.documentElement.classList.remove("dark");
+        localStorage.setItem("theme", "light");
+      } else {
+        document.documentElement.classList.add("dark");
+        localStorage.setItem("theme", "dark");
+      }
+    }
+  };
+
+  const isDarkMode = theme ? theme === "dark" : typeof document !== "undefined" && document.documentElement.classList.contains("dark");
 
   return (
     <div style={{ background: "var(--bg)", minHeight: "100vh" }}>
@@ -80,6 +105,21 @@ export default function ResultAnalysisPage({
         <span className="flex-1 min-w-0 truncate text-[14px] font-bold" style={{ color: "var(--text-primary)" }}>
           {data.testName}
         </span>
+        
+        {/* Theme Toggle Button */}
+        <button
+          onClick={handleToggleTheme}
+          className="p-2 rounded-xl flex items-center justify-center cursor-pointer transition-all border shadow-sm"
+          style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
+          title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          aria-label="Toggle Theme"
+        >
+          {isDarkMode ? (
+            <Sun size={15} className="text-amber-500" />
+          ) : (
+            <Moon size={15} style={{ color: "var(--accent)" }} />
+          )}
+        </button>
       </div>
 
       {/* TABS */}
@@ -105,7 +145,14 @@ export default function ResultAnalysisPage({
       </div>
 
       <div ref={printRef} className="px-4 py-4">
-        {activeTab === "analysis" && <AnalysisTab data={data} onDownload={() => handleDownload("analysis")} />}
+        {activeTab === "analysis" && (
+          <AnalysisTab
+            data={data}
+            submissionAnalytics={submissionAnalytics}
+            onGenerateFixItQuiz={onGenerateFixItQuiz}
+            onDownload={() => handleDownload("analysis")}
+          />
+        )}
         {activeTab === "solutions" && <SolutionsTab questions={data.questions} onDownload={() => handleDownload("solutions")} />}
         {activeTab === "leaderboard" && <LeaderboardTab data={data} />}
       </div>
@@ -125,18 +172,63 @@ export default function ResultAnalysisPage({
 }
 
 /* =================== ANALYSIS TAB =================== */
-function AnalysisTab({ data, onDownload }: { data: AnalysisData; onDownload: () => void }) {
-  const [metric, setMetric] = useState<MetricKey>("Score");
+function AnalysisTab({
+  data,
+  submissionAnalytics,
+  onGenerateFixItQuiz,
+  onDownload
+}: {
+  data: AnalysisData;
+  submissionAnalytics?: TestSubmissionAnalytics;
+  onGenerateFixItQuiz?: (subTopics: string[]) => void;
+  onDownload: () => void;
+}) {
+  // Fallback submission if direct analytics object isn't provided
+  const submission: TestSubmissionAnalytics = useMemo(() => {
+    if (submissionAnalytics) return submissionAnalytics;
 
-  const chartValues: Record<MetricKey, { you: number; topper: number; average: number; max: number }> = {
-    Score:     { you: Math.max(data.score, 0), topper: data.topperScore, average: data.averageScore, max: data.maxScore },
-    Accuracy:  { you: data.accuracy, topper: 96, average: 58, max: 100 },
-    Attempt:   { you: data.attempted, topper: data.totalQuestions, average: Math.round(data.totalQuestions * 0.7), max: data.totalQuestions },
-    Correct:   { you: data.correct, topper: data.totalQuestions - 1, average: Math.round(data.totalQuestions * 0.5), max: data.totalQuestions },
-    Incorrect: { you: data.incorrect, topper: 1, average: 4, max: data.totalQuestions },
-    Time:      { you: 32, topper: 41, average: 36, max: 60 },
-  };
-  const c = chartValues[metric];
+    return {
+      testMeta: {
+        testName: data.testName,
+        totalQuestions: data.totalQuestions,
+        maxScore: data.maxScore,
+        netScore: data.score,
+        shiftDifficultyMultiplier: 1.02,
+        topperAverageScore: data.topperScore || Math.round(data.maxScore * 0.85),
+        totalCandidates: data.totalCandidates || 1000,
+        historicalCutoffs: [
+          parseFloat((data.maxScore * 0.48).toFixed(1)),
+          parseFloat((data.maxScore * 0.52).toFixed(1)),
+          parseFloat((data.maxScore * 0.50).toFixed(1)),
+        ],
+      },
+      questions: data.questions.map((q) => {
+        let errorType: ErrorType = null;
+        if (q.status === "incorrect" || q.status === "overtime") {
+          if (q.timeTakenSec < 20) {
+            errorType = "rushed_error";
+          } else if (
+            /patient|nurse|assess|priority|intervention|admitted|presents|asking|statement|action|case/i.test(q.text)
+          ) {
+            errorType = "clinical_scenario_trap";
+          } else {
+            errorType = "memory_recall_gap";
+          }
+        }
+        return {
+          id: q.id,
+          subject: "Nursing Practice",
+          subTopic: "Clinical Skills",
+          text: q.text,
+          status: q.status === "overtime" ? "incorrect" : q.status,
+          timeTakenSec: q.timeTakenSec,
+          topperAvgTimeSec: 28,
+          negativeMarkingValue: 0.25,
+          errorType,
+        };
+      }),
+    };
+  }, [submissionAnalytics, data]);
 
   return (
     <div className="analysis-only flex flex-col gap-4">
@@ -150,79 +242,10 @@ function AnalysisTab({ data, onDownload }: { data: AnalysisData; onDownload: () 
         </button>
       </div>
 
-      {/* STAT GRID */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatBox icon={Trophy} label="Rank" value={`${data.rank}`} sub={`of ${data.totalCandidates}`} />
-        <StatBox icon={Target} label="Score" value={`${data.score}`} sub={`/ ${data.maxScore}`} />
-        <StatBox icon={Percent} label="Percentile" value={`${data.percentile}%`} sub="" />
-        <StatBox icon={CheckCircle2} label="Accuracy" value={`${data.accuracy}%`} sub="" />
-      </div>
-
-      <div className="rounded-2xl p-4" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <div className="flex justify-between text-[12.5px] mb-2" style={{ color: "var(--text-secondary)" }}>
-          <span>Correct: {data.correct}</span>
-          <span>Incorrect: {data.incorrect}</span>
-          <span>Unattempted: {data.unattempted}</span>
-        </div>
-        <div className="text-[12px]" style={{ color: "var(--text-secondary)" }}>
-          Average score: <b style={{ color: "var(--text-primary)" }}>{data.averageScore}</b> · Best score: <b style={{ color: "var(--text-primary)" }}>{data.bestScore}</b>
-        </div>
-      </div>
-
-      {/* COMPARE CHART */}
-      <div className="rounded-2xl p-4" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <p className="text-[13px] font-bold mb-3" style={{ color: "var(--text-primary)" }}>Compare</p>
-        <div className="flex flex-wrap gap-2 mb-5">
-          {METRICS.map((m) => (
-            <button
-              key={m}
-              onClick={() => setMetric(m)}
-              className="px-3 py-1.5 rounded-full text-[11.5px] font-semibold border cursor-pointer transition-all"
-              style={{
-                background: metric === m ? "var(--primary)" : "transparent",
-                color: metric === m ? "#fff" : "var(--text-secondary)",
-                borderColor: metric === m ? "var(--primary)" : "var(--border)",
-              }}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-end justify-around h-40">
-          {(["you", "average", "topper"] as const).map((k) => {
-            const val = c[k];
-            const heightPct = Math.max((val / (c.max || 1)) * 100, 3);
-            return (
-              <div key={k} className="flex flex-col items-center gap-2 w-1/4">
-                <span className="text-[11px] font-mono font-bold" style={{ color: "var(--text-primary)" }}>{val}</span>
-                <div
-                  className="w-10 rounded-t-md transition-all"
-                  style={{
-                    height: `${heightPct}%`,
-                    background: k === "you" ? "var(--primary)" : k === "topper" ? "var(--accent)" : "var(--surface-2)",
-                  }}
-                />
-                <span className="text-[11px] font-semibold capitalize" style={{ color: "var(--text-secondary)" }}>{k}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StatBox({ icon: Icon, label, value, sub }: { icon: any; label: string; value: string; sub: string }) {
-  return (
-    <div className="rounded-2xl p-3.5" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-      <div className="flex items-center gap-1.5 mb-1.5">
-        <Icon size={13} style={{ color: "var(--primary)" }} />
-        <span className="text-[10.5px] font-bold uppercase tracking-wide" style={{ color: "var(--text-secondary)" }}>{label}</span>
-      </div>
-      <p className="text-[20px] font-black font-mono" style={{ color: "var(--text-primary)" }}>
-        {value} <span className="text-[12px] font-medium" style={{ color: "var(--text-secondary)" }}>{sub}</span>
-      </p>
+      <AnalyticsSection
+        submission={submission}
+        onGenerateFixItQuiz={onGenerateFixItQuiz || (() => {})}
+      />
     </div>
   );
 }

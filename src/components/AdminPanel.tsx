@@ -13,6 +13,7 @@ import { SUBJECTS, PYQ_DATA } from "../data";
 import { NCBT_ONE_PROFESSIONS } from "../data/ncbtOneProfessions";
 import { STATIC_NURSING_UPDATES } from "../updatesData";
 import { NursingUpdate, Question } from "../types";
+import { getAllSeoArticles, saveCustomSeoArticle, deleteCustomSeoArticle, SeoArticle } from "../seoArticles";
 
 /* ---------------- TYPES & INTERFACES ---------------- */
 export interface StudentRecord {
@@ -72,7 +73,7 @@ const NAV = [
   { key: "students", label: "Students", icon: Users },
   { key: "questions", label: "MCQ Question Bank", icon: FileText },
   { key: "blog", label: "Blog & Article CMS", icon: BookOpen },
-  { key: "analytics", label: "Analytics", icon: BarChart3 },
+  { key: "exampages", label: "Exam Pages & Content", icon: Globe },
   { key: "notices", label: "Notices & Alerts", icon: Bell },
   { key: "settings", label: "Settings", icon: Settings },
 ] as const;
@@ -598,7 +599,12 @@ export default function AdminPanel({ onLockConsole, onExportBackup }: AdminPanel
             />
           )}
 
-          {active === "analytics" && <AnalyticsView />}
+          {active === "exampages" && (
+            <ExamPagesCmsView 
+              showToast={showToast}
+              onDataChanged={() => setRefreshSeed(s => s + 1)}
+            />
+          )}
 
           {active === "notices" && <NoticesView showToast={showToast} />}
 
@@ -709,7 +715,7 @@ function OverviewView({
           <div>
             <div className="flex items-center justify-between mb-4">
               <p className="text-[13.5px] font-bold" style={{ color: "var(--text-primary)" }}>Live Activity Stream</p>
-              <button onClick={() => onNavigate("analytics")} className="text-[11px] font-semibold text-[var(--primary)] hover:underline cursor-pointer">
+              <button onClick={() => onNavigate("students")} className="text-[11px] font-semibold text-[var(--primary)] hover:underline cursor-pointer">
                 View All
               </button>
             </div>
@@ -2511,6 +2517,10 @@ function BlogCmsView({ showToast, onDataChanged }: { showToast: (m: string, type
     return JSON.parse(localStorage.getItem("np_custom_updates") || "[]");
   });
 
+  const [deletedBlogIds, setDeletedBlogIds] = useState<string[]>(() => {
+    return JSON.parse(localStorage.getItem("np_deleted_updates") || "[]");
+  });
+
   // Editor Form State
   const [editingBlogId, setEditingBlogId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
@@ -2625,26 +2635,48 @@ function BlogCmsView({ showToast, onDataChanged }: { showToast: (m: string, type
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Delete Blog
+  // Insert photo block helper inside body content
+  const handleInsertPhotoToContent = () => {
+    const url = window.prompt("Enter Photo / Image URL to insert into article body:");
+    if (!url) return;
+    const caption = window.prompt("Enter Photo Caption / Description:", "Official Exam Pattern Banner") || "Image";
+    const imgMarkdown = `\n\n![${caption}](${url})\n\n`;
+    setContent(prev => prev + imgMarkdown);
+    showToast("Photo inserted into Article Body!");
+  };
+
+  // Delete Blog Page Completely
   const handleDeleteBlog = (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this blog post?")) return;
-    const updated = customBlogs.filter(b => b.id !== id);
-    setCustomBlogs(updated);
-    localStorage.setItem("np_custom_updates", JSON.stringify(updated));
+    if (!window.confirm("Are you sure you want to delete this blog article page completely?")) return;
+    const updatedCustom = customBlogs.filter(b => b.id !== id);
+    const updatedDeleted = Array.from(new Set([...deletedBlogIds, id]));
+    setCustomBlogs(updatedCustom);
+    setDeletedBlogIds(updatedDeleted);
+    localStorage.setItem("np_custom_updates", JSON.stringify(updatedCustom));
+    localStorage.setItem("np_deleted_updates", JSON.stringify(updatedDeleted));
     window.dispatchEvent(new Event("np_updates_changed"));
-    showToast("Blog article removed.");
+    showToast("Blog article page deleted completely.");
+    if (editingBlogId === id) {
+      setEditingBlogId(null);
+      setTitle("");
+      setSummary("");
+      setContent("");
+      setImage("");
+    }
     onDataChanged();
   };
 
-  // All Blogs combined
+  // All Blogs combined (excluding deleted ones)
   const allBlogsCombined = useMemo(() => {
     const map = new Map<string, NursingUpdate>();
-    customBlogs.forEach(b => map.set(b.id, b));
+    customBlogs.forEach(b => {
+      if (!deletedBlogIds.includes(b.id)) map.set(b.id, b);
+    });
     STATIC_NURSING_UPDATES.forEach(b => {
-      if (!map.has(b.id)) map.set(b.id, b);
+      if (!map.has(b.id) && !deletedBlogIds.includes(b.id)) map.set(b.id, b);
     });
     return Array.from(map.values());
-  }, [customBlogs]);
+  }, [customBlogs, deletedBlogIds]);
 
   const filteredBlogs = useMemo(() => {
     return allBlogsCombined.filter(b => 
@@ -2797,7 +2829,16 @@ function BlogCmsView({ showToast, onDataChanged }: { showToast: (m: string, type
 
           {/* Full Article Content */}
           <div>
-            <label className="block font-bold mb-1" style={{ color: "var(--text-secondary)" }}>Full Article Body Content (Supports Markdown / Formatting) *</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block font-bold" style={{ color: "var(--text-secondary)" }}>Full Article Body Content (Supports Markdown / Formatting) *</label>
+              <button 
+                type="button" 
+                onClick={handleInsertPhotoToContent}
+                className="text-[11px] font-bold text-[var(--primary)] hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <ImageIcon size={13} /> Insert Photo to Article Body
+              </button>
+            </div>
             <textarea 
               value={content}
               onChange={(e) => setContent(e.target.value)}
@@ -2913,15 +2954,13 @@ function BlogCmsView({ showToast, onDataChanged }: { showToast: (m: string, type
                 >
                   <Edit3 size={15} />
                 </button>
-                {b.id.startsWith("blog-") ? (
-                  <button 
-                    onClick={() => handleDeleteBlog(b.id)}
-                    className="p-1.5 rounded-lg text-red-400 hover:text-red-600 cursor-pointer"
-                    title="Delete Post"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                ) : null}
+                <button 
+                  onClick={() => handleDeleteBlog(b.id)}
+                  className="p-1.5 rounded-lg text-red-400 hover:text-red-600 cursor-pointer flex items-center gap-1"
+                  title="Delete Article Page Completely"
+                >
+                  <Trash2 size={15} />
+                </button>
               </div>
             </div>
           ))}
@@ -2966,49 +3005,436 @@ function BlogCmsView({ showToast, onDataChanged }: { showToast: (m: string, type
   );
 }
 
-/* ================= ANALYTICS ================= */
-function AnalyticsView() {
+/* ================= EXAM PAGES & CONTENT CMS ================= */
+function ExamPagesCmsView({ showToast, onDataChanged }: { showToast: (m: string, type?: "ok" | "err") => void; onDataChanged: () => void }) {
+  const [allArticlesMap, setAllArticlesMap] = useState<Record<string, SeoArticle>>(() => getAllSeoArticles());
+  const [selectedSlug, setSelectedSlug] = useState<string>("homepage");
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
+
+  // Form state
+  const [slug, setSlug] = useState("homepage");
+  const [title, setTitle] = useState("");
+  const [subtitle, setSubtitle] = useState("");
+  const [badge, setBadge] = useState("EXAM PREPARATION GUIDE");
+  const [keywordsStr, setKeywordsStr] = useState("");
+  const [image, setImage] = useState("");
+  const [pdfUrl, setPdfUrl] = useState("");
+  const [officialLink, setOfficialLink] = useState("");
+  const [contentHtml, setContentHtml] = useState("");
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+
+  // Load article into form when selectedSlug or isCreatingNew changes
+  useEffect(() => {
+    const articles = getAllSeoArticles();
+    setAllArticlesMap(articles);
+
+    if (isCreatingNew) {
+      setSlug(`exam-guide-${Date.now().toString().slice(-4)}`);
+      setTitle("");
+      setSubtitle("");
+      setBadge("NCBT EXAM GUIDE");
+      setKeywordsStr("Nursing, CBT, Exam Pattern, Cutoff, Practice");
+      setImage("https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?q=80&w=800");
+      setPdfUrl("");
+      setOfficialLink("");
+      setContentHtml(`<div class="prose max-w-none space-y-6">
+  <section class="space-y-3">
+    <h2 class="text-xl font-bold border-b pb-2">1. Official Exam Overview & CBT Pattern</h2>
+    <p>Detailed recruitment notification, examination duration, marking criteria, and negative marking penalty information...</p>
+  </section>
+  <section class="space-y-3">
+    <h2 class="text-xl font-bold border-b pb-2">2. Subject Syllabus & Topic Distribution</h2>
+    <p>Breakdown of core clinical topics, general knowledge, numerical aptitude, and previous year weightage...</p>
+  </section>
+</div>`);
+    } else if (articles[selectedSlug]) {
+      const art = articles[selectedSlug];
+      setSlug(selectedSlug);
+      setTitle(art.title || "");
+      setSubtitle(art.subtitle || "");
+      setBadge(art.badge || "EXAM PREPARATION GUIDE");
+      setKeywordsStr(Array.isArray(art.keywords) ? art.keywords.join(", ") : "");
+      setImage(art.image || "");
+      setPdfUrl(art.pdfUrl || "");
+      setOfficialLink(art.officialLink || "");
+      setContentHtml(art.contentHtml || "");
+    }
+  }, [selectedSlug, isCreatingNew]);
+
+  const handleImageFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const base64 = evt.target?.result as string;
+      setImage(base64);
+      showToast("Photo banner uploaded and attached!");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleInsertPhotoToPage = () => {
+    const url = window.prompt("Enter Photo / Image URL to insert into Exam Page content:");
+    if (!url) return;
+    const caption = window.prompt("Enter Photo Description / Caption:", "Official Exam Pattern Chart") || "Exam Photo";
+    const imgHtml = `\n<div class="my-6 rounded-2xl overflow-hidden border border-[var(--border)] shadow-md">\n  <img src="${url}" alt="${caption}" class="w-full h-auto object-cover max-h-96" />\n  <p class="p-2 text-center text-[11px] font-semibold text-[var(--text-secondary)] bg-[var(--surface-2)]">📷 ${caption}</p>\n</div>\n`;
+    setContentHtml(prev => prev + imgHtml);
+    showToast("Photo added to Exam Page content!");
+  };
+
+  const handleAddSection = () => {
+    const secHeading = window.prompt("Enter New Section Heading:", "Selection Criteria & Target Cutoff");
+    if (!secHeading) return;
+    const secHtml = `\n<section class="space-y-3 mt-6">\n  <h2 class="text-xl font-extrabold text-[var(--text-primary)] border-b border-[var(--border)] pb-2">\n    ${secHeading}\n  </h2>\n  <p class="text-sm text-[var(--text-secondary)] leading-relaxed">\n    Write comprehensive clinical notes or exam guidelines for ${secHeading} here...\n  </p>\n</section>\n`;
+    setContentHtml(prev => prev + secHtml);
+    showToast(`Added section: "${secHeading}"`);
+  };
+
+  const handleSavePage = (e: FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !slug.trim() || !contentHtml.trim()) {
+      showToast("Please fill in Page Title, Slug, and Content HTML.", "err");
+      return;
+    }
+
+    const cleanSlug = slug.trim().toLowerCase().replace(/\s+/g, "-");
+    const updatedArticle: SeoArticle = {
+      title: title.trim(),
+      subtitle: subtitle.trim(),
+      keywords: keywordsStr.split(",").map(k => k.trim()).filter(Boolean),
+      contentHtml: contentHtml.trim(),
+      image: image.trim() || undefined,
+      badge: badge.trim() || "EXAM PREPARATION GUIDE",
+      pdfUrl: pdfUrl.trim() || undefined,
+      officialLink: officialLink.trim() || undefined
+    };
+
+    saveCustomSeoArticle(cleanSlug, updatedArticle);
+    const refreshed = getAllSeoArticles();
+    setAllArticlesMap(refreshed);
+    setIsCreatingNew(false);
+    setSelectedSlug(cleanSlug);
+    showToast(`Exam Page "${title.trim()}" published live!`);
+    onDataChanged();
+  };
+
+  const handleDeletePage = () => {
+    if (!window.confirm(`Are you sure you want to delete the Exam Page "${title || selectedSlug}" completely?`)) return;
+    deleteCustomSeoArticle(selectedSlug);
+    const refreshed = getAllSeoArticles();
+    setAllArticlesMap(refreshed);
+    const keys = Object.keys(refreshed);
+    if (keys.length > 0) {
+      setSelectedSlug(keys[0]);
+    }
+    showToast(`Exam Page "${selectedSlug}" deleted completely.`);
+    onDataChanged();
+  };
+
+  const pageLabels: Record<string, string> = {
+    homepage: "Homepage Overview & Master Guide",
+    nursing: "Nursing Officer Exam Guide",
+    pharmacist: "Pharmacist & CGHS Exam Guide",
+    paramedical: "Paramedical & OT Technician Guide",
+    labtech: "Lab Technician & DMLT Guide",
+    radiographer: "Radiographer & X-Ray Tech Guide",
+    medical_officer: "Medical Officer & MBBS Guide",
+    aiims: "AIIMS NORCET Entrance & Recruitment",
+    wbhrb: "WBHRB Health Board Recruitment Guide",
+    esic: "ESIC Staff Nurse & Paramedical Guide",
+    rrb: "RRB Railway Nurse & Paramedical Guide",
+    cho: "NHM Community Health Officer (CHO) Guide",
+    dsssb: "DSSSB Nursing & Health Guide",
+    anatomy: "Anatomy & Physiology Master Guide",
+    blood: "Blood Bank & Hematology Master Guide",
+    subject_default: "Default Subject Exam Guide"
+  };
+
+  const articleEntries = Object.entries(allArticlesMap);
+
   return (
-    <div className="space-y-5">
-      <div className="grid md:grid-cols-3 gap-4">
-        <div className="rounded-2xl p-5" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-          <p className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-secondary)" }}>Average CBT Score</p>
-          <p className="text-[28px] font-black font-mono" style={{ color: "var(--success)" }}>68.4%</p>
-          <p className="text-[11px] mt-1" style={{ color: "var(--text-secondary)" }}>Across 2,400+ mock tests</p>
+    <div className="space-y-6">
+      
+      {/* Top Header & Page Selector */}
+      <div className="rounded-2xl p-6 space-y-5" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-[17px] font-extrabold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+              <Globe size={19} className="text-[var(--primary)]" />
+              Exam Pages & Content CMS (Full Access)
+            </h3>
+            <p className="text-[12px] text-[var(--text-secondary)]">
+              Full control to manage, edit, add sections, upload photos, or delete any exam page across NCBT.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <button 
+              onClick={() => {
+                setIsCreatingNew(true);
+                setSelectedSlug("");
+              }}
+              className="px-3.5 py-2 rounded-xl text-[12px] font-bold text-white cursor-pointer transition-all hover:opacity-90 flex items-center gap-1.5"
+              style={{ background: "var(--primary)" }}
+            >
+              <Plus size={15} /> Create New Exam Page
+            </button>
+          </div>
         </div>
-        <div className="rounded-2xl p-5" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-          <p className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-secondary)" }}>Top Performer</p>
-          <p className="text-[28px] font-black font-mono" style={{ color: "var(--primary)" }}>89.2%</p>
-          <p className="text-[11px] mt-1" style={{ color: "var(--text-secondary)" }}>Priya Sharma (NORCET Stage II)</p>
-        </div>
-        <div className="rounded-2xl p-5" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-          <p className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-secondary)" }}>Negative Marking Rate</p>
-          <p className="text-[28px] font-black font-mono" style={{ color: "var(--accent)" }}>14.2%</p>
-          <p className="text-[11px] mt-1" style={{ color: "var(--text-secondary)" }}>Incorrect options penalized</p>
+
+        {/* Page Selector Bar */}
+        <div className="p-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <label className="text-[11.5px] font-bold text-[var(--text-secondary)] shrink-0">Select Page to Manage:</label>
+            <select 
+              value={isCreatingNew ? "" : selectedSlug}
+              onChange={(e) => {
+                setIsCreatingNew(false);
+                setSelectedSlug(e.target.value);
+              }}
+              className="flex-1 p-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] font-bold text-[13px] outline-none cursor-pointer"
+            >
+              {articleEntries.map(([key, art]: [string, any]) => (
+                <option key={key} value={key}>
+                  📄 {pageLabels[key] || art.title || key} [{key}]
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {!isCreatingNew && selectedSlug && (
+            <button 
+              type="button"
+              onClick={handleDeletePage}
+              className="px-3 py-2 rounded-xl text-[11.5px] font-bold text-red-400 border border-red-500/30 hover:bg-red-500/10 cursor-pointer flex items-center gap-1.5 shrink-0"
+              title="Delete this exam page completely"
+            >
+              <Trash2 size={14} /> Delete Page Completely
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="rounded-2xl p-6" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <h3 className="text-[14px] font-bold mb-4" style={{ color: "var(--text-primary)" }}>Cadre Accuracy Comparison</h3>
-        <div className="space-y-3">
-          {[
-            { subject: "Nursing Officer (NORCET/ESIC)", accuracy: 74, color: "var(--primary)" },
-            { subject: "Pharmacist CBT Practice", accuracy: 62, color: "var(--accent)" },
-            { subject: "Lab Technician Exam", accuracy: 58, color: "var(--info, #38bdf8)" },
-            { subject: "General Knowledge & Aptitude", accuracy: 81, color: "var(--success)" },
-          ].map((item) => (
-            <div key={item.subject} className="space-y-1">
-              <div className="flex justify-between text-[12px] font-bold">
-                <span style={{ color: "var(--text-primary)" }}>{item.subject}</span>
-                <span className="font-mono" style={{ color: item.color }}>{item.accuracy}% Accuracy</span>
+      {/* Main Page Content Editor Form */}
+      <div className="rounded-2xl p-6 space-y-5" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <form onSubmit={handleSavePage} className="space-y-4 text-[12.5px]">
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label className="block font-bold mb-1" style={{ color: "var(--text-secondary)" }}>Page Slug / Key *</label>
+              <input 
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+                placeholder="e.g. aiims, norcet-9, cho-exam"
+                disabled={!isCreatingNew && !!allArticlesMap[selectedSlug]}
+                className="w-full p-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] font-mono text-[12px] outline-none"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold mb-1" style={{ color: "var(--text-secondary)" }}>Badge Pill Label</label>
+              <input 
+                value={badge}
+                onChange={(e) => setBadge(e.target.value)}
+                placeholder="e.g. OFFICIAL SYLLABUS & MOCK GUIDE"
+                className="w-full p-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] font-bold uppercase text-[11px] outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold mb-1" style={{ color: "var(--text-secondary)" }}>Keywords (Comma Separated)</label>
+              <input 
+                value={keywordsStr}
+                onChange={(e) => setKeywordsStr(e.target.value)}
+                placeholder="e.g. NORCET, AIIMS, Syllabus, Cutoff"
+                className="w-full p-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] text-[12px] outline-none"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block font-bold mb-1" style={{ color: "var(--text-secondary)" }}>Page Heading Title *</label>
+            <input 
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. AIIMS NORCET Entrance & Recruitment Exam Guide 2026"
+              className="w-full p-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] font-extrabold text-[14px] outline-none"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block font-bold mb-1" style={{ color: "var(--text-secondary)" }}>Subtitle / Overview Summary</label>
+            <textarea 
+              value={subtitle}
+              onChange={(e) => setSubtitle(e.target.value)}
+              placeholder="Brief summary explaining what this exam page covers..."
+              className="w-full p-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] outline-none min-h-[50px] text-[12px]"
+            />
+          </div>
+
+          {/* Photo Banner Upload */}
+          <div className="space-y-2 p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]">
+            <label className="block font-bold text-[12px]" style={{ color: "var(--text-primary)" }}>
+              📷 Exam Page Photo Banner / Cover Image
+            </label>
+
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-3 items-center">
+              <div>
+                <label className="block text-[11px] text-[var(--text-secondary)] font-semibold mb-1">Option A: Upload Local Photo File</label>
+                <input 
+                  type="file" 
+                  accept="image/*"
+                  onChange={handleImageFileUpload}
+                  className="w-full text-[12px] p-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] cursor-pointer"
+                />
               </div>
-              <div className="w-full h-3 rounded-full bg-[var(--surface-2)] overflow-hidden">
-                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${item.accuracy}%`, background: item.color }} />
+
+              <span className="text-[11px] font-bold text-[var(--text-secondary)] text-center hidden md:block">OR</span>
+
+              <div>
+                <label className="block text-[11px] text-[var(--text-secondary)] font-semibold mb-1">Option B: Unsplash / Web Photo URL</label>
+                <input 
+                  value={image}
+                  onChange={(e) => setImage(e.target.value)}
+                  placeholder="https://images.unsplash.com/..."
+                  className="w-full p-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] outline-none text-[12px]"
+                />
               </div>
             </div>
-          ))}
-        </div>
+
+            {image && (
+              <div className="relative mt-2 h-44 rounded-xl overflow-hidden border border-[var(--border)] bg-black/40">
+                <img src={image} alt="Banner Preview" className="w-full h-full object-cover" />
+                <button 
+                  type="button"
+                  onClick={() => setImage("")}
+                  className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/70 text-white hover:bg-red-600 transition-colors cursor-pointer"
+                  title="Remove Image"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Official Prospectus & Portal Links */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block font-bold mb-1" style={{ color: "var(--text-secondary)" }}>Official PDF Prospectus Download URL</label>
+              <input 
+                value={pdfUrl}
+                onChange={(e) => setPdfUrl(e.target.value)}
+                placeholder="https://aiimsexams.ac.in/prospectus.pdf"
+                className="w-full p-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] outline-none text-[11.5px]"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold mb-1" style={{ color: "var(--text-secondary)" }}>Official Application Portal Link</label>
+              <input 
+                value={officialLink}
+                onChange={(e) => setOfficialLink(e.target.value)}
+                placeholder="https://aiimsexams.ac.in"
+                className="w-full p-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] outline-none text-[11.5px]"
+              />
+            </div>
+          </div>
+
+          {/* Section Toolbar & Content Editor */}
+          <div className="space-y-2 pt-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] pb-2">
+              <label className="block font-bold text-[13px]" style={{ color: "var(--text-primary)" }}>
+                Page Content Sections & Article Body *
+              </label>
+
+              <div className="flex items-center gap-2">
+                <button 
+                  type="button"
+                  onClick={handleAddSection}
+                  className="px-2.5 py-1 rounded-lg bg-[var(--surface-2)] text-[var(--primary)] border border-[var(--border)] font-bold text-[11px] hover:bg-[var(--surface)] flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus size={13} /> Add New Section
+                </button>
+
+                <button 
+                  type="button"
+                  onClick={handleInsertPhotoToPage}
+                  className="px-2.5 py-1 rounded-lg bg-[var(--surface-2)] text-[var(--accent)] border border-[var(--border)] font-bold text-[11px] hover:bg-[var(--surface)] flex items-center gap-1 cursor-pointer"
+                >
+                  <ImageIcon size={13} /> Add Photo / Image
+                </button>
+              </div>
+            </div>
+
+            <textarea 
+              value={contentHtml}
+              onChange={(e) => setContentHtml(e.target.value)}
+              placeholder="Write or edit section content. Supports HTML sections, headings (<h2>), lists (<ul>), and images..."
+              className="w-full p-3.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] outline-none min-h-[260px] font-mono text-[12px] leading-relaxed"
+              required
+            />
+          </div>
+
+          {/* Form Submit & Preview Buttons */}
+          <div className="flex items-center gap-3 pt-3">
+            <button 
+              type="button"
+              onClick={() => setShowPreviewModal(true)}
+              className="flex-1 py-3 rounded-xl font-bold text-[12.5px] cursor-pointer border border-[var(--border)] bg-[var(--surface-2)] hover:bg-[var(--surface)] flex items-center justify-center gap-2"
+            >
+              <Eye size={16} /> Live Preview Exam Page
+            </button>
+
+            <button 
+              type="submit"
+              className="flex-1 py-3 rounded-xl text-white font-bold text-[12.5px] cursor-pointer transition-all hover:opacity-90 flex items-center justify-center gap-2"
+              style={{ background: "var(--primary)" }}
+            >
+              <Sparkles size={16} /> Save Exam Page Live
+            </button>
+          </div>
+
+        </form>
       </div>
+
+      {/* LIVE PREVIEW MODAL */}
+      {showPreviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-4xl rounded-3xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+              <span className="text-[12px] font-black uppercase text-[var(--primary)] flex items-center gap-1.5">
+                <Globe size={15} /> Live Exam Page Preview — [{slug}]
+              </span>
+              <button onClick={() => setShowPreviewModal(false)} className="p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-left">
+              <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20">
+                {badge || "EXAM GUIDE"}
+              </span>
+
+              <h2 className="text-2xl font-black text-[var(--text-primary)] leading-snug">{title || "Untitled Exam Page"}</h2>
+              <p className="text-xs text-[var(--text-secondary)] font-medium">{subtitle}</p>
+
+              {image && (
+                <div className="h-60 rounded-2xl overflow-hidden border border-[var(--border)]">
+                  <img src={image} alt="Cover Preview" className="w-full h-full object-cover" />
+                </div>
+              )}
+
+              <div 
+                className="p-5 rounded-2xl bg-[var(--surface-2)] text-xs text-[var(--text-primary)] leading-relaxed space-y-4"
+                dangerouslySetInnerHTML={{ __html: contentHtml }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -111,6 +111,7 @@ import {
 } from "./services/geminiClient";
 import { SEO_ARTICLES, getArticleForTest, getArticleForExam } from "./seoArticles";
 import ResultAnalysisPage, { AnalysisData, QuestionResult } from "./components/ResultAnalysisPage";
+import { TestSubmissionAnalytics, QuestionAnalytics, ErrorType } from "./data/mockAnalyticsSubmission";
 
 // Dynamically enriches standard explanations with high-yield clinical pointers
 const getDetailedExplain = (q: Question): string => {
@@ -1344,6 +1345,138 @@ export default function App() {
     };
   }, [activeTest, selectedOptions, questionTimesSpent, examMode]);
 
+  // Refs for tracking current page state in popstate handlers
+  const activePageRef = useRef(activePage);
+  activePageRef.current = activePage;
+  const isTestFinishedRef = useRef(isTestFinished);
+  isTestFinishedRef.current = isTestFinished;
+  const testReferrerRef = useRef(testReferrer);
+  testReferrerRef.current = testReferrer;
+  const submissionAnalytics: TestSubmissionAnalytics = React.useMemo(() => {
+    if (!activeTest) {
+      return {
+        testMeta: {
+          testName: "Mock Test",
+          totalQuestions: 10,
+          maxScore: 10,
+          netScore: 0,
+          shiftDifficultyMultiplier: 1.02,
+          topperAverageScore: 8.5,
+          totalCandidates: 1000,
+          historicalCutoffs: [5.0, 5.2, 4.8],
+        },
+        questions: [],
+      };
+    }
+
+    const totalQuestions = activeTest.data.length;
+    let correct = 0;
+    let incorrect = 0;
+    let unattempted = 0;
+
+    const questions: QuestionAnalytics[] = activeTest.data.map((q, idx) => {
+      const selIdx = selectedOptions[idx] ?? null;
+      const timeTakenSec = questionTimesSpent[idx] || 15;
+      let status: "correct" | "incorrect" | "unattempted" = "unattempted";
+
+      if (selIdx === null) {
+        unattempted++;
+        status = "unattempted";
+      } else if (selIdx === q.ans) {
+        correct++;
+        status = "correct";
+      } else {
+        incorrect++;
+        status = "incorrect";
+      }
+
+      let errorType: ErrorType = null;
+      if (status === "incorrect") {
+        if ((q as any).errorType) {
+          errorType = (q as any).errorType;
+        } else if (timeTakenSec < 20) {
+          errorType = "rushed_error";
+        } else if (
+          /patient|nurse|assess|priority|intervention|admitted|presents|asking|statement|action|case/i.test(q.q)
+        ) {
+          errorType = "clinical_scenario_trap";
+        } else {
+          errorType = "memory_recall_gap";
+        }
+      }
+
+      const subjectName = (q as any).subject || (activeTest.title.includes("—") ? activeTest.title.split(" — ")[0] : "Nursing Practice");
+      const subTopicName = (q as any).subTopic || (q.source ? q.source.split(" ")[0] : activeTest.title);
+
+      return {
+        id: q.id || `q-${idx}`,
+        subject: subjectName,
+        subTopic: subTopicName,
+        text: q.q,
+        status,
+        timeTakenSec,
+        topperAvgTimeSec: Math.round(18 + ((idx * 3) % 20)),
+        negativeMarkingValue: examMode ? 0.25 : 0.33,
+        errorType,
+      };
+    });
+
+    const penalty = examMode ? (incorrect * 0.25) : 0;
+    const netScore = Math.max(0, parseFloat((correct - penalty).toFixed(2)));
+
+    return {
+      testMeta: {
+        testName: activeTest.title,
+        totalQuestions,
+        maxScore: totalQuestions,
+        netScore,
+        shiftDifficultyMultiplier: 1.02,
+        topperAverageScore: Math.max(correct, Math.round(totalQuestions * 0.85)),
+        totalCandidates: Math.max(500, totalQuestions * 35),
+        historicalCutoffs: [
+          parseFloat((totalQuestions * 0.48).toFixed(1)),
+          parseFloat((totalQuestions * 0.52).toFixed(1)),
+          parseFloat((totalQuestions * 0.50).toFixed(1)),
+        ],
+      },
+      questions,
+    };
+  }, [activeTest, selectedOptions, questionTimesSpent, examMode]);
+
+  // Generate 10-Question Fix-It Quiz from weak topics
+  const handleGenerateFixItQuiz = (subTopics: string[]) => {
+    if (!activeTest) return;
+    const weakQuestions = activeTest.data.filter((q, idx) => selectedOptions[idx] !== q.ans);
+    const pool = weakQuestions.length >= 5 ? weakQuestions : activeTest.data;
+    const selectedQuestions = [...pool].sort(() => 0.5 - Math.random()).slice(0, 10);
+
+    const fixItTest: Test = {
+      id: `fixit-${Date.now()}`,
+      icon: "⚡",
+      title: `Fix-It Quiz: Target Drill (${selectedQuestions.length} Qs)`,
+      desc: "Targeted quick practice session focused on your identified weak sub-topics.",
+      questions: selectedQuestions.length,
+      mins: Math.max(5, Math.round(selectedQuestions.length * 1)),
+      ready: true,
+      data: selectedQuestions,
+    };
+
+    setActiveTest(fixItTest);
+    setCurrentQuestionIndex(0);
+    setSelectedOptions(new Array(selectedQuestions.length).fill(null));
+    setQuestionAnswers(new Array(selectedQuestions.length).fill(null));
+    setReviewedQuestions(new Array(selectedQuestions.length).fill(false));
+    setQuestionTimesSpent(new Array(selectedQuestions.length).fill(0));
+    setCorrectCount(0);
+    setTimeLeft(fixItTest.mins * 60);
+    setIsTestFinished(false);
+    setShowFinishConfirm(false);
+    setIsTimerPaused(false);
+    setShowPalette(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    triggerToast(`10-Question Fix-It Quiz generated & started! ⚡`, "ok");
+  };
+
   // Format per-question time spent
   const formatQuestionTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -1476,6 +1609,8 @@ export default function App() {
         } catch (e) {}
       }
 
+      const deletedIds = new Set<string>(JSON.parse(localStorage.getItem("np_deleted_updates") || "[]"));
+
       if (fetchedList && fetchedList.length > 0) {
         const supabaseIds = new Set(fetchedList.map(u => u.id));
         const merged = [
@@ -1483,7 +1618,7 @@ export default function App() {
           ...fetchedList,
           ...STATIC_NURSING_UPDATES.filter(u => !supabaseIds.has(u.id))
         ];
-        setUpdates(merged);
+        setUpdates(merged.filter(u => !deletedIds.has(u.id)));
       } else {
         // Fallback to Express backend or static + local
         try {
@@ -1499,7 +1634,7 @@ export default function App() {
                   ...data,
                   ...STATIC_NURSING_UPDATES.filter(u => !apiIds.has(u.id))
                 ];
-                setUpdates(merged);
+                setUpdates(merged.filter(u => !deletedIds.has(u.id)));
                 return;
               }
             }
@@ -1509,10 +1644,11 @@ export default function App() {
         // Pure local + static fallback
         const customIds = new Set(customBlogList.map(u => u.id));
         const merged = [...customBlogList, ...STATIC_NURSING_UPDATES.filter(u => !customIds.has(u.id))];
-        setUpdates(merged);
+        setUpdates(merged.filter(u => !deletedIds.has(u.id)));
       }
     } catch (err: any) {
       console.error(err);
+      const deletedIds = new Set<string>(JSON.parse(localStorage.getItem("np_deleted_updates") || "[]"));
       const localCustom = localStorage.getItem("np_custom_updates");
       let customBlogList: NursingUpdate[] = [];
       if (localCustom) {
@@ -1523,7 +1659,7 @@ export default function App() {
       }
       const customIds = new Set(customBlogList.map(u => u.id));
       const merged = [...customBlogList, ...STATIC_NURSING_UPDATES.filter(u => !customIds.has(u.id))];
-      setUpdates(merged);
+      setUpdates(merged.filter(u => !deletedIds.has(u.id)));
     } finally {
       setLoadingUpdates(false);
     }
@@ -1800,6 +1936,12 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
     // PopState event handler for backward/forward swipe gestures
     const handlePopState = (e: PopStateEvent) => {
+      if (activePageRef.current === "test" && !isTestFinishedRef.current) {
+        window.history.pushState({ page: "test" }, "", window.location.href);
+        setIsTimerPaused(true);
+        return;
+      }
+
       if (e.state && e.state.page) {
         setActivePage(e.state.page);
         if (e.state.hubTab) {
@@ -2669,7 +2811,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       targetTab = "short";
       setHubTab("short");
     } else if (pageId === "hub") {
-      targetPage = "exam_landing";
+      targetPage = "find_test";
     }
 
     const effectiveExamId = customState?.examId || selectedExamId || "aiims-norcet";
@@ -2755,6 +2897,19 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
   // Handle Browser Back/Forward buttons smoothly
   useEffect(() => {
     const handlePopState = () => {
+      if (activePageRef.current === "test" && !isTestFinishedRef.current) {
+        window.history.pushState({ page: "test" }, "", window.location.href);
+        setIsTimerPaused(true);
+        return;
+      }
+      if (activePageRef.current === "test" && isTestFinishedRef.current) {
+        setIsTestFinished(false);
+        const target = (testReferrerRef.current && testReferrerRef.current !== "exam_landing" && testReferrerRef.current !== "hub")
+          ? testReferrerRef.current
+          : "find_test";
+        showPage(target, false);
+        return;
+      }
       const route = getInitialRoute();
       setActivePage(route.page);
       if (route.examId) setSelectedExamId(route.examId);
@@ -2811,7 +2966,9 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     if (!test || !test.ready) return;
 
     if (activePage !== "test") {
-      setTestReferrer(activePage);
+      const safeReferrer = (activePage === "exam_landing" || activePage === "hub") ? "find_test" : activePage;
+      setTestReferrer(safeReferrer);
+      testReferrerRef.current = safeReferrer;
     }
     setActiveSubjectId(subjectId);
     setActiveTest(test);
@@ -2858,7 +3015,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
     setIsTimerPaused(false);
     triggerToast("⏸️ Test progress saved in memory! You can resume anytime.", "ok");
-    showPage("hub");
+    goHub();
   };
 
   const triggerTestInit = (subjectId: string, testId: string) => {
@@ -3223,7 +3380,9 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
   const handleMarkAndNext = () => {
     toggleMarkForReview(currentQuestionIndex);
-    handleNextQuestion();
+    if (activeTest && currentQuestionIndex < activeTest.data.length - 1) {
+      handleNextQuestion();
+    }
   };
 
   const toggleMarkForReview = (index: number) => {
@@ -3234,9 +3393,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
   const handleNextQuestion = () => {
     if (!activeTest) return;
-    if (currentQuestionIndex === activeTest.data.length - 1) {
-      setCurrentQuestionIndex(0); // Wrap back to first question for smooth looping review
-    } else {
+    if (currentQuestionIndex < activeTest.data.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     }
   };
@@ -4472,13 +4629,12 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
             {/* Test Content Container */}
             {!isTestFinished && (
-              <div className="max-w-6xl mx-auto min-h-screen flex flex-col justify-between">
-                <div>
-                  {/* HEADER / NAVIGATOR SECTION */}
+              <div className="max-w-6xl mx-auto pb-12">
+                {/* HEADER / NAVIGATOR SECTION */}
                   <div className="sticky top-0 z-40 bg-[var(--surface)] border-b border-[var(--border)] shadow-sm">
                     {/* ROW 1 — single header */}
                     <div className="flex items-center gap-2 px-3 py-2">
-                      <button onClick={goHub} className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-[var(--surface-2)] text-[var(--text-primary)] cursor-pointer hover:bg-[var(--border)] transition-colors">
+                      <button onClick={() => setIsTimerPaused(true)} className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-[var(--surface-2)] text-[var(--text-primary)] cursor-pointer hover:bg-[var(--border)] transition-colors" title="Pause / Exit Test">
                         <ArrowLeft size={16} />
                       </button>
 
@@ -4508,6 +4664,20 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5" />
                         <span>{formatTime(timeLeft)}</span>
                       </div>
+
+                      {/* Light/Dark Mode Toggle Button */}
+                      <button
+                        onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+                        className="shrink-0 p-1.5 rounded-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] hover:border-[var(--primary)] transition-colors cursor-pointer flex items-center justify-center"
+                        title={theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
+                        aria-label="Toggle Theme"
+                      >
+                        {theme === "light" ? (
+                          <Moon size={14} className="text-[var(--accent)]" />
+                        ) : (
+                          <Sun size={14} className="text-amber-500" />
+                        )}
+                      </button>
 
                       <button onClick={() => setShowFinishConfirm(true)} className="shrink-0 px-3.5 py-1.5 rounded-full bg-red-500/90 hover:bg-red-500 text-white text-[12px] font-bold cursor-pointer transition-colors shadow-sm">
                         Submit
@@ -4660,8 +4830,53 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                           </div>
                         );
                       })()}
+
+                        {/* ACTION BUTTONS DIRECTLY BELOW END OF OPTIONS / RATIONALE */}
+                        <div className="pt-3 border-t border-[var(--border)] flex items-center justify-between gap-2.5">
+                          {/* Prev */}
+                          <button
+                            onClick={handlePrevQuestion}
+                            disabled={currentQuestionIndex === 0}
+                            className="flex-1 py-2.5 px-2.5 sm:px-4 rounded-xl border border-[var(--border)] text-[var(--text-primary)] bg-[var(--surface-2)] hover:bg-[var(--surface)] disabled:opacity-30 disabled:cursor-not-allowed font-bold text-xs sm:text-sm transition-all cursor-pointer text-center"
+                            title="Previous Question"
+                          >
+                            ← Prev
+                          </button>
+
+                          {/* Mark & Next / Mark */}
+                          <button
+                            onClick={currentQuestionIndex === activeTest.data.length - 1 ? () => toggleMarkForReview(currentQuestionIndex) : handleMarkAndNext}
+                            className={`flex-1 py-2.5 px-2.5 sm:px-4 rounded-xl border font-bold text-xs sm:text-sm transition-all cursor-pointer text-center truncate shadow-sm ${
+                              reviewedQuestions[currentQuestionIndex]
+                                ? "border-pink-500 bg-pink-500 text-white"
+                                : "border-pink-500/50 bg-pink-500/10 text-pink-600 dark:text-pink-400 hover:bg-pink-500/20"
+                            }`}
+                          >
+                            {currentQuestionIndex === activeTest.data.length - 1
+                              ? (reviewedQuestions[currentQuestionIndex] ? "✓ Marked" : "🔖 Mark")
+                              : "🔖 Mark & Next"
+                            }
+                          </button>
+
+                          {/* Save & Next / Submit Test */}
+                          {currentQuestionIndex === activeTest.data.length - 1 ? (
+                            <button
+                              onClick={() => setShowFinishConfirm(true)}
+                              className="flex-1 py-2.5 px-2.5 sm:px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer text-center truncate"
+                            >
+                              Submit Test ✓
+                            </button>
+                          ) : (
+                            <button
+                              onClick={handleNextQuestion}
+                              className="flex-1 py-2.5 px-2.5 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer text-center truncate"
+                            >
+                              Save & Next →
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
 
                   {/* RIGHT COLUMN: DESKTOP QUESTION PALETTE & ATTEMPT STATS */}
                   {showPalette && (
@@ -4756,38 +4971,6 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   )}
                 </div>
               </div>
-
-                {/* BOTTOM BAR — WELL-SPACED, UN-CROWDED 3 BUTTONS */}
-                <div className="sticky bottom-0 z-40 bg-[var(--surface)]/95 backdrop-blur-md border-t border-[var(--border)] px-4 py-2.5">
-                  <div className="flex items-center justify-between gap-3 max-w-lg mx-auto w-full">
-                    {/* Prev */}
-                    <button 
-                      onClick={handlePrevQuestion}
-                      disabled={currentQuestionIndex === 0}
-                      className="flex-1 py-2.5 px-3 rounded-xl border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--surface-2)] disabled:opacity-30 disabled:cursor-not-allowed font-bold text-xs sm:text-sm transition-colors cursor-pointer text-center"
-                      title="Previous Question"
-                    >
-                      ← Prev
-                    </button>
-
-                    {/* Mark & Next */}
-                    <button 
-                      onClick={handleMarkAndNext}
-                      className="flex-1 py-2.5 px-3 rounded-xl border border-pink-500/50 bg-pink-500/10 text-pink-600 dark:text-pink-400 hover:bg-pink-500/20 font-bold text-xs sm:text-sm transition-colors cursor-pointer text-center truncate shadow-sm"
-                    >
-                      🔖 Mark & Next
-                    </button>
-
-                    {/* Save & Next */}
-                    <button 
-                      onClick={handleNextQuestion}
-                      className="flex-1 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer text-center truncate"
-                    >
-                      Save & Next →
-                    </button>
-                  </div>
-                </div>
-              </div>
             )}
 
             {/* Custom Modal Confirmation for finishing the test */}
@@ -4847,10 +5030,12 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
             {isTestFinished && activeTest && (
               <ResultAnalysisPage
                 data={analysisData}
+                submissionAnalytics={submissionAnalytics}
                 onBack={() => {
                   setIsTestFinished(false);
                   goHub();
                 }}
+                onGenerateFixItQuiz={handleGenerateFixItQuiz}
               />
             )}
 
@@ -5031,7 +5216,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                     {/* Tags */}
                     <div className="flex items-center gap-2.5 flex-wrap pt-1">
                       <span className="px-3 py-1.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-xs font-bold text-[var(--text-secondary)] flex items-center gap-1.5">
-                        📄 {examPyqs.length} Solved PYQ Sets
+                        🚀 NCBT ONE All-in-One Portal
                       </span>
                       <span className="px-3 py-1.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-xs font-bold text-[var(--text-secondary)] flex items-center gap-1.5">
                         🏆 All India Rank Simulation
@@ -5040,7 +5225,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                         💻 Real CBT Interface
                       </span>
                       <span className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                        ✨ 100% Free Practice
+                        ✨ 100% Zero Ad &amp; Distraction Free
                       </span>
                     </div>
                   </div>
@@ -5057,14 +5242,14 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                             {exam.category} Series
                           </span>
                           <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                            Solved Previous Year Papers
+                            NCBT ONE Specialization
                           </span>
                         </div>
                         <h2 className="text-lg md:text-2xl font-black text-[var(--text-primary)] leading-snug">
-                          {exam.fullName} Solved PYQs
+                          {exam.fullName} CBT Test Series
                         </h2>
                         <p className="text-xs text-[var(--text-secondary)] font-medium">
-                          CBT exam interface simulation • Verified explanations • Instant scorecards
+                          CBT exam interface simulation • Verified explanations • Zero distraction
                         </p>
                       </div>
                     </div>
@@ -5072,158 +5257,255 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 </div>
               </div>
 
-              {/* 2. CBT PRACTICE ARENA CONTENT AREA - PYQ ONLY */}
-              <div className="w-full bg-[var(--surface)] py-12 px-4 md:px-8 border-b border-[var(--border)]/40" id="practice-tab-content">
-                <div id="page-hub" className="max-w-6xl mx-auto space-y-6">
-                  <div id="hub-main-layout" className="space-y-6">
-                    <div className="flex items-center justify-between pb-4 border-b border-[var(--border)]">
-                      <div className="flex items-center gap-2">
-                        <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-base">📄</span>
-                        <div>
-                          <h3 className="text-base font-black text-[var(--text-primary)]">Solved Previous Year Papers (PYQ)</h3>
-                          <p className="text-xs text-[var(--text-secondary)]">Authentic exam questions with full clinical rationales and answer keys.</p>
-                        </div>
-                      </div>
-                      <span className="px-3 py-1 rounded-full bg-[var(--surface-2)] border border-[var(--border)] text-xs font-bold text-[var(--text-secondary)]">
-                        {examPyqs.length} Sets Available
+
+
+              {/* 3. REDESIGN: DETAILED HIGH-YIELD EXAM PREPARATION GUIDE (STRUCTURED BLOG FORMAT) */}
+              <div className="w-full bg-[var(--surface-2)]/40 py-16 px-4 md:px-8 border-b border-[var(--border)]/60">
+                <div className="max-w-5xl mx-auto space-y-10 text-left">
+                  
+                  {/* Article Main Header */}
+                  <div className="space-y-4 border-b border-[var(--border)] pb-8">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-3.5 py-1.5 bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/30 rounded-full text-xs font-black uppercase tracking-wider">
+                        🏥 Official Nursing Officer CBT Guide
+                      </span>
+                      <span className="px-3.5 py-1.5 bg-[var(--surface)] text-[var(--text-secondary)] border border-[var(--border)] rounded-full text-xs font-bold">
+                        Published by NCBT Academic Cell
+                      </span>
+                      <span className="px-3.5 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-full text-xs font-bold">
+                        Updated for 2026 Shift Pattern
                       </span>
                     </div>
 
-                    {/* SOLVED PYQS LIST */}
-                    <div className="space-y-4 pt-2">
-                      {examPyqs.length === 0 ? (
-                        <div className="p-12 text-center bg-[var(--surface-2)] rounded-3xl border border-dashed border-[var(--border)]">
-                          <span className="text-3xl">📄</span>
-                          <h4 className="text-xs font-bold text-[var(--text-primary)] mt-2">No solved past papers found for this exam</h4>
-                          <p className="text-[10px] text-[var(--text-secondary)] mt-1">Practice papers are currently being uploaded by our subject team.</p>
-                        </div>
-                      ) : (
-                        examPyqs.map((p, pIdx) => (
-                          <div
-                            key={pIdx}
-                            className="p-5 bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--primary)] rounded-3xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all duration-300 relative overflow-hidden group shadow-sm"
-                          >
-                            <div className="space-y-1 text-left">
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded text-emerald-600 dark:text-emerald-400">
-                                  {p.year} Solved PYQ
-                                </span>
-                                <span className="text-[10px] text-[var(--text-secondary)] font-mono">
-                                  ⏱️ {Math.ceil(p.count * 1.5)} Mins • 📋 {p.count} MCQs • High Yield
-                                </span>
-                              </div>
-                              <h3 className="text-sm font-extrabold text-[var(--text-primary)] group-hover:text-[var(--primary)] transition-colors">
-                                {p.exam} Past Solved CBT Paper
-                              </h3>
-                              <p className="text-[11px] text-[var(--text-secondary)] line-clamp-2 max-w-2xl font-sans">
-                                Complete authentic computer-based examination questions with fully researched clinical keys and step-by-step rationales.
-                              </p>
-                            </div>
+                    <h2 className="text-2xl md:text-4xl font-black text-[var(--text-primary)] leading-tight">
+                      {exam.fullName}: Exam Pattern, High-Yield Nursing Syllabus &amp; CBT Crack Strategy
+                    </h2>
 
-                            <button
-                              onClick={() => {
-                                triggerTestInit("pyq", "pyq-" + p.tag + "-" + p.year);
-                              }}
-                              className="px-5 py-2.5 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all self-stretch md:self-auto justify-center cursor-pointer shrink-0"
-                            >
-                              ⚡ Practice PYQ
-                            </button>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+                    <p className="text-sm md:text-base text-[var(--text-secondary)] leading-relaxed font-sans font-medium">
+                      A comprehensive, research-backed examination analysis and study blueprint designed specifically for nursing officer, pharmacist, and paramedical aspirants preparing for <strong>{exam.fullName}</strong>. Learn how to navigate clinical scenario MCQs, negative marking penalties, and real-time computer-based testing on the NCBT platform.
+                    </p>
 
-              {/* 3. WHY NCBT SECTION (MOVED AFTER PRACTICE ARENA) */}
-              <div className="w-full bg-[var(--bg)] py-16 px-4 md:px-8 border-b border-[var(--border)]/40">
-                <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                  <div className="lg:col-span-8 space-y-6">
-                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 md:p-8 space-y-6">
-                      <div className="flex items-center gap-3">
-                        <span className="text-3xl">🎯</span>
-                        <div>
-                          <h2 className="text-lg md:text-xl font-black text-[var(--text-primary)]">Why NCBT is Your Best Exam Partner</h2>
-                          <p className="text-[11px] text-[var(--text-secondary)]">Complete exam preparation — mock tests, study material, live tests & daily practice, all in one place.</p>
-                        </div>
-                      </div>
-
-                      <div className="border-l-4 border-[var(--primary)] pl-4 py-1">
-                        <p className="text-xs text-[var(--text-secondary)] leading-relaxed font-sans">
-                          NCBT is a full-fledged exam preparation platform built specifically for <strong className="text-[var(--text-primary)]">{exam.fullName}</strong> and other government job aspirants across India. We go far beyond simple quizzes — our platform provides Chapter-wise Tests, Subject Tests, Full-Length Mock Tests, Live Tests, PYQs, Smart Notes, and Detailed Answer Explanations — everything structured so you can clear your exam on the very first attempt.
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                        <div className="bg-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl space-y-1">
-                          <span className="text-xl">🏅</span>
-                          <h4 className="text-xs font-black text-[var(--text-primary)] uppercase">Full Mock Tests</h4>
-                          <p className="text-[11px] text-[var(--text-secondary)]">Realistic timed exam conditions matching the latest recruitment guidelines.</p>
-                        </div>
-                        <div className="bg-[var(--surface-2)] border border-[var(--border)] p-4 rounded-2xl space-y-1">
-                          <span className="text-xl">📖</span>
-                          <h4 className="text-xs font-black text-[var(--text-primary)] uppercase">Chapter & Subject</h4>
-                          <p className="text-[11px] text-[var(--text-secondary)]">High-yield syllabus coverage including nursing and non-nursing specialties.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="lg:col-span-4 space-y-4">
-                    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 space-y-4">
-                      <h3 className="text-xs font-black text-[var(--text-primary)] uppercase tracking-wider border-b border-[var(--border)] pb-2">📦 Course Highlights</h3>
-                      <ul className="space-y-3 text-xs text-[var(--text-secondary)]">
-                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">Instant evaluation</strong> and score calculation</li>
-                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">Negative marking penalty</strong> simulation (-0.25)</li>
-                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">Verified keys</strong> & step-by-step clinical rationales</li>
-                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">All India Ranking (AIR)</strong> comparison</li>
-                        <li className="flex items-center gap-2">🟢 <strong className="text-[var(--text-primary)]">100% Mobile & PC</strong> friendly CBT layout</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* DEDICATED SEO EXAM GUIDE ARTICLE */}
-              {(() => {
-                const article = getArticleForExam(exam.id);
-                if (!article) return null;
-                return (
-                  <div className="w-full bg-[var(--surface-2)]/50 py-16 px-4 md:px-8 border-t border-[var(--border)]/60">
-                    <div className="max-w-5xl mx-auto space-y-8 text-left">
-                      <div className="space-y-2 border-b border-[var(--border)] pb-6">
-                        <span className="px-3 py-1 bg-[var(--accent-soft)] border border-[var(--accent)]/30 text-[var(--accent)] text-[10px] font-black uppercase tracking-widest rounded-full inline-block">
-                          📖 EXAM PREPARATION GUIDE &amp; SYLLABUS
+                    {/* SEO / GEO Keyword Tags Ticker */}
+                    <div className="flex items-center gap-2 flex-wrap pt-2">
+                      {["NORCET 2026 Mock Test", "Nursing Officer PYQs", "AIIMS Clinical Questions", "NCBT CBT Simulator", "Nursing Officer Syllabus", "NCBT Practice Portal"].map((kw, kwIdx) => (
+                        <span key={kwIdx} className="text-[11px] font-mono text-[var(--text-secondary)] bg-[var(--surface)] border border-[var(--border)] px-3 py-1 rounded-xl">
+                          #{kw}
                         </span>
-                        <h2 className="text-xl md:text-3xl font-black text-[var(--text-primary)] leading-snug">
-                          {article.title}
-                        </h2>
-                        <p className="text-xs md:text-sm text-[var(--text-secondary)] font-medium">
-                          {article.subtitle}
-                        </p>
-
-                        {/* Keyword Chips */}
-                        {article.keywords && article.keywords.length > 0 && (
-                          <div className="flex items-center gap-2 flex-wrap pt-3">
-                            {article.keywords.map((kw, kwIdx) => (
-                              <span key={kwIdx} className="text-[10px] font-mono text-[var(--text-secondary)] bg-[var(--surface)] border border-[var(--border)] px-2.5 py-1 rounded-md">
-                                #{kw}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Render Article HTML safely */}
-                      <div 
-                        className="seo-article-body text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed space-y-6"
-                        dangerouslySetInnerHTML={{ __html: article.contentHtml }}
-                      />
+                      ))}
                     </div>
                   </div>
-                );
-              })()}
+
+                  {/* ARTICLE CONTENT BODY - STRUCTURED BLOG LAYOUT */}
+                  <div className="space-y-12 text-sm text-[var(--text-secondary)] leading-relaxed font-sans">
+                    
+                    {/* SECTION 1: EXAM PATTERN & SELECTION STAGES */}
+                    <section className="space-y-4 bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 md:p-8 shadow-sm">
+                      <div className="flex items-center gap-3 border-b border-[var(--border)] pb-4">
+                        <span className="w-10 h-10 rounded-2xl bg-[var(--accent-soft)] border border-[var(--accent)]/30 flex items-center justify-center text-[var(--accent)] font-extrabold text-lg shrink-0">
+                          📌
+                        </span>
+                        <div>
+                          <h3 className="text-lg md:text-xl font-black text-[var(--text-primary)]">
+                            1. Examination Overview &amp; Selection Pattern
+                          </h3>
+                          <p className="text-xs text-[var(--text-secondary)]">Understanding the multi-stage computer-based test structure</p>
+                        </div>
+                      </div>
+
+                      <p className="text-sm leading-relaxed">
+                        The <strong>{exam.fullName}</strong> recruitment exam evaluates candidate competency across core clinical nursing concepts, scenario-based decision making, and general aptitude. To qualify for senior staff nurse and nursing officer roles in premier central and state medical institutes, candidates must master both memory recall and critical clinical judgment under strict time limits.
+                      </p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                        <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl p-4 space-y-1">
+                          <span className="text-xs font-black text-[var(--primary)] uppercase tracking-wider">Exam Mode</span>
+                          <p className="text-base font-extrabold text-[var(--text-primary)]">Online CBT (Computer Based)</p>
+                          <p className="text-[11px] text-[var(--text-secondary)]">Simulated on NCBT with exact real interface</p>
+                        </div>
+                        <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl p-4 space-y-1">
+                          <span className="text-xs font-black text-[var(--primary)] uppercase tracking-wider">Total Questions</span>
+                          <p className="text-base font-extrabold text-[var(--text-primary)]">100 / 200 Multiple Choice</p>
+                          <p className="text-[11px] text-[var(--text-secondary)]">80% Nursing Core + 20% Non-Nursing</p>
+                        </div>
+                        <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl p-4 space-y-1">
+                          <span className="text-xs font-black text-[var(--primary)] uppercase tracking-wider">Negative Marking</span>
+                          <p className="text-base font-extrabold text-[var(--text-primary)]">-0.33 / -0.25 Penalty</p>
+                          <p className="text-[11px] text-[var(--text-secondary)]">1/3rd penalty for incorrect attempts</p>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* SECTION 2: HIGH-YIELD NURSING SYLLABUS BREAKDOWN */}
+                    <section className="space-y-6">
+                      <div className="space-y-2">
+                        <h3 className="text-lg md:text-2xl font-black text-[var(--text-primary)] flex items-center gap-2">
+                          <span>📚</span>
+                          <span>2. High-Yield Subject &amp; Clinical Syllabus Breakdown</span>
+                        </h3>
+                        <p className="text-xs md:text-sm text-[var(--text-secondary)]">
+                          Focus on high-weightage nursing specialties that dominate recent recruitment shift papers:
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">🩺</span>
+                            <h4 className="text-xs font-black text-[var(--text-primary)] uppercase tracking-wide">Nursing Foundation &amp; Procedures</h4>
+                          </div>
+                          <ul className="list-disc list-inside text-xs text-[var(--text-secondary)] space-y-1.5 leading-relaxed font-sans">
+                            <li>Vital signs measurement and clinical norms</li>
+                            <li>Aseptic techniques, catheterization &amp; wound dressing</li>
+                            <li>Drug dose calculations, IV flow rates &amp; drip formulas</li>
+                            <li>Infection control and Bio-Medical Waste (BMW) management</li>
+                          </ul>
+                        </div>
+
+                        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">🫀</span>
+                            <h4 className="text-xs font-black text-[var(--text-primary)] uppercase tracking-wide">Medical-Surgical &amp; Critical Care</h4>
+                          </div>
+                          <ul className="list-disc list-inside text-xs text-[var(--text-secondary)] space-y-1.5 leading-relaxed font-sans">
+                            <li>Arterial Blood Gas (ABG) interpretation &amp; acid-base imbalances</li>
+                            <li>Mechanical ventilation alarms &amp; airway management</li>
+                            <li>ECG rhythm interpretation (Arrhythmias, MI indicators)</li>
+                            <li>Fluid resuscitation formulas (Parkland burn formula, TPN)</li>
+                          </ul>
+                        </div>
+
+                        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">👶</span>
+                            <h4 className="text-xs font-black text-[var(--text-primary)] uppercase tracking-wide">Obstetrics &amp; Pediatric Nursing</h4>
+                          </div>
+                          <ul className="list-disc list-inside text-xs text-[var(--text-secondary)] space-y-1.5 leading-relaxed font-sans">
+                            <li>GTPAL scoring, Naegele's rule for EDD calculation</li>
+                            <li>Maternal emergencies: Eclampsia, Placenta Previa, Abruptio</li>
+                            <li>APGAR score evaluation &amp; neonatal resuscitation</li>
+                            <li>Pediatric developmental milestones &amp; immunization schedule</li>
+                          </ul>
+                        </div>
+
+                        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">💊</span>
+                            <h4 className="text-xs font-black text-[var(--text-primary)] uppercase tracking-wide">Pharmacology &amp; General Aptitude</h4>
+                          </div>
+                          <ul className="list-disc list-inside text-xs text-[var(--text-secondary)] space-y-1.5 leading-relaxed font-sans">
+                            <li>High-alert medications, antidotes &amp; therapeutic drug levels</li>
+                            <li>Side effects &amp; priority nursing action before drug administration</li>
+                            <li>Community Health Nursing (National Health Programs &amp; Indicators)</li>
+                            <li>Basic arithmetic, general science &amp; reasoning questions</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* SECTION 3: WHY PRACTICE ON NCBT PLATFORM */}
+                    <section className="bg-gradient-to-br from-[var(--surface)] via-[var(--surface-2)] to-[var(--surface)] border-2 border-[var(--primary)]/30 rounded-3xl p-6 md:p-8 space-y-6 shadow-md">
+                      <div className="space-y-2">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--primary)]/15 border border-[var(--primary)]/30 text-[var(--primary)] text-xs font-black tracking-wide uppercase">
+                          <span>💡 THE NCBT ADVANTAGE</span>
+                        </div>
+                        <h3 className="text-xl md:text-2xl font-black text-[var(--text-primary)]">
+                          3. Why NCBT is India's Premier Nursing CBT Exam Portal
+                        </h3>
+                        <p className="text-xs md:text-sm text-[var(--text-secondary)] leading-relaxed">
+                          Unlike cluttered test series apps filled with intrusive popups and advertisements, NCBT is strictly engineered to deliver an authentic, distraction-free examination environment.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] space-y-1.5">
+                          <div className="text-2xl">⚡</div>
+                          <h4 className="text-xs font-black text-[var(--text-primary)]">100% Zero Ads</h4>
+                          <p className="text-[11px] text-[var(--text-secondary)] leading-snug">
+                            No banners, no popups, zero commercial noise during live mock testing.
+                          </p>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] space-y-1.5">
+                          <div className="text-2xl">💻</div>
+                          <h4 className="text-xs font-black text-[var(--text-primary)]">Official CBT Palette</h4>
+                          <p className="text-[11px] text-[var(--text-secondary)] leading-snug">
+                            Replicates the exact TCS iON exam panel with Save &amp; Next, Mark for Review, and timer countdown.
+                          </p>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] space-y-1.5">
+                          <div className="text-2xl">🔍</div>
+                          <h4 className="text-xs font-black text-[var(--text-primary)]">Verified Rationales</h4>
+                          <p className="text-[11px] text-[var(--text-secondary)] leading-snug">
+                            Every question features clinical explanations and drug action highlights for rapid retention.
+                          </p>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] space-y-1.5">
+                          <div className="text-2xl">🏆</div>
+                          <h4 className="text-xs font-black text-[var(--text-primary)]">All India Rank (AIR)</h4>
+                          <p className="text-[11px] text-[var(--text-secondary)] leading-snug">
+                            Compare your accuracy and time per question against top percentile aspirants across India.
+                          </p>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* SECTION 4: FREQUENTLY ASKED QUESTIONS (FAQ / AEO) */}
+                    <section className="space-y-6">
+                      <div className="space-y-2 border-b border-[var(--border)] pb-4">
+                        <h3 className="text-lg md:text-2xl font-black text-[var(--text-primary)] flex items-center gap-2">
+                          <span>❓</span>
+                          <span>4. Frequently Asked Questions (FAQ &amp; Quick Answers)</span>
+                        </h3>
+                        <p className="text-xs md:text-sm text-[var(--text-secondary)]">
+                          High-yield queries answered for nursing officer aspirants:
+                        </p>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 space-y-2">
+                          <h4 className="text-sm font-black text-[var(--text-primary)]">
+                            Q1: How can I access full-length CBT mock tests for {exam.name} on NCBT?
+                          </h4>
+                          <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                            Answer: You can access all full-length mock tests directly in the <strong>Practice Center</strong> section above. Simply choose the "Full Length Mocks" tab, select your target test paper, and click "Start CBT Test" to initiate the real timed simulation.
+                          </p>
+                        </div>
+
+                        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 space-y-2">
+                          <h4 className="text-sm font-black text-[var(--text-primary)]">
+                            Q2: Are previous year solved question papers (PYQs) included for {exam.name}?
+                          </h4>
+                          <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                            Answer: Yes, NCBT features solved shift memory papers from recent recruitment drives with verified answer keys, detailed clinical rationale explanations, and subject-wise difficulty tagging.
+                          </p>
+                        </div>
+
+                        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 space-y-2">
+                          <h4 className="text-sm font-black text-[var(--text-primary)]">
+                            Q3: Is negative marking penalty calculated in NCBT test evaluation?
+                          </h4>
+                          <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                            Answer: Absolutely. The NCBT score calculation engine applies the official exam negative marking rule (-0.33 or -0.25 marks per wrong answer) to give you an accurate picture of your net score and cut-off zone.
+                          </p>
+                        </div>
+
+                        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 space-y-2">
+                          <h4 className="text-sm font-black text-[var(--text-primary)]">
+                            Q4: Is the NCBT platform mobile and tablet friendly?
+                          </h4>
+                          <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                            Answer: Yes, the platform is 100% responsive and optimized for mobile browsers, tablets, and desktop computers with touch controls and high-contrast night mode support.
+                          </p>
+                        </div>
+                      </div>
+                    </section>
+
+                  </div>
+
+                </div>
+              </div>
 
               {/* RECOMMENDATIONS - "You Might Also Like" section */}
               <div className="w-full bg-[var(--bg)] py-16 px-4 md:px-8 border-t border-[var(--border)]/40">
@@ -6123,16 +6405,23 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
               </div>
               
               <div className="flex items-center gap-2">
-                <span className="flex h-2.5 w-2.5 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent)] opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[var(--accent)]"></span>
-                </span>
-                <span className="text-[10px] font-black uppercase tracking-wider text-[var(--text-secondary)] font-mono">CBT ENGINE V1.2</span>
+                <button
+                  onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+                  className="p-1.5 hover:bg-[var(--surface-2)] rounded-xl transition-all cursor-pointer flex items-center justify-center text-[var(--text-primary)] border border-[var(--border)] bg-[var(--surface-2)] shadow-sm"
+                  title={theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
+                  aria-label="Toggle Theme"
+                >
+                  {theme === "light" ? (
+                    <Moon size={15} className="text-[var(--accent)]" />
+                  ) : (
+                    <Sun size={15} className="text-amber-500" />
+                  )}
+                </button>
               </div>
             </div>
 
             {/* Main Content Area */}
-            <div className="w-full max-w-4xl mx-auto px-4 md:px-8 pt-8 flex flex-col gap-8">
+            <div className="w-full max-w-4xl mx-auto px-4 md:px-8 pt-8 flex flex-col gap-8 pb-12">
               
               {/* TOP PORTION: CLEAN ASSESSMENT WORKSPACE */}
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 md:p-8 shadow-2xl space-y-6">
@@ -6240,38 +6529,6 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                 </div>
               </div>
 
-              {/* LOWER PORTION: DETAILED SCROLLABLE SEO-FRIENDLY BLOG/ARTICLE */}
-              <div className="bg-[var(--card)] border border-[var(--border)]/60 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
-                <div className="flex items-center gap-1.5 text-[var(--accent)] text-[10px] font-black uppercase tracking-widest bg-[var(--accent-soft)] border border-[var(--border)] px-3 py-1 rounded-full w-fit">
-                  📄 Exam Guide, Syllabus & High-Yield Analysis
-                </div>
-                <div>
-                  <h2 className="text-xl md:text-2xl font-black text-[var(--text-primary)] tracking-tight leading-tight">
-                    {testArticle.title}
-                  </h2>
-                  <p className="text-xs text-[var(--text2)] font-sans mt-1.5 italic leading-relaxed">
-                    {testArticle.subtitle}
-                  </p>
-                </div>
-
-                <div 
-                  className="prose max-w-none text-[var(--text2)] space-y-6"
-                  dangerouslySetInnerHTML={{ __html: testArticle.contentHtml }}
-                />
-
-                {/* Additional SEO Keywords Footer inside paper page */}
-                <div className="border-t border-[var(--border)]/40 pt-6 mt-8">
-                  <span className="text-[10px] font-extrabold text-neutral-500 uppercase block mb-2">Primary Keywords Associated:</span>
-                  <div className="flex flex-wrap gap-2">
-                    {testArticle.keywords.map((kw, i) => (
-                      <span key={i} className="text-[10px] bg-[var(--card2)] text-neutral-400 px-2.5 py-1 rounded-lg border border-[var(--border)]/50 font-mono">
-                        #{kw}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
             </div>
           </div>
         );
@@ -6283,7 +6540,10 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
   // Quick auxiliary helper
   function goHub() {
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    showPage(testReferrer || "exam_landing");
+    const target = (testReferrerRef.current && testReferrerRef.current !== "exam_landing" && testReferrerRef.current !== "hub")
+      ? testReferrerRef.current
+      : "find_test";
+    showPage(target);
   }
 
   // Quick mode handler

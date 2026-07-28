@@ -3,6 +3,12 @@ export interface SeoArticle {
   subtitle: string;
   keywords: string[];
   contentHtml: string;
+  image?: string;
+  badge?: string;
+  category?: string;
+  pdfUrl?: string;
+  officialLink?: string;
+  deleted?: boolean;
 }
 
 export const SEO_ARTICLES: Record<string, SeoArticle> = {
@@ -729,67 +735,117 @@ export const SEO_ARTICLES: Record<string, SeoArticle> = {
   }
 };
 
+export function getCustomSeoArticles(): Record<string, SeoArticle> {
+  try {
+    const raw = localStorage.getItem("np_custom_seo_articles");
+    if (raw) {
+      return JSON.parse(raw);
+    }
+  } catch (e) {
+    console.error("Error reading custom SEO articles", e);
+  }
+  return {};
+}
+
+export function getAllSeoArticles(): Record<string, SeoArticle> {
+  const customMap = getCustomSeoArticles();
+  const merged: Record<string, SeoArticle> = { ...SEO_ARTICLES };
+
+  Object.keys(customMap).forEach(key => {
+    if (customMap[key].deleted) {
+      delete merged[key];
+    } else {
+      merged[key] = { ...merged[key], ...customMap[key] };
+    }
+  });
+
+  return merged;
+}
+
+export function saveCustomSeoArticle(key: string, article: SeoArticle) {
+  const customMap = getCustomSeoArticles();
+  customMap[key] = article;
+  localStorage.setItem("np_custom_seo_articles", JSON.stringify(customMap));
+  window.dispatchEvent(new Event("np_seo_articles_changed"));
+}
+
+export function deleteCustomSeoArticle(key: string) {
+  const customMap = getCustomSeoArticles();
+  if (SEO_ARTICLES[key]) {
+    customMap[key] = { ...SEO_ARTICLES[key], deleted: true };
+  } else {
+    delete customMap[key];
+  }
+  localStorage.setItem("np_custom_seo_articles", JSON.stringify(customMap));
+  window.dispatchEvent(new Event("np_seo_articles_changed"));
+}
+
 export function getArticleForExam(examId: string): SeoArticle {
+  const articles = getAllSeoArticles();
   const id = examId.toLowerCase();
+  
+  if (articles[id]) return articles[id];
+
   if (id.includes("pharma") || id.includes("drug") || id.includes("cghs")) {
-    return SEO_ARTICLES.pharmacist || SEO_ARTICLES.homepage;
+    return articles.pharmacist || articles.homepage;
   }
   if (id.includes("ot-") || id.includes("ophthalmic") || id.includes("dialysis")) {
-    return SEO_ARTICLES.paramedical || SEO_ARTICLES.homepage;
+    return articles.paramedical || articles.homepage;
   }
   if (id.includes("labtech") || id.includes("dmlt")) {
-    return SEO_ARTICLES.labtech || SEO_ARTICLES.homepage;
+    return articles.labtech || articles.homepage;
   }
   if (id.includes("radiographer") || id.includes("mri")) {
-    return SEO_ARTICLES.radiographer || SEO_ARTICLES.homepage;
+    return articles.radiographer || articles.homepage;
   }
   if (id.includes("medical-officer") || id.includes("mo-")) {
-    return SEO_ARTICLES.medical_officer || SEO_ARTICLES.homepage;
+    return articles.medical_officer || articles.homepage;
   }
   if (id.includes("norcet") || id.includes("aiims")) {
-    return SEO_ARTICLES.aiims;
+    return articles.aiims || articles.homepage;
   }
   if (id.includes("wbhrb")) {
-    return SEO_ARTICLES.wbhrb;
+    return articles.wbhrb || articles.homepage;
   }
   if (id.includes("esic")) {
-    return SEO_ARTICLES.esic;
+    return articles.esic || articles.homepage;
   }
   if (id.includes("rrb")) {
-    return SEO_ARTICLES.rrb;
+    return articles.rrb || articles.homepage;
   }
   if (id.includes("cho")) {
-    return SEO_ARTICLES.cho;
+    return articles.cho || articles.homepage;
   }
   if (id.includes("dsssb")) {
-    return SEO_ARTICLES.dsssb;
+    return articles.dsssb || articles.homepage;
   }
-  return SEO_ARTICLES.homepage;
+  return articles.homepage;
 }
 
 export function getArticleForTest(subjectId: string, testId: string): SeoArticle {
+  const articles = getAllSeoArticles();
   const cleanSubId = subjectId.toLowerCase();
   const cleanTestId = testId.toLowerCase();
 
   if (cleanSubId === "mock_tests" || cleanTestId.includes("mock") || cleanTestId.includes("norcet")) {
-    return SEO_ARTICLES.aiims; // Use deep Central AIIMS guide
+    return articles.aiims || articles.homepage;
   }
   if (cleanTestId.includes("wbhrb")) {
-    return SEO_ARTICLES.wbhrb;
+    return articles.wbhrb || articles.homepage;
   }
   if (cleanSubId === "anatomy" || cleanTestId.includes("anatomy") || cleanTestId.includes("cell")) {
-    return SEO_ARTICLES.anatomy;
+    return articles.anatomy || articles.homepage;
   }
   if (cleanSubId === "blood" || cleanTestId.includes("blood")) {
-    return SEO_ARTICLES.blood;
+    return articles.blood || articles.homepage;
   }
   if (cleanSubId === "med-surg" || cleanSubId === "med_surg") {
-    return SEO_ARTICLES.esic;
+    return articles.esic || articles.homepage;
   }
   if (cleanSubId === "community") {
-    return SEO_ARTICLES.wbhrb;
+    return articles.wbhrb || articles.homepage;
   }
 
-  return SEO_ARTICLES.subject_default;
+  return articles.subject_default || articles.homepage;
 }
 
