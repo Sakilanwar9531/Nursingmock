@@ -140,7 +140,7 @@ export default function HomePage() {
       {/* Top Navigation Bar */}
       <header className="sticky top-0 z-50 bg-[#070b14]/90 backdrop-blur-md border-b border-slate-800/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-blue-500 flex items-center justify-center shadow-lg shadow-sky-500/20">
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
@@ -150,23 +150,23 @@ export default function HomePage() {
                 Exam Portal
               </span>
             </div>
-          </div>
+          </Link>
 
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
             <Link href="#exams" className="hover:text-white transition-colors">Target Exams</Link>
             <Link href="#mock-tests" className="hover:text-white transition-colors">Mock Tests</Link>
-            <Link href="#pyqs" className="hover:text-white transition-colors">Previous Year Papers</Link>
+            <Link href="/practice" className="hover:text-white transition-colors">CBT Practice</Link>
             <Link href="#faqs" className="hover:text-white transition-colors">FAQs</Link>
           </nav>
 
           <div className="flex items-center gap-3">
-            <a
-              href="#mock-tests"
+            <Link
+              href="/practice"
               className="px-4 py-2 text-sm font-semibold rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 transition-all shadow-md shadow-sky-500/25 flex items-center gap-1.5"
             >
               <Sparkles className="w-4 h-4" />
               <span>Practice Now</span>
-            </a>
+            </Link>
           </div>
         </div>
       </header>
@@ -191,19 +191,19 @@ export default function HomePage() {
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <a
-                href="#mock-tests"
+              <Link
+                href="/practice"
                 className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-base shadow-lg shadow-sky-500/25 transition-all flex items-center justify-center gap-2"
               >
                 <span>Start Free Mock Test</span>
                 <ArrowRight className="w-5 h-5" />
-              </a>
+              </Link>
               <a
                 href="#exams"
                 className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-base border border-slate-700 transition-all flex items-center justify-center gap-2"
               >
                 <BookOpen className="w-5 h-5 text-sky-400" />
-                <span>Explore Exam Syllabus</span>
+                <span>Explore Exam Streams</span>
               </a>
             </div>
 
@@ -272,13 +272,13 @@ export default function HomePage() {
                     <span className="text-xs font-medium text-slate-400">
                       {exam.testsCount}
                     </span>
-                    <a
-                      href="#mock-tests"
+                    <Link
+                      href="/practice"
                       className="text-xs font-bold text-sky-400 group-hover:translate-x-1 transition-transform flex items-center gap-1"
                     >
-                      <span>Explore</span>
+                      <span>Practice Series</span>
                       <ArrowRight className="w-3.5 h-3.5" />
-                    </a>
+                    </Link>
                   </div>
                 </div>
               );
@@ -346,12 +346,13 @@ export default function HomePage() {
                     <ShieldCheck className="w-3.5 h-3.5" />
                     <span>Free CBT Access</span>
                   </span>
-                  <button
-                    className="px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs transition-colors flex items-center gap-1.5"
+                  <Link
+                    href="/practice"
+                    className="px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs transition-colors flex items-center gap-1.5 shadow-sm shadow-sky-500/20"
                   >
                     <span>Attempt Test</span>
                     <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
+                  </Link>
                 </div>
               </div>
             ))}
@@ -359,7 +360,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Frequently Asked Questions (FAQ) Section for Google Search Snippets */}
+      {/* Frequently Asked Questions (FAQ) Section */}
       <section id="faqs" className="py-16 lg:py-20 border-b border-slate-800/60">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -412,30 +413,30 @@ export default function HomePage() {
             <div>
               <h4 className="text-sm font-bold text-white mb-3">Nursing Exams</h4>
               <ul className="space-y-2 text-xs text-slate-400">
-                <li><a href="#mock-tests" className="hover:text-white">AIIMS NORCET 07 Mock Test</a></li>
-                <li><a href="#mock-tests" className="hover:text-white">ESIC Staff Nurse Test Series</a></li>
-                <li><a href="#mock-tests" className="hover:text-white">RRB Nursing Officer PYQ</a></li>
-                <li><a href="#mock-tests" className="hover:text-white">DSSSB Nursing Solved Papers</a></li>
+                <li><Link href="/practice" className="hover:text-white">AIIMS NORCET 07 Mock Test</Link></li>
+                <li><Link href="/practice" className="hover:text-white">ESIC Staff Nurse Test Series</Link></li>
+                <li><Link href="/practice" className="hover:text-white">RRB Nursing Officer PYQ</Link></li>
+                <li><Link href="/practice" className="hover:text-white">DSSSB Nursing Solved Papers</Link></li>
               </ul>
             </div>
 
             <div>
               <h4 className="text-sm font-bold text-white mb-3">Paramedical & Pharmacy</h4>
               <ul className="space-y-2 text-xs text-slate-400">
-                <li><a href="#mock-tests" className="hover:text-white">Govt Pharmacist Exam Mock</a></li>
-                <li><a href="#mock-tests" className="hover:text-white">Lab Technician (DMLT) CBT</a></li>
-                <li><a href="#mock-tests" className="hover:text-white">Radiographer Solved Tests</a></li>
-                <li><a href="#mock-tests" className="hover:text-white">OT Technician Series</a></li>
+                <li><Link href="/practice" className="hover:text-white">Govt Pharmacist Exam Mock</Link></li>
+                <li><Link href="/practice" className="hover:text-white">Lab Technician (DMLT) CBT</Link></li>
+                <li><Link href="/practice" className="hover:text-white">Radiographer Solved Tests</Link></li>
+                <li><Link href="/practice" className="hover:text-white">OT Technician Series</Link></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="text-sm font-bold text-white mb-3">Legal & Support</h4>
+              <h4 className="text-sm font-bold text-white mb-3">Practice & Portal</h4>
               <ul className="space-y-2 text-xs text-slate-400">
-                <li><span className="text-slate-400 hover:text-white cursor-pointer">About Us</span></li>
-                <li><span className="text-slate-400 hover:text-white cursor-pointer">Privacy Policy</span></li>
-                <li><span className="text-slate-400 hover:text-white cursor-pointer">Terms of Service</span></li>
-                <li><span className="text-slate-400 hover:text-white cursor-pointer">Refund & Cancellation</span></li>
+                <li><Link href="/practice" className="hover:text-white">Live CBT Exam Hall</Link></li>
+                <li><Link href="/practice" className="hover:text-white">All India Test Series</Link></li>
+                <li><Link href="/practice" className="hover:text-white">Previous Year Papers (PYQ)</Link></li>
+                <li><Link href="/practice" className="hover:text-white">Student Dashboard</Link></li>
               </ul>
             </div>
           </div>
