@@ -5,7 +5,15 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/api/"],
+      disallow: [
+        "/api/",
+        "/admin",
+        "/analytics",
+        "/auth",
+        "/test/",
+        "/test",
+        "/result",
+      ],
     },
     sitemap: "https://ncbt.in/sitemap.xml",
   };

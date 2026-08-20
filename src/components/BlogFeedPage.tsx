@@ -34,7 +34,7 @@ export const BlogFeedPage: React.FC<BlogFeedPageProps> = ({
 
   const copyPostLink = (update: NursingUpdate, e: React.MouseEvent) => {
     e.stopPropagation();
-    const link = `${window.location.origin}/updates?id=${update.id}`;
+    const link = typeof window !== "undefined" ? `${window.location.origin}/blog/${update.id}` : `https://ncbt.in/blog/${update.id}`;
     navigator.clipboard.writeText(link);
     setCopiedPostId(update.id);
     if (triggerToast) triggerToast("Article link copied! 📋", "ok");
@@ -43,7 +43,8 @@ export const BlogFeedPage: React.FC<BlogFeedPageProps> = ({
 
   const sharePostToWhatsapp = (update: NursingUpdate, e: React.MouseEvent) => {
     e.stopPropagation();
-    const shareText = `*NCBT Editorial: ${update.title}*\n\n${update.summary}\n\nRead full article & practice CBT: ${window.location.origin}/updates?id=${update.id}`;
+    const url = typeof window !== "undefined" ? `${window.location.origin}/blog/${update.id}` : `https://ncbt.in/blog/${update.id}`;
+    const shareText = `*NCBT Editorial: ${update.title}*\n\n${update.summary}\n\nRead full article & practice CBT: ${url}`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, "_blank");
   };
 

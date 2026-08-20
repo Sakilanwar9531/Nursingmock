@@ -2,6 +2,11 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /auth
+Disallow: /analytics
+Disallow: /test/
+Disallow: /test
+Disallow: /result
+Disallow: /api/
 
 # Explicitly Allow Major AI Web Search & Chat Bots (ChatGPT, Claude, Perplexity, Gemini)
 User-agent: GPTBot

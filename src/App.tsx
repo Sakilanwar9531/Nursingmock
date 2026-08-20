@@ -442,7 +442,7 @@ const generateMockTests = (): Test[] => {
       initialPage = "ncbt_one";
     } else if (cleanPath === "/current-affairs") {
       initialPage = "current_affairs";
-    } else if (cleanPath.startsWith("/updates/")) {
+    } else if (cleanPath.startsWith("/blog/") || cleanPath.startsWith("/updates/")) {
       const uId = path.split("/")[2];
       const foundU = STATIC_NURSING_UPDATES.find(u => u.id === uId);
       if (foundU) {
@@ -451,7 +451,7 @@ const generateMockTests = (): Test[] => {
       } else {
         initialPage = "404";
       }
-    } else if (cleanPath === "/updates") {
+    } else if (cleanPath === "/blog" || cleanPath === "/updates") {
       initialPage = "updates";
     } else if (cleanPath === "/auth") {
       initialPage = "auth";
@@ -1936,9 +1936,23 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
     // PopState event handler for backward/forward swipe gestures
     const handlePopState = (e: PopStateEvent) => {
+      // Dismiss pending test preview modal if open
+      setPendingTest(null);
+
+      // If actively taking a test and test is not finished, pause and prompt
       if (activePageRef.current === "test" && !isTestFinishedRef.current) {
         window.history.pushState({ page: "test" }, "", window.location.href);
         setIsTimerPaused(true);
+        return;
+      }
+
+      // If test is completed on results screen, back goes to previous search/hub
+      if (activePageRef.current === "test" && isTestFinishedRef.current) {
+        setIsTestFinished(false);
+        const target = (testReferrerRef.current && testReferrerRef.current !== "exam_landing" && testReferrerRef.current !== "hub")
+          ? testReferrerRef.current
+          : "find_test";
+        showPage(target, false);
         return;
       }
 
@@ -1983,6 +1997,9 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         setHubTab(route.tab);
         if (route.examId) {
           setSelectedExamId(route.examId);
+        }
+        if (route.category) {
+          setFindTestCategory(route.category);
         }
         setSelectedUpdate(route.update || null);
         if (route.test) {
@@ -2771,7 +2788,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     if (pageId === "ncbt_one" || pageId === "all_in_one") return "/ncbt-one";
     if (pageId === "current_affairs") return "/current-affairs";
     if (pageId === "landing") return "/";
-    if (pageId === "updates") return "/updates";
+    if (pageId === "updates" || pageId === "blog") return "/blog";
     if (pageId === "auth") return "/auth";
     if (pageId === "admin") return "/admin";
     if (pageId === "about") return "/about";
@@ -2792,6 +2809,9 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
 
   // Navigation controller
   const showPage = (pageId: string, pushHistory = true, customState?: { subjectId?: string | null, testId?: string | null, examId?: string }) => {
+    // Clear any active test preview modal when navigating
+    setPendingTest(null);
+
     let targetPage = pageId;
     let targetTab = hubTab;
     if (pageId === "pyq") {
@@ -2820,6 +2840,10 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       setSelectedExamId(effectiveExamId);
     }
 
+    if (targetPage !== "updates") {
+      setSelectedUpdate(null);
+    }
+
     setActivePage(targetPage);
     window.scrollTo({ top: 0 });
     if (pushHistory) {
@@ -2832,7 +2856,11 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           testId: customState ? customState.testId : (activeTest?.id || null)
         };
         const urlPath = getPathForState(targetPage, targetTab, stateToPush.subjectId, stateToPush.testId, effectiveExamId);
-        window.history.pushState(stateToPush, "", urlPath);
+        if (targetPage === "landing") {
+          window.history.replaceState(stateToPush, "", urlPath);
+        } else {
+          window.history.pushState(stateToPush, "", urlPath);
+        }
       } catch (e) {
         console.error("Failed to pushState", e);
       }
@@ -2843,8 +2871,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
   useEffect(() => {
     let metaRobots = document.querySelector('meta[name="robots"]');
 
-    if (activePage === "404") {
-      document.title = "404 - Page Not Found | NCBT.in";
+    if (activePage === "404" || activePage === "test" || activePage === "analytics" || activePage === "admin" || activePage === "auth") {
       if (!metaRobots) {
         metaRobots = document.createElement("meta");
         metaRobots.setAttribute("name", "robots");
@@ -2855,7 +2882,11 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       if (metaRobots) {
         metaRobots.setAttribute("content", "index, follow");
       }
+    }
 
+    if (activePage === "404") {
+      document.title = "404 - Page Not Found | NCBT.in";
+    } else {
       if (activePage === "exam_landing") {
         const exam = TARGET_EXAMS.find(e => e.id === selectedExamId) || TARGET_EXAMS[0];
         if (exam) {
@@ -2894,33 +2925,6 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     }
   }, [activePage, selectedExamId, activeTest]);
 
-  // Handle Browser Back/Forward buttons smoothly
-  useEffect(() => {
-    const handlePopState = () => {
-      if (activePageRef.current === "test" && !isTestFinishedRef.current) {
-        window.history.pushState({ page: "test" }, "", window.location.href);
-        setIsTimerPaused(true);
-        return;
-      }
-      if (activePageRef.current === "test" && isTestFinishedRef.current) {
-        setIsTestFinished(false);
-        const target = (testReferrerRef.current && testReferrerRef.current !== "exam_landing" && testReferrerRef.current !== "hub")
-          ? testReferrerRef.current
-          : "find_test";
-        showPage(target, false);
-        return;
-      }
-      const route = getInitialRoute();
-      setActivePage(route.page);
-      if (route.examId) setSelectedExamId(route.examId);
-      if (route.category) setFindTestCategory(route.category);
-      if (route.test) setActiveTest(route.test);
-      if (route.update) setSelectedUpdate(route.update);
-    };
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
-
   const viewUpdate = (item: NursingUpdate) => {
     setSelectedUpdate(item);
     try {
@@ -2931,7 +2935,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         testId: activeTest?.id || null,
         updateId: item.id
       };
-      window.history.pushState(stateToPush, "", `/updates/${item.id}`);
+      window.history.pushState(stateToPush, "", `/blog/${item.id}`);
     } catch (e) {
       console.error(e);
     }
@@ -2947,7 +2951,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         testId: activeTest?.id || null,
         updateId: null
       };
-      window.history.pushState(stateToPush, "", "/updates");
+      window.history.pushState(stateToPush, "", "/blog");
     } catch (e) {
       console.error(e);
     }

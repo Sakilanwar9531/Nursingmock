@@ -250,6 +250,7 @@ export function getSeoMetadata(urlPath: string): SeoMeta {
     return {
       title: `Attend CBT Test: ${testTitle} | NCBT.in`,
       description: `Practice ${testTitle} on NCBT. Answer high-yield multiple choice questions with active timers, negative markings, review flags, and detailed explanations.`,
+      noIndex: true
     };
   }
 

@@ -69,7 +69,7 @@ export const BlogPostTemplate: React.FC<BlogPostTemplateProps> = ({
     window.scrollTo(0, 0);
   }, [post.id]);
 
-  const shareLink = `${window.location.origin}/updates?id=${post.id}`;
+  const shareLink = typeof window !== "undefined" ? `${window.location.origin}/blog/${post.id}` : `https://ncbt.in/blog/${post.id}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareLink);
