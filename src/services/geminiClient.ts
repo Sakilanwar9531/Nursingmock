@@ -3,8 +3,8 @@
 // Connects directly to Google Generative Language APIs without requiring a backend server.
 
 export function getClientGeminiKey(): string {
-  // 1. Try env variable VITE_GEMINI_API_KEY
-  let key = import.meta.env.VITE_GEMINI_API_KEY;
+  // 1. Try env variable
+  let key = (typeof process !== "undefined" && (process.env?.GEMINI_API_KEY || process.env?.NEXT_PUBLIC_GEMINI_API_KEY)) || (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_GEMINI_API_KEY) || "";
   // 2. Fallback to localStorage configured by user in UI
   if (!key || key === "MY_GEMINI_API_KEY") {
     key = localStorage.getItem("np_gemini_api_key") || "";

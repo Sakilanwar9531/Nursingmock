@@ -9,8 +9,8 @@ export function getSupabaseClient(): SupabaseClient | null {
   if (supabaseInstance) return supabaseInstance;
 
   // 1. Check process/import.meta env variables
-  let url = import.meta.env.VITE_SUPABASE_URL;
-  let anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  let url = (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_SUPABASE_URL) || (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_SUPABASE_URL) || "";
+  let anonKey = (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY) || (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_SUPABASE_ANON_KEY) || "";
 
   // 2. Fallback to localStorage (for easy static setup without rebuilding code)
   if (!url || !anonKey) {

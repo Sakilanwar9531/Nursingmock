@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   reactStrictMode: true,
   typescript: {
     // Allows production builds to successfully complete even if there are minor type warnings
@@ -15,3 +16,4 @@ const nextConfig = {
 };
 
 export default nextConfig;
+
