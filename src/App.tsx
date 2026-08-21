@@ -88,6 +88,16 @@ import { STATIC_NURSING_UPDATES } from "./updatesData";
 import { CATEGORY_ROUTES } from "./seoData";
 import { BLOG_TRANSLATIONS } from "./blogTranslations";
 import { Subject, Test, Question, PyqCard, User as UserType, Attempt, StreakData, NursingUpdate } from "./types";
+import { useAuth } from "./services/AuthContext";
+import { auth, googleProvider, db } from "./services/firebase";
+import { 
+  signInWithPopup, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut as fbSignOutAuth,
+  updateProfile 
+} from "firebase/auth";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { 
   getSupabaseClient, 
   isSupabaseConnected, 
@@ -1178,11 +1188,43 @@ export default function App() {
   const [hubSearchText, setHubSearchText] = useState<string>("");
   const [hubTab, setHubTab] = useState<"full_mock" | "pyq" | "subject" | "short">(initialRoute.tab);
 
-  // Auth State
+  // Firebase Auth Hook & State
+  const { 
+    user: fbUser, 
+    profile: fbProfile, 
+    loading: fbAuthLoading, 
+    isAdmin: isFbAdmin, 
+    signInWithGoogle: fbSignInWithGoogle, 
+    signOut: fbSignOut, 
+    saveTestAttempt: fbSaveTestAttempt 
+  } = useAuth();
+  const [isGoogleSigningIn, setIsGoogleSigningIn] = useState<boolean>(false);
+
+  // Local & Synced Auth State
   const [currentUser, setCurrentUser] = useState<UserType | null>(() => {
     const saved = localStorage.getItem("np_user");
     return saved ? JSON.parse(saved) : null;
   });
+
+  // Sync Firebase authenticated user into currentUser state
+  useEffect(() => {
+    if (fbUser) {
+      const email = fbUser.email || "";
+      const isMasterAdmin = email.toLowerCase() === "sakil.net.in@gmail.com" || isFbAdmin;
+      const userObj: UserType = {
+        name: fbProfile?.displayName || fbUser.displayName || email.split("@")[0] || "Aspirant",
+        email: email,
+        photoURL: fbUser.photoURL || fbProfile?.photoURL || "",
+        isAdmin: isMasterAdmin,
+        studentType: fbProfile?.targetExam || "Nursing",
+        desiredPost: "AIIMS NORCET / Govt Exam",
+        googleUser: true,
+        joined: Date.now()
+      };
+      setCurrentUser(userObj);
+      localStorage.setItem("np_user", JSON.stringify(userObj));
+    }
+  }, [fbUser, fbProfile, isFbAdmin]);
   const [authTab, setAuthTab] = useState<"login" | "register">("login");
   const [authEmail, setAuthEmail] = useState<string>("");
   const [authPassword, setAuthPassword] = useState<string>("");
@@ -2256,6 +2298,65 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     showPage("hub");
   };
 
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsGoogleSigningIn(true);
+      setAuthError("");
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      if (user) {
+        const isMaster = user.email?.toLowerCase() === "sakil.net.in@gmail.com";
+        // Create or update Firestore profile
+        try {
+          const userDocRef = doc(db, "users", user.uid);
+          const docSnap = await getDoc(userDocRef);
+          if (!docSnap.exists()) {
+            await setDoc(userDocRef, {
+              id: user.uid,
+              email: user.email || "",
+              displayName: user.displayName || "Aspirant",
+              photoURL: user.photoURL || "",
+              role: isMaster ? "admin" : "student",
+              targetExam: "AIIMS NORCET",
+              totalTestsAttempted: 0,
+              averageAccuracy: 0,
+              createdAt: serverTimestamp(),
+            });
+          }
+        } catch (dbErr) {
+          console.error("Firestore user sync warning:", dbErr);
+        }
+
+        const userObj: UserType = {
+          name: user.displayName || user.email?.split("@")[0] || "Aspirant",
+          email: user.email || "",
+          photoURL: user.photoURL || "",
+          isAdmin: isMaster,
+          googleUser: true,
+          studentType: "Nursing",
+          desiredPost: "AIIMS NORCET Nursing Officer",
+          joined: Date.now()
+        };
+        setCurrentUser(userObj);
+        localStorage.setItem("np_user", JSON.stringify(userObj));
+        triggerToast(`Welcome back, ${user.displayName || user.email}! Connected with Google 🚀`, "ok");
+        showPage("hub");
+      }
+    } catch (err: any) {
+      if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
+        // User closed or dismissed the popup without signing in - clean exit
+        setAuthError("");
+      } else if (err.code === "auth/popup-blocked") {
+        setAuthError("Sign-in popup was blocked by browser. Please enable popups or open NCBT in a new tab.");
+      } else {
+        console.error("Google Auth error:", err);
+        setAuthError(err.message || "Failed to sign in with Google. Please try again.");
+      }
+    } finally {
+      setIsGoogleSigningIn(false);
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!authEmail || !authPassword) {
@@ -2263,33 +2364,39 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       return;
     }
 
-    if (isSupabaseConnected()) {
-      setAuthError("");
-      const res = await supabaseSignIn(authEmail, authPassword);
-      if (res.error) {
-        setAuthError(res.error);
-        return;
-      }
-      if (res.user) {
-        setCurrentUser(res.user);
-        localStorage.setItem("np_user", JSON.stringify(res.user));
-        triggerToast(`Welcome back, ${res.user.name}! Connected via Supabase 👋`, "ok");
+    setAuthError("");
+    try {
+      // 1. Authenticate with Firebase
+      const cred = await signInWithEmailAndPassword(auth, authEmail.trim(), authPassword);
+      if (cred.user) {
+        const isMaster = cred.user.email?.toLowerCase() === "sakil.net.in@gmail.com";
+        const loggedUser: UserType = {
+          name: cred.user.displayName || cred.user.email?.split("@")[0] || "Aspirant",
+          email: cred.user.email || authEmail,
+          photoURL: cred.user.photoURL || "",
+          isAdmin: isMaster,
+          joined: Date.now()
+        };
+        setCurrentUser(loggedUser);
+        localStorage.setItem("np_user", JSON.stringify(loggedUser));
+        triggerToast(`Welcome back, ${loggedUser.name}! Verified via Firebase 🛡️`, "ok");
         showPage("hub");
         return;
       }
+    } catch (fbErr: any) {
+      console.log("Firebase login error or fallback:", fbErr.message);
+      // Local fallback
+      const users: UserType[] = JSON.parse(localStorage.getItem("np_users") || "[]");
+      const found = users.find(u => u.email.toLowerCase() === authEmail.toLowerCase().trim() && (u as any).pass === authPassword);
+      if (found) {
+        setCurrentUser(found);
+        localStorage.setItem("np_user", JSON.stringify(found));
+        triggerToast(`Welcome back, ${found.name}! 👋`, "ok");
+        showPage("hub");
+        return;
+      }
+      setAuthError(fbErr.message || "Invalid email or password.");
     }
-
-    const users: UserType[] = JSON.parse(localStorage.getItem("np_users") || "[]");
-    const found = users.find(u => u.email.toLowerCase() === authEmail.toLowerCase().trim() && (u as any).pass === authPassword);
-    if (!found) {
-      setAuthError("Invalid email or password.");
-      return;
-    }
-    setCurrentUser(found);
-    localStorage.setItem("np_user", JSON.stringify(found));
-    setAuthError("");
-    triggerToast(`Welcome back, ${found.name}! 👋`, "ok");
-    showPage("hub");
   };
 
   const handleAllInOneClick = () => {
@@ -2330,52 +2437,86 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
       return;
     }
 
-    const users: UserType[] = JSON.parse(localStorage.getItem("np_users") || "[]");
-    if (users.some(u => u.email.toLowerCase() === authEmail.toLowerCase().trim())) {
-      setAuthError("Email is already registered.");
-      return;
-    }
+    setAuthError("");
+    try {
+      // 1. Create account in Firebase Auth
+      const cred = await createUserWithEmailAndPassword(auth, authEmail.trim(), authPassword);
+      if (cred.user) {
+        await updateProfile(cred.user, { displayName: authName.trim() });
+        const isMaster = authEmail.toLowerCase().trim() === "sakil.net.in@gmail.com";
+        
+        // 2. Save detailed student profile in Firestore
+        try {
+          await setDoc(doc(db, "users", cred.user.uid), {
+            id: cred.user.uid,
+            email: authEmail.toLowerCase().trim(),
+            displayName: authName.trim(),
+            phone: authPhone.trim() || "",
+            studentType: authStudentType || "Nursing",
+            desiredPost: authDesiredPost.trim() || "AIIMS NORCET",
+            state: authState || "West Bengal",
+            pin: authPin.trim() || "700001",
+            role: isMaster ? "admin" : "student",
+            totalTestsAttempted: 0,
+            averageAccuracy: 0,
+            createdAt: serverTimestamp()
+          });
+        } catch (dbErr) {
+          console.error("Firestore user creation warning:", dbErr);
+        }
 
-    const newUser: UserType = {
-      name: authName.trim(),
-      email: authEmail.toLowerCase().trim(),
-      pass: authPassword,
-      phone: authPhone.trim() || "9830000000",
-      studentType: authStudentType || "Nursing",
-      desiredPost: authDesiredPost.trim() || "AIIMS NORCET Nursing Officer",
-      state: authState || "West Bengal",
-      pin: authPin.trim() || "700001",
-      isAdmin: users.length === 0 || authEmail.toLowerCase().trim() === "sakil.net.in@gmail.com",
-      joined: Date.now()
-    };
-
-    if (isSupabaseConnected()) {
-      setAuthError("");
-      const res = await supabaseSignUp(authEmail, authPassword, authName, authPhone);
-      if (res.error) {
-        setAuthError(res.error);
-        return;
-      }
-      if (res.user) {
-        const merged = { ...res.user, ...newUser };
-        setCurrentUser(merged);
-        localStorage.setItem("np_user", JSON.stringify(merged));
-        triggerToast(`Welcome to All in ONE, ${merged.name}! 🎉`, "ok");
+        const newUser: UserType = {
+          name: authName.trim(),
+          email: authEmail.toLowerCase().trim(),
+          phone: authPhone.trim() || "9830000000",
+          studentType: authStudentType || "Nursing",
+          desiredPost: authDesiredPost.trim() || "AIIMS NORCET Nursing Officer",
+          state: authState || "West Bengal",
+          pin: authPin.trim() || "700001",
+          isAdmin: isMaster,
+          joined: Date.now()
+        };
+        setCurrentUser(newUser);
+        localStorage.setItem("np_user", JSON.stringify(newUser));
+        triggerToast(`Account created with Firebase! Welcome, ${newUser.name}! 🎉`, "ok");
         showPage("all_in_one");
         return;
       }
+    } catch (fbErr: any) {
+      console.log("Firebase registration error or fallback:", fbErr);
+      if (fbErr.code === "auth/email-already-in-use") {
+        setAuthError("This email address is already registered. Please click Log In.");
+        return;
+      }
+      // Local fallback
+      const users: UserType[] = JSON.parse(localStorage.getItem("np_users") || "[]");
+      const isMaster = authEmail.toLowerCase().trim() === "sakil.net.in@gmail.com";
+      const newUser: UserType = {
+        name: authName.trim(),
+        email: authEmail.toLowerCase().trim(),
+        pass: authPassword,
+        phone: authPhone.trim() || "9830000000",
+        studentType: authStudentType || "Nursing",
+        desiredPost: authDesiredPost.trim() || "AIIMS NORCET Nursing Officer",
+        state: authState || "West Bengal",
+        pin: authPin.trim() || "700001",
+        isAdmin: isMaster,
+        joined: Date.now()
+      };
+      users.push(newUser);
+      localStorage.setItem("np_users", JSON.stringify(users));
+      setCurrentUser(newUser);
+      localStorage.setItem("np_user", JSON.stringify(newUser));
+      triggerToast(`Registered successfully! Welcome, ${newUser.name}! 🎉`, "ok");
+      showPage("all_in_one");
     }
-
-    users.push(newUser);
-    localStorage.setItem("np_users", JSON.stringify(users));
-    setCurrentUser(newUser);
-    localStorage.setItem("np_user", JSON.stringify(newUser));
-    setAuthError("");
-    triggerToast(`Welcome to All in ONE, ${newUser.name}! 🎉`, "ok");
-    showPage("all_in_one");
   };
 
   const handleLogout = async () => {
+    try {
+      await fbSignOut();
+      await fbSignOutAuth(auth);
+    } catch (e) {}
     if (isSupabaseConnected()) {
       await supabaseSignOut();
     }
@@ -3455,6 +3596,21 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     }
     localStorage.setItem(streakKey, JSON.stringify(sd));
 
+    // Firebase Firestore Cloud Sync
+    if (fbUser && currentUser && !currentUser.guest) {
+      fbSaveTestAttempt({
+        testId: activeTest?.id || "mock-test",
+        testTitle: activeTest?.title || "Mock Test",
+        score: scoreVal,
+        totalQuestions: total,
+        correctCount: correctCount,
+        incorrectCount: wrong,
+        unansweredCount: skipped,
+        accuracy: finalPct,
+        timeSpentSeconds: (activeTest?.mins || 50) * 60 - timeLeft,
+      }).catch(err => console.error("Firestore test attempt sync error:", err));
+    }
+
     // Cloud backup to Supabase
     if (isSupabaseConnected() && currentUser && !currentUser.guest) {
       saveAttemptToCloud(currentUser.email, newAttempt);
@@ -3843,6 +3999,44 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         </div>
 
         <div className="nav-right flex items-center gap-2">
+          {/* User Auth status or Google Sign-In button */}
+          {currentUser && !currentUser.guest ? (
+            <div className="flex items-center gap-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl py-1 px-2.5 shadow-sm">
+              {currentUser.photoURL ? (
+                <img src={currentUser.photoURL} alt={currentUser.name} className="w-5 h-5 rounded-full object-cover border border-[var(--border)]" />
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] font-bold text-[10px] flex items-center justify-center">
+                  {currentUser.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <span className="text-xs font-bold text-[var(--text-primary)] max-w-[90px] truncate hidden sm:inline-block">
+                {currentUser.name.split(" ")[0]}
+              </span>
+              <button
+                onClick={() => showPage("auth")}
+                className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-bold px-1 py-0.5 rounded cursor-pointer"
+                title="Manage Account"
+              >
+                ⚙️
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleGoogleSignIn}
+              disabled={isGoogleSigningIn}
+              className="flex items-center gap-2 py-1.5 px-3 rounded-xl border border-[var(--border)] bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-bold text-xs hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm transition-all cursor-pointer active:scale-95"
+              title="1-Click Login with Google"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+              </svg>
+              <span>{isGoogleSigningIn ? "..." : "Google Login"}</span>
+            </button>
+          )}
+
           {/* Theme Toggle Button */}
           <button
             onClick={() => setTheme(theme === "light" ? "dark" : "light")}
@@ -5630,280 +5824,398 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         {activePage === "auth" && (
           <div className="page active" id="page-auth">
             <div className="auth-wrap">
-              <div className="auth-card font-sans bg-[var(--surface)] border border-[var(--border)] shadow-2xl rounded-2xl p-6">
-                <div className="auth-logo flex items-baseline justify-center select-none font-sans">
-                  <span className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]"><span className="text-[var(--primary)]">N</span>CBT</span>
-                  <span className="text-2xl font-black text-sky-600 dark:text-sky-400">.in</span>
-                </div>
-                <div className="auth-tagline font-sans font-medium text-xs text-[var(--text-secondary)] mt-1 text-center">NCBT – National CBT | Government Exam Preparation Portal</div>
-                
-                <div className="auth-tabs">
-                  <button 
-                    className={`auth-tab ${authTab === "login" ? "active" : ""}`}
-                    onClick={() => {
-                      setAuthTab("login");
-                      setAuthError("");
-                    }}
-                  >
-                    Log In
-                  </button>
-                  <button 
-                    className={`auth-tab ${authTab === "register" ? "active" : ""}`}
-                    onClick={() => {
-                      setAuthTab("register");
-                      setAuthError("");
-                    }}
-                  >
-                    Register
-                  </button>
-                </div>
-
-                {authError && (
-                  <div className="auth-err show">
-                    {authError}
+              {currentUser && !currentUser.guest ? (
+                /* Authenticated User Account Card */
+                <div className="auth-card font-sans bg-[var(--surface)] border border-[var(--border)] shadow-2xl rounded-2xl p-6 text-center">
+                  <div className="relative inline-block mb-3">
+                    {currentUser.photoURL ? (
+                      <img 
+                        src={currentUser.photoURL} 
+                        alt={currentUser.name} 
+                        className="w-20 h-20 rounded-full mx-auto object-cover border-2 border-emerald-500 shadow-md" 
+                      />
+                    ) : (
+                      <div className="w-20 h-20 rounded-full mx-auto bg-gradient-to-tr from-emerald-500 to-teal-500 text-white font-black text-2xl flex items-center justify-center shadow-md">
+                        {currentUser.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <span className="absolute bottom-0 right-0 bg-emerald-500 text-white p-1 rounded-full text-xs shadow-sm border-2 border-[var(--surface)]" title="Verified Account">
+                      ✓
+                    </span>
                   </div>
-                )}
 
-                {/* Login Form view */}
-                {authTab === "login" ? (
-                  <div className="space-y-4">
-                    <div className="flex justify-center gap-4 mb-4 border-b border-[var(--border)] pb-3 text-xs">
-                      <button 
-                        type="button"
-                        className={`pb-1 px-2 font-bold transition-all bg-transparent border-none cursor-pointer ${loginMethod === "otp" ? "text-[var(--accent)] border-b-2 border-[var(--accent)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"}`}
-                        onClick={() => {
-                          setLoginMethod("otp");
-                          setAuthError("");
-                        }}
+                  <h2 className="text-xl font-extrabold text-[var(--text-primary)] leading-tight">{currentUser.name}</h2>
+                  <p className="text-xs text-[var(--text-secondary)] font-medium mt-0.5">{currentUser.email}</p>
+
+                  <div className="flex flex-wrap items-center justify-center gap-1.5 mt-3">
+                    <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      ✓ Google Authenticated
+                    </span>
+                    {(currentUser.isAdmin || currentUser.email.toLowerCase() === "sakil.net.in@gmail.com") && (
+                      <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                        ⭐ Admin Access
+                      </span>
+                    )}
+                    {currentUser.studentType && (
+                      <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                        {currentUser.studentType} Cadre
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5 mt-6 text-left">
+                    <button
+                      onClick={() => showPage("hub")}
+                      className="p-3 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-xs font-bold transition-all shadow-sm cursor-pointer flex flex-col items-center justify-center text-center gap-1"
+                    >
+                      <span className="text-base">🎯</span>
+                      <span>Launch Exam Hub</span>
+                    </button>
+                    <button
+                      onClick={() => showPage("all_in_one")}
+                      className="p-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-90 text-white text-xs font-bold transition-all shadow-sm cursor-pointer flex flex-col items-center justify-center text-center gap-1"
+                    >
+                      <span className="text-base">🚀</span>
+                      <span>All-in-ONE Portal</span>
+                    </button>
+                    <button
+                      onClick={() => showPage("analytics")}
+                      className="p-3 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--border)] text-[var(--text-primary)] border border-[var(--border)] text-xs font-bold transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-1"
+                    >
+                      <span className="text-base">📊</span>
+                      <span>My Performance</span>
+                    </button>
+                    {(currentUser.isAdmin || currentUser.email.toLowerCase() === "sakil.net.in@gmail.com") ? (
+                      <button
+                        onClick={() => showPage("admin")}
+                        className="p-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-bold transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-1"
                       >
-                        ⚡ Phone OTP (Fast)
+                        <span className="text-base">⚙️</span>
+                        <span>Admin Console</span>
                       </button>
-                      <button 
-                        type="button"
-                        className={`pb-1 px-2 font-bold transition-all bg-transparent border-none cursor-pointer ${loginMethod === "email" ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-500" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"}`}
-                        onClick={() => {
-                          setLoginMethod("email");
-                          setAuthError("");
-                        }}
+                    ) : (
+                      <button
+                        onClick={() => showPage("current_affairs")}
+                        className="p-3 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--border)] text-[var(--text-primary)] border border-[var(--border)] text-xs font-bold transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-1"
                       >
-                        📧 Email & Password
+                        <span className="text-base">⚡</span>
+                        <span>Current Affairs</span>
                       </button>
+                    )}
+                  </div>
+
+                  <div className="pt-5 mt-5 border-t border-[var(--border)]">
+                    <button
+                      onClick={handleLogout}
+                      className="w-full py-2.5 rounded-xl border border-red-500/20 bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold text-xs transition-all cursor-pointer"
+                    >
+                      Sign Out / Switch Account 🚪
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Unauthenticated Sign-In & Registration Card */
+                <div className="auth-card font-sans bg-[var(--surface)] border border-[var(--border)] shadow-2xl rounded-2xl p-6">
+                  <div className="auth-logo flex items-baseline justify-center select-none font-sans">
+                    <span className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]"><span className="text-[var(--primary)]">N</span>CBT</span>
+                    <span className="text-2xl font-black text-sky-600 dark:text-sky-400">.in</span>
+                  </div>
+                  <div className="auth-tagline font-sans font-medium text-xs text-[var(--text-secondary)] mt-1 text-center">NCBT – National CBT | Government Exam Preparation Portal</div>
+
+                  {/* PROMINENT GOOGLE AUTHENTICATION BUTTON */}
+                  <div className="mt-5 mb-4">
+                    <button
+                      type="button"
+                      onClick={handleGoogleSignIn}
+                      disabled={isGoogleSigningIn}
+                      className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-[var(--border)] bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-850 hover:shadow-md transition-all cursor-pointer shadow-sm active:scale-[0.99] group"
+                    >
+                      <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                      </svg>
+                      <span>{isGoogleSigningIn ? "Connecting with Google..." : "Continue with Google"}</span>
+                      <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold px-1.5 py-0.5 rounded border border-emerald-500/20 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                        1-CLICK
+                      </span>
+                    </button>
+                    <p className="text-[10px] text-[var(--text-secondary)] text-center mt-1.5 flex items-center justify-center gap-1">
+                      <span>🔒</span> <span>Direct Google Authentication • Instant CBT Mock Sync</span>
+                    </p>
+                  </div>
+
+                  <div className="auth-divider text-xs text-[var(--text-secondary)] my-4">or continue with email & phone</div>
+                  
+                  <div className="auth-tabs">
+                    <button 
+                      className={`auth-tab ${authTab === "login" ? "active" : ""}`}
+                      onClick={() => {
+                        setAuthTab("login");
+                        setAuthError("");
+                      }}
+                    >
+                      Log In
+                    </button>
+                    <button 
+                      className={`auth-tab ${authTab === "register" ? "active" : ""}`}
+                      onClick={() => {
+                        setAuthTab("register");
+                        setAuthError("");
+                      }}
+                    >
+                      Register
+                    </button>
+                  </div>
+
+                  {authError && (
+                    <div className="auth-err show">
+                      {authError}
                     </div>
+                  )}
 
-                    {loginMethod === "otp" ? (
-                      <form onSubmit={handleOtpLogin} className="space-y-4">
-                        <div className="form-group text-left">
-                          <label className="form-label text-[var(--text-secondary)] font-semibold text-xs mb-1 block">Phone Number</label>
-                          <div className="flex gap-2">
-                            <span className="flex items-center justify-center bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 text-xs text-[var(--text-secondary)] font-sans font-extrabold">+91</span>
-                            <input 
-                              className="form-input flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--accent)] focus:outline-none" 
-                              type="tel" 
-                              maxLength={10}
-                              placeholder="9531659828"
-                              value={authPhone}
-                              onChange={(e) => setAuthPhone(e.target.value.replace(/\D/g, ""))}
-                            />
-                          </div>
-                        </div>
+                  {/* Login Form view */}
+                  {authTab === "login" ? (
+                    <div className="space-y-4">
+                      <div className="flex justify-center gap-4 mb-4 border-b border-[var(--border)] pb-3 text-xs">
+                        <button 
+                          type="button"
+                          className={`pb-1 px-2 font-bold transition-all bg-transparent border-none cursor-pointer ${loginMethod === "otp" ? "text-[var(--accent)] border-b-2 border-[var(--accent)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"}`}
+                          onClick={() => {
+                            setLoginMethod("otp");
+                            setAuthError("");
+                          }}
+                        >
+                          ⚡ Phone OTP (Fast)
+                        </button>
+                        <button 
+                          type="button"
+                          className={`pb-1 px-2 font-bold transition-all bg-transparent border-none cursor-pointer ${loginMethod === "email" ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-500" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"}`}
+                          onClick={() => {
+                            setLoginMethod("email");
+                            setAuthError("");
+                          }}
+                        >
+                          📧 Email & Password
+                        </button>
+                      </div>
 
-                        {otpSent && (
-                          <div className="form-group text-left animate-fade-in">
-                            <div className="flex justify-between items-center mb-1">
-                              <label className="form-label text-[var(--text-secondary)] font-semibold text-xs">Enter 6-Digit OTP</label>
-                              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold">✓ Simulated Code Sent</span>
+                      {loginMethod === "otp" ? (
+                        <form onSubmit={handleOtpLogin} className="space-y-4">
+                          <div className="form-group text-left">
+                            <label className="form-label text-[var(--text-secondary)] font-semibold text-xs mb-1 block">Phone Number</label>
+                            <div className="flex gap-2">
+                              <span className="flex items-center justify-center bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 text-xs text-[var(--text-secondary)] font-sans font-extrabold">+91</span>
+                              <input 
+                                className="form-input flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--accent)] focus:outline-none" 
+                                type="tel" 
+                                maxLength={10}
+                                placeholder="9531659828"
+                                value={authPhone}
+                                onChange={(e) => setAuthPhone(e.target.value.replace(/\D/g, ""))}
+                              />
                             </div>
-                            <input 
-                              className="form-input bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-center font-mono tracking-widest text-emerald-600 dark:text-emerald-400 font-black focus:border-emerald-500 focus:outline-none" 
-                              type="text" 
-                              maxLength={6}
-                              placeholder="••••••"
-                              value={authOtp}
-                              onChange={(e) => setAuthOtp(e.target.value.replace(/\D/g, ""))}
-                            />
                           </div>
-                        )}
 
-                        {!otpSent ? (
-                          <button 
-                            className="btn-auth w-full flex items-center justify-center gap-2 cursor-pointer py-2.5 rounded-xl font-bold bg-[var(--accent)] hover:opacity-90 transition-all border-none text-[var(--primary)] animate-pulse" 
-                            type="button" 
-                            disabled={isSendingOtp}
-                            onClick={requestOtpCode}
-                          >
-                            {isSendingOtp ? "Sending code..." : "Request Instant OTP ⚡"}
-                          </button>
-                        ) : (
-                          <div className="flex flex-col gap-2">
-                            <button className="btn-auth w-full py-2.5 rounded-xl font-bold bg-emerald-600 hover:bg-emerald-700 transition-all border-none text-white cursor-pointer" type="submit">
-                              Verify & Log In instantly 🔓
-                            </button>
+                          {otpSent && (
+                            <div className="form-group text-left animate-fade-in">
+                              <div className="flex justify-between items-center mb-1">
+                                <label className="form-label text-[var(--text-secondary)] font-semibold text-xs">Enter 6-Digit OTP</label>
+                                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold">✓ Simulated Code Sent</span>
+                              </div>
+                              <input 
+                                className="form-input bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-center font-mono tracking-widest text-emerald-600 dark:text-emerald-400 font-black focus:border-emerald-500 focus:outline-none" 
+                                type="text" 
+                                maxLength={6}
+                                placeholder="••••••"
+                                value={authOtp}
+                                onChange={(e) => setAuthOtp(e.target.value.replace(/\D/g, ""))}
+                              />
+                            </div>
+                          )}
+
+                          {!otpSent ? (
                             <button 
-                              className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all underline bg-transparent border-none cursor-pointer mt-1" 
-                              type="button"
+                              className="btn-auth w-full flex items-center justify-center gap-2 cursor-pointer py-2.5 rounded-xl font-bold bg-[var(--accent)] hover:opacity-90 transition-all border-none text-[var(--primary)] animate-pulse" 
+                              type="button" 
+                              disabled={isSendingOtp}
                               onClick={requestOtpCode}
                             >
-                              Resend Verification Code
+                              {isSendingOtp ? "Sending code..." : "Request Instant OTP ⚡"}
                             </button>
+                          ) : (
+                            <div className="flex flex-col gap-2">
+                              <button className="btn-auth w-full py-2.5 rounded-xl font-bold bg-emerald-600 hover:bg-emerald-700 transition-all border-none text-white cursor-pointer" type="submit">
+                                Verify & Log In instantly 🔓
+                              </button>
+                              <button 
+                                className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all underline bg-transparent border-none cursor-pointer mt-1" 
+                                type="button"
+                                onClick={requestOtpCode}
+                              >
+                                Resend Verification Code
+                              </button>
+                            </div>
+                          )}
+                        </form>
+                      ) : (
+                        <form onSubmit={handleLogin} className="space-y-4">
+                          <div className="form-group text-left">
+                            <label className="form-label text-[var(--text-secondary)] font-semibold text-xs mb-1 block">Email Address</label>
+                            <input 
+                              className="form-input bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:border-blue-500 focus:outline-none w-full" 
+                              type="email" 
+                              placeholder="you@example.com"
+                              value={authEmail}
+                              onChange={(e) => setAuthEmail(e.target.value)}
+                            />
                           </div>
-                        )}
-                      </form>
-                    ) : (
-                      <form onSubmit={handleLogin} className="space-y-4">
-                        <div className="form-group text-left">
-                          <label className="form-label text-[var(--text-secondary)] font-semibold text-xs mb-1 block">Email Address</label>
+                          <div className="form-group text-left">
+                            <label className="form-label text-[var(--text-secondary)] font-semibold text-xs mb-1 block">Password</label>
+                            <input 
+                              className="form-input bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:border-blue-500 focus:outline-none w-full" 
+                              type="password" 
+                              placeholder="••••••••"
+                              value={authPassword}
+                              onChange={(e) => setAuthPassword(e.target.value)}
+                            />
+                          </div>
+                          <button className="btn-auth w-full py-2.5 rounded-xl font-bold bg-[var(--primary)] hover:bg-[var(--primary-hover)] transition-all border-none text-white cursor-pointer" type="submit">
+                            Log In securely 🛡️
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  ) : (
+                    // Register Form view - Detailed Student Profile
+                    <form onSubmit={handleRegister} className="space-y-3.5 text-left">
+                      <div>
+                        <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Full Name *</label>
+                        <input 
+                          className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3.5 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
+                          type="text" 
+                          placeholder="e.g. Sakil Ahmed"
+                          value={authName}
+                          onChange={(e) => setAuthName(e.target.value)}
+                          required
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Email Address *</label>
                           <input 
-                            className="form-input bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:border-blue-500 focus:outline-none w-full" 
+                            className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3.5 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
                             type="email" 
                             placeholder="you@example.com"
                             value={authEmail}
                             onChange={(e) => setAuthEmail(e.target.value)}
+                            required
                           />
                         </div>
-                        <div className="form-group text-left">
-                          <label className="form-label text-[var(--text-secondary)] font-semibold text-xs mb-1 block">Password</label>
+
+                        <div>
+                          <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Phone Number *</label>
                           <input 
-                            className="form-input bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:border-blue-500 focus:outline-none w-full" 
-                            type="password" 
-                            placeholder="••••••••"
-                            value={authPassword}
-                            onChange={(e) => setAuthPassword(e.target.value)}
+                            className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
+                            type="tel" 
+                            placeholder="9830123456"
+                            maxLength={10}
+                            value={authPhone}
+                            onChange={(e) => setAuthPhone(e.target.value.replace(/\D/g, ""))}
+                            required
                           />
                         </div>
-                        <button className="btn-auth w-full py-2.5 rounded-xl font-bold bg-[var(--primary)] hover:bg-[var(--primary-hover)] transition-all border-none text-white cursor-pointer" type="submit">
-                          Log In securely 🛡️
-                        </button>
-                      </form>
-                    )}
-                  </div>
-                ) : (
-                  // Register Form view - Detailed Student Profile
-                  <form onSubmit={handleRegister} className="space-y-3.5 text-left">
-                    <div>
-                      <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Full Name *</label>
-                      <input 
-                        className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3.5 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
-                        type="text" 
-                        placeholder="e.g. Sakil Ahmed"
-                        value={authName}
-                        onChange={(e) => setAuthName(e.target.value)}
-                        required
-                      />
-                    </div>
+                      </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Course / Student Category *</label>
+                          <select 
+                            className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500"
+                            value={authStudentType}
+                            onChange={(e) => setAuthStudentType(e.target.value)}
+                          >
+                            <option value="Nursing">🩺 Nursing (B.Sc / GNM)</option>
+                            <option value="Pharmacist">💊 Pharmacist (D.Pharm / B.Pharm)</option>
+                            <option value="Paramedical">🔬 Paramedical & OT Tech</option>
+                            <option value="Lab Technician">🧪 Lab Technician (DMLT)</option>
+                            <option value="Radiographer">📸 Radiographer & X-Ray</option>
+                            <option value="Medical Officer">👨‍⚕️ Medical Officer & CHO</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Desired Govt Post *</label>
+                          <input 
+                            className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3.5 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
+                            type="text" 
+                            placeholder="e.g. AIIMS NORCET / RRB Pharmacist"
+                            value={authDesiredPost}
+                            onChange={(e) => setAuthDesiredPost(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">State / Region *</label>
+                          <select 
+                            className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500"
+                            value={authState}
+                            onChange={(e) => setAuthState(e.target.value)}
+                          >
+                            <option value="West Bengal">West Bengal</option>
+                            <option value="Delhi">Delhi / NCR</option>
+                            <option value="Uttar Pradesh">Uttar Pradesh</option>
+                            <option value="Rajasthan">Rajasthan</option>
+                            <option value="Bihar">Bihar</option>
+                            <option value="Maharashtra">Maharashtra</option>
+                            <option value="Kerala">Kerala</option>
+                            <option value="All India">All India / Central Govt</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">PIN Code *</label>
+                          <input 
+                            className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
+                            type="text" 
+                            placeholder="700001"
+                            maxLength={6}
+                            value={authPin}
+                            onChange={(e) => setAuthPin(e.target.value.replace(/\D/g, ""))}
+                            required
+                          />
+                        </div>
+                      </div>
+
                       <div>
-                        <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Email Address *</label>
+                        <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Create Password *</label>
                         <input 
                           className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3.5 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
-                          type="email" 
-                          placeholder="you@example.com"
-                          value={authEmail}
-                          onChange={(e) => setAuthEmail(e.target.value)}
+                          type="password" 
+                          placeholder="Min. 6 characters"
+                          value={authPassword}
+                          onChange={(e) => setAuthPassword(e.target.value)}
                           required
                         />
                       </div>
 
-                      <div>
-                        <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Phone Number *</label>
-                        <input 
-                          className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
-                          type="tel" 
-                          placeholder="9830123456"
-                          maxLength={10}
-                          value={authPhone}
-                          onChange={(e) => setAuthPhone(e.target.value.replace(/\D/g, ""))}
-                          required
-                        />
-                      </div>
-                    </div>
+                      <button className="btn-auth w-full py-3 rounded-xl font-black bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-90 text-white shadow-lg transition-all border-none cursor-pointer text-xs uppercase tracking-wider mt-2" type="submit">
+                        Register & Access All in ONE Portal 🚀
+                      </button>
+                    </form>
+                  )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Course / Student Category *</label>
-                        <select 
-                          className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500"
-                          value={authStudentType}
-                          onChange={(e) => setAuthStudentType(e.target.value)}
-                        >
-                          <option value="Nursing">🩺 Nursing (B.Sc / GNM)</option>
-                          <option value="Pharmacist">💊 Pharmacist (D.Pharm / B.Pharm)</option>
-                          <option value="Paramedical">🔬 Paramedical & OT Tech</option>
-                          <option value="Lab Technician">🧪 Lab Technician (DMLT)</option>
-                          <option value="Radiographer">📸 Radiographer & X-Ray</option>
-                          <option value="Medical Officer">👨‍⚕️ Medical Officer & CHO</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Desired Govt Post *</label>
-                        <input 
-                          className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3.5 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
-                          type="text" 
-                          placeholder="e.g. AIIMS NORCET / RRB Pharmacist"
-                          value={authDesiredPost}
-                          onChange={(e) => setAuthDesiredPost(e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">State / Region *</label>
-                        <select 
-                          className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500"
-                          value={authState}
-                          onChange={(e) => setAuthState(e.target.value)}
-                        >
-                          <option value="West Bengal">West Bengal</option>
-                          <option value="Delhi">Delhi / NCR</option>
-                          <option value="Uttar Pradesh">Uttar Pradesh</option>
-                          <option value="Rajasthan">Rajasthan</option>
-                          <option value="Bihar">Bihar</option>
-                          <option value="Maharashtra">Maharashtra</option>
-                          <option value="Kerala">Kerala</option>
-                          <option value="All India">All India / Central Govt</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">PIN Code *</label>
-                        <input 
-                          className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
-                          type="text" 
-                          placeholder="700001"
-                          maxLength={6}
-                          value={authPin}
-                          onChange={(e) => setAuthPin(e.target.value.replace(/\D/g, ""))}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Create Password *</label>
-                      <input 
-                        className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3.5 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
-                        type="password" 
-                        placeholder="Min. 6 characters"
-                        value={authPassword}
-                        onChange={(e) => setAuthPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-
-                    <button className="btn-auth w-full py-3 rounded-xl font-black bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-90 text-white shadow-lg transition-all border-none cursor-pointer text-xs uppercase tracking-wider mt-2" type="submit">
-                      Register & Access All in ONE Portal 🚀
-                    </button>
-                  </form>
-                )}
-
-                <div className="auth-divider">or</div>
-                <button className="auth-guest" onClick={guestLogin}>
-                  Continue as Guest Student →
-                </button>
-              </div>
+                  <div className="auth-divider text-xs text-[var(--text-secondary)] my-3">or continue as guest</div>
+                  <button className="auth-guest w-full py-2.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer bg-transparent border-none" onClick={guestLogin}>
+                    Continue as Guest Student →
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -43,6 +43,8 @@ export interface User {
   pin?: string;         // PIN code
   isAdmin: boolean;
   guest?: boolean;
+  googleUser?: boolean;
+  photoURL?: string;
   joined?: number;
 }
 
