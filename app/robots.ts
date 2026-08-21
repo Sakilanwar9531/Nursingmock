@@ -8,11 +8,6 @@ export default function robots(): MetadataRoute.Robots {
       disallow: [
         "/api/",
         "/admin",
-        "/analytics",
-        "/auth",
-        "/test/",
-        "/test",
-        "/result",
       ],
     },
     sitemap: "https://ncbt.in/sitemap.xml",

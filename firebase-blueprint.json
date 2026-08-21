@@ -1,0 +1,80 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account profile details and preferences",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "student"] },
+        "targetExam": { "type": "string" },
+        "totalTestsAttempted": { "type": "number" },
+        "averageAccuracy": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "email", "role"]
+    },
+    "TestAttempt": {
+      "title": "TestAttempt",
+      "description": "Completed CBT mock test submission record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userName": { "type": "string" },
+        "testId": { "type": "string" },
+        "testTitle": { "type": "string" },
+        "score": { "type": "number" },
+        "totalQuestions": { "type": "number" },
+        "correctCount": { "type": "number" },
+        "incorrectCount": { "type": "number" },
+        "unansweredCount": { "type": "number" },
+        "accuracy": { "type": "number" },
+        "timeSpentSeconds": { "type": "number" },
+        "submittedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "testId", "score"]
+    },
+    "LiveExamUpdate": {
+      "title": "LiveExamUpdate",
+      "description": "Exam notifications, syllabus updates and blog articles",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "content": { "type": "string" },
+        "badge": { "type": "string" },
+        "tag": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorAvatar": { "type": "string" },
+        "image": { "type": "string" },
+        "pdfUrl": { "type": "string" },
+        "officialLink": { "type": "string" },
+        "date": { "type": "string" },
+        "readTime": { "type": "string" },
+        "published": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "title", "content"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Stores private and public user account information"
+    },
+    "/test_attempts/{attemptId}": {
+      "schema": "TestAttempt",
+      "description": "Global test attempt scores for student history and leaderboards"
+    },
+    "/exam_updates/{updateId}": {
+      "schema": "LiveExamUpdate",
+      "description": "Live exam announcements and blog articles published by admin"
+    }
+  }
+}

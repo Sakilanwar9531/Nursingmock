@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "../src/index.css";
+import ClientProviders from "@/components/ClientProviders";
 
 export const viewport: Viewport = {
   themeColor: "#070b14",
@@ -90,7 +91,9 @@ export default function RootLayout({
       </head>
       <body className="bg-[#070b14] text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-sky-500 selection:text-white">
         {/* Main Content Area */}
-        <main className="flex-grow">{children}</main>
+        <ClientProviders>
+          <main className="flex-grow">{children}</main>
+        </ClientProviders>
       </body>
     </html>
   );
