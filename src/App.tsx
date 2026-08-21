@@ -1270,6 +1270,7 @@ export default function App() {
   const [testReferrer, setTestReferrer] = useState<string>("hub");
   const [pendingTest, setPendingTest] = useState<{ subjectId: string; testId: string; test: Test } | null>(null);
   const [selectedModeForPending, setSelectedModeForPending] = useState<"practice" | "exam">("exam");
+  const [preTestAuthPending, setPreTestAuthPending] = useState<{ subjectId: string; testId: string; mode: "practice" | "exam"; testTitle?: string } | null>(null);
   const [activeSubjectId, setActiveSubjectId] = useState<string | null>(initialRoute.subjectId);
   const [activeTest, setActiveTest] = useState<Test | null>(initialRoute.test);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
@@ -2298,7 +2299,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     showPage("hub");
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = async (onSuccessCallback?: (user: UserType) => void) => {
     try {
       setIsGoogleSigningIn(true);
       setAuthError("");
@@ -2340,7 +2341,12 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         setCurrentUser(userObj);
         localStorage.setItem("np_user", JSON.stringify(userObj));
         triggerToast(`Welcome back, ${user.displayName || user.email}! Connected with Google 🚀`, "ok");
-        showPage("hub");
+        if (onSuccessCallback) {
+          onSuccessCallback(userObj);
+        } else {
+          showPage("hub");
+        }
+        return userObj;
       }
     } catch (err: any) {
       if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
@@ -2355,6 +2361,7 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
     } finally {
       setIsGoogleSigningIn(false);
     }
+    return null;
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -3914,10 +3921,18 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   </div>
                 ) : (
                   <button
-                    onClick={() => { showPage("auth"); setIsDrawerOpen(false); }}
-                    className="w-full py-2.5 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-extrabold text-xs rounded-xl transition-all shadow-md cursor-pointer border border-[var(--border)] text-center"
+                    onClick={() => { handleGoogleSignIn(); setIsDrawerOpen(false); }}
+                    disabled={isGoogleSigningIn}
+                    className="w-full py-2.5 flex items-center justify-center gap-2.5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 font-extrabold text-xs rounded-xl transition-all shadow-md cursor-pointer border border-[var(--border)] text-center active:scale-95"
+                    title="Log In with Google"
                   >
-                    🔐 Login with Google Auth
+                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                    </svg>
+                    <span>{isGoogleSigningIn ? "Connecting..." : "Log In"}</span>
                   </button>
                 )}
                 <div className="mt-4 text-center">
@@ -4022,18 +4037,18 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
             </div>
           ) : (
             <button
-              onClick={handleGoogleSignIn}
+              onClick={() => handleGoogleSignIn()}
               disabled={isGoogleSigningIn}
               className="flex items-center gap-2 py-1.5 px-3 rounded-xl border border-[var(--border)] bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-bold text-xs hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm transition-all cursor-pointer active:scale-95"
-              title="1-Click Login with Google"
+              title="Log In with Google"
             >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
               </svg>
-              <span>{isGoogleSigningIn ? "..." : "Google Login"}</span>
+              <span>{isGoogleSigningIn ? "Connecting..." : "Log In"}</span>
             </button>
           )}
 
@@ -6835,8 +6850,18 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                       onClick={() => {
                         const subId = pendingTest.subjectId;
                         const testId = pendingTest.testId;
-                        startTest(subId, testId, selectedModeForPending);
-                        setPendingTest(null);
+                        const mode = selectedModeForPending;
+                        if (!currentUser || currentUser.guest) {
+                          setPreTestAuthPending({
+                            subjectId: subId,
+                            testId: testId,
+                            mode: mode,
+                            testTitle: pendingTest.test.title
+                          });
+                        } else {
+                          startTest(subId, testId, mode);
+                          setPendingTest(null);
+                        }
                       }}
                     >
                       Start Test Now →
@@ -6849,6 +6874,91 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
           </div>
         );
       })()}
+
+      {/* =============== PRE-TEST GOOGLE AUTO AUTH ACTIVATION MODAL =============== */}
+      {preTestAuthPending && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[300] flex items-center justify-center p-4 animate-fade-in font-sans">
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative text-center space-y-5 animate-scale-up">
+            {/* Close 'X' Button to avoid/skip authentication */}
+            <button
+              onClick={() => {
+                const { subjectId, testId, mode } = preTestAuthPending;
+                setPreTestAuthPending(null);
+                setPendingTest(null);
+                startTest(subjectId, testId, mode);
+              }}
+              className="absolute top-4 right-4 p-2 rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-colors cursor-pointer border border-transparent hover:border-[var(--border)]"
+              title="Skip & start test as guest"
+              aria-label="Close authentication prompt"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="w-14 h-14 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center mx-auto text-sky-400">
+              <Sparkles className="w-7 h-7" />
+            </div>
+
+            <div className="space-y-1.5">
+              <h2 className="text-xl font-black text-[var(--text-primary)] tracking-tight">
+                Save Test Record & Analytics
+              </h2>
+              <p className="text-xs text-[var(--text-secondary)] leading-relaxed px-2">
+                Connect with Google in 1-click to track your subject accuracy, save test attempt history, and calculate your All-India Percentile Rank.
+              </p>
+            </div>
+
+            <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl p-3.5 text-left space-y-2 text-xs">
+              <div className="flex items-center gap-2.5 text-[var(--text-primary)] font-semibold">
+                <span className="text-emerald-500 font-bold">✓</span>
+                <span>Automatic Scorecard & Weak Topic Breakdown</span>
+              </div>
+              <div className="flex items-center gap-2.5 text-[var(--text-primary)] font-semibold">
+                <span className="text-emerald-500 font-bold">✓</span>
+                <span>All-India Rank & Percentile Comparison</span>
+              </div>
+              <div className="flex items-center gap-2.5 text-[var(--text-primary)] font-semibold">
+                <span className="text-emerald-500 font-bold">✓</span>
+                <span>Access Saved Performance History on Any Device</span>
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <button
+                onClick={async () => {
+                  const { subjectId, testId, mode } = preTestAuthPending;
+                  await handleGoogleSignIn((_user) => {
+                    setPreTestAuthPending(null);
+                    setPendingTest(null);
+                    startTest(subjectId, testId, mode);
+                  });
+                }}
+                disabled={isGoogleSigningIn}
+                className="w-full py-3 px-4 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-900 dark:text-white font-extrabold text-sm shadow-lg border border-[var(--border)] flex items-center justify-center gap-3 transition-all cursor-pointer active:scale-95"
+              >
+                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                </svg>
+                <span>{isGoogleSigningIn ? "Connecting..." : "Log In with Google"}</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  const { subjectId, testId, mode } = preTestAuthPending;
+                  setPreTestAuthPending(null);
+                  setPendingTest(null);
+                  startTest(subjectId, testId, mode);
+                }}
+                className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] underline transition-colors cursor-pointer py-1 block w-full text-center"
+              >
+                Skip and take test as Guest without saving →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
