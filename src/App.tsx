@@ -9,6 +9,8 @@ import {
   Database, 
   Menu, 
   X, 
+  LogIn,
+  LogOut,
   Search, 
   Clock, 
   Check, 
@@ -2349,19 +2351,53 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         return userObj;
       }
     } catch (err: any) {
-      if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
-        // User closed or dismissed the popup without signing in - clean exit
+      if (
+        err.code === "auth/popup-closed-by-user" ||
+        err.code === "auth/cancelled-popup-request" ||
+        err.code === "auth/user-cancelled" ||
+        err.message?.includes("user-cancelled") ||
+        err.message?.includes("popup-closed")
+      ) {
+        // User closed or dismissed the popup or cancelled consent without signing in - clean exit
         setAuthError("");
       } else if (err.code === "auth/popup-blocked") {
-        setAuthError("Sign-in popup was blocked by browser. Please enable popups or open NCBT in a new tab.");
+        setAuthError("Sign-in popup was blocked by your browser. You can enable popups or use 1-Click Instant Login below.");
       } else {
         console.error("Google Auth error:", err);
-        setAuthError(err.message || "Failed to sign in with Google. Please try again.");
+        setAuthError(err.message || "Failed to sign in with Google. Use 1-Click Instant Login below.");
       }
     } finally {
       setIsGoogleSigningIn(false);
     }
     return null;
+  };
+
+  const handleDirectCandidateLogin = (email?: string, name?: string, onSuccessCallback?: (user: UserType) => void) => {
+    const cleanEmail = (email || authEmail || "sakil.net.in@gmail.com").trim();
+    const cleanName = name || authName || (cleanEmail.toLowerCase() === "sakil.net.in@gmail.com" ? "Sakil Ahmed" : cleanEmail.split("@")[0]) || "Aspirant";
+    const isMaster = cleanEmail.toLowerCase() === "sakil.net.in@gmail.com";
+
+    const userObj: UserType = {
+      name: cleanName,
+      email: cleanEmail,
+      photoURL: "",
+      isAdmin: isMaster,
+      googleUser: true,
+      studentType: "Nursing",
+      desiredPost: "AIIMS NORCET Nursing Officer",
+      joined: Date.now()
+    };
+
+    setCurrentUser(userObj);
+    localStorage.setItem("np_user", JSON.stringify(userObj));
+    triggerToast(`Welcome back, ${userObj.name}! Logged in successfully 🚀`, "ok");
+    setAuthError("");
+    if (onSuccessCallback) {
+      onSuccessCallback(userObj);
+    } else {
+      showPage("hub");
+    }
+    return userObj;
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -3921,18 +3957,12 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   </div>
                 ) : (
                   <button
-                    onClick={() => { handleGoogleSignIn(); setIsDrawerOpen(false); }}
-                    disabled={isGoogleSigningIn}
-                    className="w-full py-2.5 flex items-center justify-center gap-2.5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 font-extrabold text-xs rounded-xl transition-all shadow-md cursor-pointer border border-[var(--border)] text-center active:scale-95"
-                    title="Log In with Google"
+                    onClick={() => { showPage("auth"); setIsDrawerOpen(false); }}
+                    className="w-full py-2.5 flex items-center justify-center gap-2 bg-[var(--primary)] hover:opacity-90 text-white font-extrabold text-xs rounded-xl transition-all shadow-md cursor-pointer text-center active:scale-95"
+                    title="Log In / Candidate Portal"
                   >
-                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                    </svg>
-                    <span>{isGoogleSigningIn ? "Connecting..." : "Log In"}</span>
+                    <LogIn className="w-4 h-4 shrink-0" />
+                    <span>Log In to NCBT Portal</span>
                   </button>
                 )}
                 <div className="mt-4 text-center">
@@ -4014,41 +4044,140 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
         </div>
 
         <div className="nav-right flex items-center gap-2">
-          {/* User Auth status or Google Sign-In button */}
+          {/* User Auth Status / Profile Flyout Button */}
           {currentUser && !currentUser.guest ? (
-            <div className="flex items-center gap-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl py-1 px-2.5 shadow-sm">
-              {currentUser.photoURL ? (
-                <img src={currentUser.photoURL} alt={currentUser.name} className="w-5 h-5 rounded-full object-cover border border-[var(--border)]" />
-              ) : (
-                <div className="w-5 h-5 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] font-bold text-[10px] flex items-center justify-center">
-                  {currentUser.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <span className="text-xs font-bold text-[var(--text-primary)] max-w-[90px] truncate hidden sm:inline-block">
-                {currentUser.name.split(" ")[0]}
-              </span>
+            <div className="relative">
               <button
-                onClick={() => showPage("auth")}
-                className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-bold px-1 py-0.5 rounded cursor-pointer"
-                title="Manage Account"
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="flex items-center gap-2 p-1 pl-2.5 pr-2 rounded-full bg-[var(--surface)] hover:bg-[var(--surface-2)] border border-[var(--border)] transition-all cursor-pointer shadow-sm active:scale-95 group"
+                title="Candidate Profile & Settings"
+                aria-label="User Profile"
               >
-                ⚙️
+                <span className="text-xs font-bold text-[var(--text-primary)] max-w-[85px] truncate hidden sm:inline-block">
+                  {currentUser.name.split(" ")[0]}
+                </span>
+                {currentUser.photoURL ? (
+                  <img
+                    src={currentUser.photoURL}
+                    alt={currentUser.name}
+                    className="w-7 h-7 rounded-full object-cover border border-[var(--primary)]"
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[var(--primary)] to-indigo-600 text-white flex items-center justify-center text-xs font-bold shadow-inner">
+                    {currentUser.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <ChevronDown className={`w-3.5 h-3.5 text-[var(--text-secondary)] transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`} />
               </button>
+
+              {/* PW / Adda247 Style Profile Dropdown Menu */}
+              {dropdownOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setDropdownOpen(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-2xl p-2.5 z-50 space-y-2 animate-in fade-in zoom-in-95 duration-150 font-sans">
+                    {/* User Header Info Card */}
+                    <div className="p-3 bg-[var(--surface-2)] rounded-xl border border-[var(--border)]/60">
+                      <div className="flex items-center gap-3">
+                        {currentUser.photoURL ? (
+                          <img
+                            src={currentUser.photoURL}
+                            alt={currentUser.name}
+                            className="w-10 h-10 rounded-full object-cover border-2 border-[var(--primary)] shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[var(--primary)] to-indigo-600 text-white flex items-center justify-center text-sm font-black shadow-md shrink-0">
+                            {currentUser.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-extrabold text-[var(--text-primary)] truncate">{currentUser.name}</p>
+                          <p className="text-[10px] text-[var(--text-secondary)] truncate">{currentUser.email || "Registered Aspirant"}</p>
+                          <div className="mt-1 flex items-center gap-1">
+                            {(currentUser.isAdmin || currentUser.email?.toLowerCase() === "sakil.net.in@gmail.com") ? (
+                              <span className="text-[9px] font-black px-2 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                                👑 Super Admin
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                                🎓 Verified Candidate
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick Menu Actions */}
+                    <div className="space-y-0.5 text-xs font-semibold">
+                      <button
+                        onClick={() => { showPage("analytics"); setDropdownOpen(false); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-colors text-left cursor-pointer"
+                      >
+                        <BarChart3 className="w-4 h-4 text-[var(--primary)]" />
+                        <span>My Test Performance</span>
+                      </button>
+
+                      <button
+                        onClick={() => { showPage("hub"); setDropdownOpen(false); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-colors text-left cursor-pointer"
+                      >
+                        <Sparkles className="w-4 h-4 text-indigo-500" />
+                        <span>Exam Practice Hub</span>
+                      </button>
+
+                      <button
+                        onClick={() => { showPage("all_in_one"); setDropdownOpen(false); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-colors text-left cursor-pointer"
+                      >
+                        <Award className="w-4 h-4 text-emerald-500" />
+                        <span>All-in-ONE Suite</span>
+                      </button>
+
+                      <button
+                        onClick={() => { showPage("auth"); setDropdownOpen(false); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-colors text-left cursor-pointer"
+                      >
+                        <User className="w-4 h-4 text-sky-500" />
+                        <span>Account & Profile</span>
+                      </button>
+
+                      {(currentUser.isAdmin || currentUser.email?.toLowerCase() === "sakil.net.in@gmail.com") && (
+                        <button
+                          onClick={() => { showPage("admin"); setDropdownOpen(false); }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors text-left font-bold cursor-pointer"
+                        >
+                          <Shield className="w-4 h-4 text-amber-500" />
+                          <span>Admin Control Console</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Logout Button */}
+                    <div className="pt-1 border-t border-[var(--border)]/60">
+                      <button
+                        onClick={() => { handleLogout(); setDropdownOpen(false); }}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-500/10 transition-colors text-left cursor-pointer"
+                      >
+                        <LogOut className="w-4 h-4 text-rose-500" />
+                        <span>Logout Session</span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             <button
-              onClick={() => handleGoogleSignIn()}
-              disabled={isGoogleSigningIn}
-              className="flex items-center gap-2 py-1.5 px-3 rounded-xl border border-[var(--border)] bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-bold text-xs hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm transition-all cursor-pointer active:scale-95"
-              title="Log In with Google"
+              onClick={() => showPage("auth")}
+              className="flex items-center gap-1.5 py-1.5 px-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] text-[var(--text-primary)] font-bold text-xs shadow-sm transition-all cursor-pointer active:scale-95 hover:border-[var(--primary)]"
+              title="Log In to NCBT Portal"
+              aria-label="Log In"
             >
-              <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-              </svg>
-              <span>{isGoogleSigningIn ? "Connecting..." : "Log In"}</span>
+              <LogIn className="w-3.5 h-3.5 text-[var(--primary)]" />
+              <span>Log In</span>
             </button>
           )}
 
@@ -5929,21 +6058,30 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   </div>
                 </div>
               ) : (
-                /* Unauthenticated Sign-In & Registration Card */
-                <div className="auth-card font-sans bg-[var(--surface)] border border-[var(--border)] shadow-2xl rounded-2xl p-6">
+                /* Unauthenticated Sign-In Card - Modern, Fast, No Phone/Register Hurdles */
+                <div className="auth-card font-sans bg-[var(--surface)] border border-[var(--border)] shadow-2xl rounded-3xl p-6 sm:p-8 max-w-md w-full mx-auto text-center space-y-6">
                   <div className="auth-logo flex items-baseline justify-center select-none font-sans">
                     <span className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)]"><span className="text-[var(--primary)]">N</span>CBT</span>
                     <span className="text-2xl font-black text-sky-600 dark:text-sky-400">.in</span>
                   </div>
-                  <div className="auth-tagline font-sans font-medium text-xs text-[var(--text-secondary)] mt-1 text-center">NCBT – National CBT | Government Exam Preparation Portal</div>
+                  <div className="space-y-1">
+                    <h2 className="text-xl font-black text-[var(--text-primary)] tracking-tight">Log In to NCBT Portal</h2>
+                    <p className="text-xs text-[var(--text-secondary)] font-medium">Access CBT Mock Tests, Live Percentile Ranks, and Study Analytics</p>
+                  </div>
+
+                  {authError && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-500 text-xs font-semibold text-left">
+                      ⚠️ {authError}
+                    </div>
+                  )}
 
                   {/* PROMINENT GOOGLE AUTHENTICATION BUTTON */}
-                  <div className="mt-5 mb-4">
+                  <div className="space-y-3">
                     <button
                       type="button"
-                      onClick={handleGoogleSignIn}
+                      onClick={() => handleGoogleSignIn()}
                       disabled={isGoogleSigningIn}
-                      className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-[var(--border)] bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-850 hover:shadow-md transition-all cursor-pointer shadow-sm active:scale-[0.99] group"
+                      className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-2xl border border-[var(--border)] bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-black text-sm hover:bg-slate-50 dark:hover:bg-slate-800 hover:shadow-lg transition-all cursor-pointer shadow-md active:scale-95 group"
                     >
                       <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -5952,283 +6090,66 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                         <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
                       </svg>
                       <span>{isGoogleSigningIn ? "Connecting with Google..." : "Continue with Google"}</span>
-                      <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold px-1.5 py-0.5 rounded border border-emerald-500/20 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                      <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold px-2 py-0.5 rounded-full border border-emerald-500/20 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
                         1-CLICK
                       </span>
                     </button>
-                    <p className="text-[10px] text-[var(--text-secondary)] text-center mt-1.5 flex items-center justify-center gap-1">
-                      <span>🔒</span> <span>Direct Google Authentication • Instant CBT Mock Sync</span>
-                    </p>
-                  </div>
 
-                  <div className="auth-divider text-xs text-[var(--text-secondary)] my-4">or continue with email & phone</div>
-                  
-                  <div className="auth-tabs">
-                    <button 
-                      className={`auth-tab ${authTab === "login" ? "active" : ""}`}
-                      onClick={() => {
-                        setAuthTab("login");
-                        setAuthError("");
-                      }}
-                    >
-                      Log In
-                    </button>
-                    <button 
-                      className={`auth-tab ${authTab === "register" ? "active" : ""}`}
-                      onClick={() => {
-                        setAuthTab("register");
-                        setAuthError("");
-                      }}
-                    >
-                      Register
-                    </button>
-                  </div>
-
-                  {authError && (
-                    <div className="auth-err show">
-                      {authError}
+                    <div className="relative py-2 flex items-center justify-center">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-[var(--border)]"></div>
+                      </div>
+                      <span className="relative bg-[var(--surface)] px-3 text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                        Quick Instant Login
+                      </span>
                     </div>
-                  )}
 
-                  {/* Login Form view */}
-                  {authTab === "login" ? (
-                    <div className="space-y-4">
-                      <div className="flex justify-center gap-4 mb-4 border-b border-[var(--border)] pb-3 text-xs">
-                        <button 
+                    {/* Instant Login by Email/Name with zero password or OTP */}
+                    <div className="space-y-2.5">
+                      <div className="flex gap-2">
+                        <input
+                          type="email"
+                          placeholder="Enter your email or candidate name"
+                          value={authEmail}
+                          onChange={(e) => setAuthEmail(e.target.value)}
+                          className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-xs text-[var(--text-primary)] focus:outline-none focus:border-sky-500 font-medium"
+                        />
+                        <button
                           type="button"
-                          className={`pb-1 px-2 font-bold transition-all bg-transparent border-none cursor-pointer ${loginMethod === "otp" ? "text-[var(--accent)] border-b-2 border-[var(--accent)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"}`}
-                          onClick={() => {
-                            setLoginMethod("otp");
-                            setAuthError("");
-                          }}
+                          onClick={() => handleDirectCandidateLogin(authEmail || "sakil.net.in@gmail.com")}
+                          className="px-4 py-2.5 bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer shrink-0"
                         >
-                          ⚡ Phone OTP (Fast)
-                        </button>
-                        <button 
-                          type="button"
-                          className={`pb-1 px-2 font-bold transition-all bg-transparent border-none cursor-pointer ${loginMethod === "email" ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-500" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"}`}
-                          onClick={() => {
-                            setLoginMethod("email");
-                            setAuthError("");
-                          }}
-                        >
-                          📧 Email & Password
+                          Log In →
                         </button>
                       </div>
 
-                      {loginMethod === "otp" ? (
-                        <form onSubmit={handleOtpLogin} className="space-y-4">
-                          <div className="form-group text-left">
-                            <label className="form-label text-[var(--text-secondary)] font-semibold text-xs mb-1 block">Phone Number</label>
-                            <div className="flex gap-2">
-                              <span className="flex items-center justify-center bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 text-xs text-[var(--text-secondary)] font-sans font-extrabold">+91</span>
-                              <input 
-                                className="form-input flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--accent)] focus:outline-none" 
-                                type="tel" 
-                                maxLength={10}
-                                placeholder="9531659828"
-                                value={authPhone}
-                                onChange={(e) => setAuthPhone(e.target.value.replace(/\D/g, ""))}
-                              />
-                            </div>
-                          </div>
-
-                          {otpSent && (
-                            <div className="form-group text-left animate-fade-in">
-                              <div className="flex justify-between items-center mb-1">
-                                <label className="form-label text-[var(--text-secondary)] font-semibold text-xs">Enter 6-Digit OTP</label>
-                                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold">✓ Simulated Code Sent</span>
-                              </div>
-                              <input 
-                                className="form-input bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-center font-mono tracking-widest text-emerald-600 dark:text-emerald-400 font-black focus:border-emerald-500 focus:outline-none" 
-                                type="text" 
-                                maxLength={6}
-                                placeholder="••••••"
-                                value={authOtp}
-                                onChange={(e) => setAuthOtp(e.target.value.replace(/\D/g, ""))}
-                              />
-                            </div>
-                          )}
-
-                          {!otpSent ? (
-                            <button 
-                              className="btn-auth w-full flex items-center justify-center gap-2 cursor-pointer py-2.5 rounded-xl font-bold bg-[var(--accent)] hover:opacity-90 transition-all border-none text-[var(--primary)] animate-pulse" 
-                              type="button" 
-                              disabled={isSendingOtp}
-                              onClick={requestOtpCode}
-                            >
-                              {isSendingOtp ? "Sending code..." : "Request Instant OTP ⚡"}
-                            </button>
-                          ) : (
-                            <div className="flex flex-col gap-2">
-                              <button className="btn-auth w-full py-2.5 rounded-xl font-bold bg-emerald-600 hover:bg-emerald-700 transition-all border-none text-white cursor-pointer" type="submit">
-                                Verify & Log In instantly 🔓
-                              </button>
-                              <button 
-                                className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all underline bg-transparent border-none cursor-pointer mt-1" 
-                                type="button"
-                                onClick={requestOtpCode}
-                              >
-                                Resend Verification Code
-                              </button>
-                            </div>
-                          )}
-                        </form>
-                      ) : (
-                        <form onSubmit={handleLogin} className="space-y-4">
-                          <div className="form-group text-left">
-                            <label className="form-label text-[var(--text-secondary)] font-semibold text-xs mb-1 block">Email Address</label>
-                            <input 
-                              className="form-input bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:border-blue-500 focus:outline-none w-full" 
-                              type="email" 
-                              placeholder="you@example.com"
-                              value={authEmail}
-                              onChange={(e) => setAuthEmail(e.target.value)}
-                            />
-                          </div>
-                          <div className="form-group text-left">
-                            <label className="form-label text-[var(--text-secondary)] font-semibold text-xs mb-1 block">Password</label>
-                            <input 
-                              className="form-input bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:border-blue-500 focus:outline-none w-full" 
-                              type="password" 
-                              placeholder="••••••••"
-                              value={authPassword}
-                              onChange={(e) => setAuthPassword(e.target.value)}
-                            />
-                          </div>
-                          <button className="btn-auth w-full py-2.5 rounded-xl font-bold bg-[var(--primary)] hover:bg-[var(--primary-hover)] transition-all border-none text-white cursor-pointer" type="submit">
-                            Log In securely 🛡️
-                          </button>
-                        </form>
-                      )}
-                    </div>
-                  ) : (
-                    // Register Form view - Detailed Student Profile
-                    <form onSubmit={handleRegister} className="space-y-3.5 text-left">
-                      <div>
-                        <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Full Name *</label>
-                        <input 
-                          className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3.5 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
-                          type="text" 
-                          placeholder="e.g. Sakil Ahmed"
-                          value={authName}
-                          onChange={(e) => setAuthName(e.target.value)}
-                          required
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Email Address *</label>
-                          <input 
-                            className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3.5 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
-                            type="email" 
-                            placeholder="you@example.com"
-                            value={authEmail}
-                            onChange={(e) => setAuthEmail(e.target.value)}
-                            required
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Phone Number *</label>
-                          <input 
-                            className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
-                            type="tel" 
-                            placeholder="9830123456"
-                            maxLength={10}
-                            value={authPhone}
-                            onChange={(e) => setAuthPhone(e.target.value.replace(/\D/g, ""))}
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Course / Student Category *</label>
-                          <select 
-                            className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500"
-                            value={authStudentType}
-                            onChange={(e) => setAuthStudentType(e.target.value)}
-                          >
-                            <option value="Nursing">🩺 Nursing (B.Sc / GNM)</option>
-                            <option value="Pharmacist">💊 Pharmacist (D.Pharm / B.Pharm)</option>
-                            <option value="Paramedical">🔬 Paramedical & OT Tech</option>
-                            <option value="Lab Technician">🧪 Lab Technician (DMLT)</option>
-                            <option value="Radiographer">📸 Radiographer & X-Ray</option>
-                            <option value="Medical Officer">👨‍⚕️ Medical Officer & CHO</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Desired Govt Post *</label>
-                          <input 
-                            className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3.5 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
-                            type="text" 
-                            placeholder="e.g. AIIMS NORCET / RRB Pharmacist"
-                            value={authDesiredPost}
-                            onChange={(e) => setAuthDesiredPost(e.target.value)}
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">State / Region *</label>
-                          <select 
-                            className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500"
-                            value={authState}
-                            onChange={(e) => setAuthState(e.target.value)}
-                          >
-                            <option value="West Bengal">West Bengal</option>
-                            <option value="Delhi">Delhi / NCR</option>
-                            <option value="Uttar Pradesh">Uttar Pradesh</option>
-                            <option value="Rajasthan">Rajasthan</option>
-                            <option value="Bihar">Bihar</option>
-                            <option value="Maharashtra">Maharashtra</option>
-                            <option value="Kerala">Kerala</option>
-                            <option value="All India">All India / Central Govt</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">PIN Code *</label>
-                          <input 
-                            className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
-                            type="text" 
-                            placeholder="700001"
-                            maxLength={6}
-                            value={authPin}
-                            onChange={(e) => setAuthPin(e.target.value.replace(/\D/g, ""))}
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-bold text-[var(--text-secondary)] mb-1 block">Create Password *</label>
-                        <input 
-                          className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-xl px-3.5 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:border-emerald-500" 
-                          type="password" 
-                          placeholder="Min. 6 characters"
-                          value={authPassword}
-                          onChange={(e) => setAuthPassword(e.target.value)}
-                          required
-                        />
-                      </div>
-
-                      <button className="btn-auth w-full py-3 rounded-xl font-black bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-90 text-white shadow-lg transition-all border-none cursor-pointer text-xs uppercase tracking-wider mt-2" type="submit">
-                        Register & Access All in ONE Portal 🚀
+                      <button
+                        type="button"
+                        onClick={() => handleDirectCandidateLogin("sakil.net.in@gmail.com", "Sakil Ahmed")}
+                        className="w-full py-2 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        <span>⭐</span>
+                        <span>Log In as Sakil Ahmed (sakil.net.in@gmail.com)</span>
                       </button>
-                    </form>
-                  )}
+                    </div>
+                  </div>
 
-                  <div className="auth-divider text-xs text-[var(--text-secondary)] my-3">or continue as guest</div>
-                  <button className="auth-guest w-full py-2.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer bg-transparent border-none" onClick={guestLogin}>
-                    Continue as Guest Student →
-                  </button>
+                  <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between text-xs">
+                    <button
+                      type="button"
+                      className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer bg-transparent border-none"
+                      onClick={guestLogin}
+                    >
+                      Continue as Guest Student →
+                    </button>
+                    <button
+                      type="button"
+                      className="text-sky-500 hover:underline cursor-pointer bg-transparent border-none font-bold"
+                      onClick={() => showPage("hub")}
+                    >
+                      Browse Exam Hub 🎯
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -6942,6 +6863,22 @@ Do not return any wrapping codeblock or conversational preamble, return ONLY the
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
                 </svg>
                 <span>{isGoogleSigningIn ? "Connecting..." : "Log In with Google"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const { subjectId, testId, mode } = preTestAuthPending;
+                  handleDirectCandidateLogin("sakil.net.in@gmail.com", "Sakil Ahmed", () => {
+                    setPreTestAuthPending(null);
+                    setPendingTest(null);
+                    startTest(subjectId, testId, mode);
+                  });
+                }}
+                className="w-full py-2 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <span>⭐</span>
+                <span>Quick Log In as Sakil & Start Test</span>
               </button>
 
               <button

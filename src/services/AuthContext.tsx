@@ -125,8 +125,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (err: any) {
-      if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
-        // User intentionally closed the popup dialog - gracefully ignore
+      if (
+        err.code === "auth/popup-closed-by-user" ||
+        err.code === "auth/cancelled-popup-request" ||
+        err.code === "auth/user-cancelled" ||
+        err.message?.includes("user-cancelled") ||
+        err.message?.includes("popup-closed")
+      ) {
+        // User intentionally closed the popup dialog or cancelled permission - gracefully ignore
         return;
       }
       if (err.code === "auth/popup-blocked") {

@@ -1,7 +1,7 @@
 import { MetadataRoute } from "next";
 import { STATIC_NURSING_UPDATES } from "@/src/updatesData";
 import { SEO_ARTICLES } from "@/src/seoArticles";
-import { TARGET_EXAMS, SUBJECTS, PYQ_DATA } from "@/src/data";
+import { TARGET_EXAMS, SUBJECTS } from "@/src/data";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://ncbt.in";
@@ -31,6 +31,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${baseUrl}/subjects`,
       lastModified: now,
       changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/find-tests`,
+      lastModified: now,
+      changeFrequency: "daily",
       priority: 0.9,
     },
     {
