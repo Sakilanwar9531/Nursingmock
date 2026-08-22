@@ -432,7 +432,7 @@ const generateMockTests = (): Test[] => {
 
     if (cleanPath === "/" || cleanPath === "") {
       initialPage = "landing";
-    } else if (cleanPath === "/find-tests" || cleanPath === "/find-test") {
+    } else if (cleanPath === "/find-tests" || cleanPath === "/find-test" || cleanPath === "/tests" || cleanPath === "/exams" || cleanPath === "/subjects") {
       initialPage = "find_test";
       initialCategory = "all";
     } else if (CATEGORY_ROUTES.some(c => c.path === cleanPath)) {
@@ -456,16 +456,16 @@ const generateMockTests = (): Test[] => {
       initialPage = "current_affairs";
     } else if (cleanPath.startsWith("/blog/") || cleanPath.startsWith("/updates/")) {
       const uId = path.split("/")[2];
-      const foundU = STATIC_NURSING_UPDATES.find(u => u.id === uId);
+      const foundU = STATIC_NURSING_UPDATES.find(u => u.id.toLowerCase() === (uId || "").toLowerCase());
       if (foundU) {
         initialPage = "updates";
         foundUpdateOnLoad = foundU;
       } else {
-        initialPage = "404";
+        initialPage = "updates";
       }
     } else if (cleanPath === "/blog" || cleanPath === "/updates") {
       initialPage = "updates";
-    } else if (cleanPath === "/auth") {
+    } else if (cleanPath === "/auth" || cleanPath === "/login") {
       initialPage = "auth";
     } else if (cleanPath === "/admin") {
       initialPage = "admin";
@@ -477,7 +477,47 @@ const generateMockTests = (): Test[] => {
         initialPage = "exam_landing";
         initialExamId = foundE.id;
       } else {
-        initialPage = "404";
+        initialPage = "exam_landing";
+        initialExamId = TARGET_EXAMS[0]?.id || "aiims-norcet";
+      }
+    } else if (cleanPath.startsWith("/tests/")) {
+      const parts = path.split("/");
+      const tId = parts[2];
+      let subjectsList: Subject[] = [];
+      const saved = typeof window !== "undefined" ? localStorage.getItem("np_subjects_custom_v1") : null;
+      if (saved) {
+        try {
+          subjectsList = JSON.parse(saved) || [];
+        } catch (e) {}
+      }
+      if (!subjectsList || subjectsList.length === 0) {
+        subjectsList = [...SUBJECTS];
+      }
+      if (!subjectsList.some(s => s.id === "mock_tests")) {
+        subjectsList.push({
+          id: "mock_tests",
+          icon: "🔥",
+          name: "Mock Test Series",
+          tests: generateMockTests()
+        });
+      }
+      let matchedTest: Test | null = null;
+      let matchedSubjId: string | null = null;
+      for (const subj of subjectsList) {
+        const found = subj.tests.find(t => t.id.toLowerCase() === (tId || "").toLowerCase());
+        if (found) {
+          matchedTest = found;
+          matchedSubjId = subj.id;
+          break;
+        }
+      }
+      if (matchedTest) {
+        initialPage = "test";
+        foundTest = matchedTest;
+        initialSubjId = matchedSubjId;
+        initialTestId = matchedTest.id;
+      } else {
+        initialPage = "find_test";
       }
     } else if (cleanPath.startsWith("/test/")) {
       const parts = path.split("/");

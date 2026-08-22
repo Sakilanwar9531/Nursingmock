@@ -6,6 +6,6 @@ const App = dynamic(() => import("@/src/App"), {
   ssr: false,
 });
 
-export default function HomePage() {
+export default function CatchAllPage() {
   return <App />;
 }
